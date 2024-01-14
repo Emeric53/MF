@@ -1,6 +1,6 @@
-import numpy as np
-from osgeo import gdal
 #基于该代码实现 对AHSI的辐射定标工作。
+from osgeo import gdal
+
 # 设置初始栅格文件路径
 file_path = "H:\\高分5号02星\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222_SW.tif"
 #利用gdal打开数据

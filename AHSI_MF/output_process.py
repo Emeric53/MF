@@ -1,6 +1,5 @@
+"""该代码用于 对 计算得到的 柱浓度数据 进行中值滤波和去噪等处理"""
 import numpy as np
-from osgeo import gdal
-import sys
 import cv2
 
 # 读取TIFF格式的图像

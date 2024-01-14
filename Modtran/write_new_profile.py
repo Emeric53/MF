@@ -12,6 +12,7 @@ with open('1.85_US_1987_CH4_profile.txt', 'r') as file:
     for i in data:
         i = float(i.strip())
         methane.append(i)
+
 for i in range(101):  # 创建100个文件，可以根据需要修改数量
     file_name = f"data\\EMIT_{i * 100}.ltn"  # 定义文件名，例如：file_1.txt, file_2.txt, ...
     with open("C:\\PcModWin5\\Usr\\EMIT.ltn", 'r') as input_file:

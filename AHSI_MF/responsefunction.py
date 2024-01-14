@@ -3,7 +3,6 @@ import numpy as np
 filepath = "H:\\重新下载数据\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222\\GF5B_AHSI_Spectralresponse_SWIR.raw"
 data = np.genfromtxt(filepath)
 
-
 def gaussian_response(wavelengths, center_wavelength, fwhm):
     """
     Calculate the Gaussian response for a given channel.
