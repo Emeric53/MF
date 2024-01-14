@@ -1,3 +1,4 @@
+"""将文件路径写入 modtran 批量运行的文件中"""
 # 生成文件内容
 file_content = [f"TEST/EMIT/Emit_{n*100}.tp5\n" for n in range(101)]
 
