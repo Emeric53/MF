@@ -46,8 +46,8 @@ vectors = []
 for i in range(len(row_indices)):
     row = row_indices[i]
     col = col_indices[i]
-    a=array_without_nan[row,col]
-    l = image_data[:,row,col]
+    a = array_without_nan[row, col]
+    l = image_data[:, row, col]
     result = (l-u)/(u*a)
     vectors.append(result)
 
