@@ -39,7 +39,7 @@ for index in range(len(wavelengthlist)):
     slopelist.append(slope)
 
 plt.figure(figsize=(5, 3))
-plt.plot(wavelengthlist, slopelist)
+plt.plot(wavelengthlist[-60:-1], slopelist[-60:-1])
 plt.xlabel('Wavelength(nm)')
 plt.ylabel("Unit absorption spectrum(ppm*m-1)")
 # plt.ylim(-0.6, 0.05)
