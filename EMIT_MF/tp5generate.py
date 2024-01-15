@@ -12,7 +12,7 @@ for n in range(1, 101):
         modified_number = original_number + 0.2 * n  # 修改数字
         modified_line = original_line[:20] + f'{modified_number:10f}' + original_line[30:]  # 使用f-string格式化科学计数法的数字，并确保占够10个字符
         lines[line_number] = modified_line + '\n'  # 更新行内容
-    # 将修改后的内容写入新文件
-    file_name = f"C:\\Users\\RS\\Desktop\\EMIT\\Config\\Emit_{n*100}.tp5"
+    # 将修改后的内容写入modtran运行文件夹
+    file_name = f"C:\\Users\\RS\\Desktop\\modtran5.2.6\\TEST\\EMIT\\Emit_{n*100}.tp5"
     with open(file_name, 'w', encoding='utf-8') as file:
         file.writelines(lines)

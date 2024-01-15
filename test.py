@@ -1,4 +1,6 @@
 """该代码用于进行快速的 语法测试 和 函数与方法测试 """
-
+import math
 a = [1, 2, 3, 4, 5]
 print(a[len(a)-2:len(a)])
+radiance_log = math.log(2, math.e)
+print(radiance_log)
