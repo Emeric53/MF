@@ -8,8 +8,6 @@ filepath = "C:\\Users\\RS\\Desktop\\GF5B_AHSI_Spectralresponse_SWIR.txt"
 column1 = []
 column2 = []
 
-
-
 # 打开文本文件
 with open(filepath, 'r') as file:
     lines = file.readlines()

@@ -1,4 +1,4 @@
-""" 敏感性分析 绘制图标 """
+""" 敏感性分析 绘制plot """
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt

@@ -10,6 +10,7 @@ directory = "C:\\Users\\RS\\Desktop\\modtran5.2.6\\TEST\\SensitivityAnalysis"
 files = [os.path.abspath(file) for file in glob.glob(os.path.join(directory, '*.chn'))]
 filename = [os.path.basename(file) for file in glob.glob(os.path.join(directory, '*.chn'))]
 
+
 # 创建一个空字典，用于存储不同的数组
 data_dict = {}
 
@@ -33,12 +34,18 @@ for index in range(len(files)):
         data_dict[filename[index]].append(float(i.split()[3])*1000000)
 print(data_dict)
 
+
 # 绘制数据
-for name,value in data_dict.items():
-    plt.plot(wavelengthlist, value)  # 使用wavelength作为x轴，data作为y轴
+for name, value in data_dict.items():
+    if not name == 'original.chn':
+        if not name =="albedo_1.chn":
+            plt.plot(wavelengthlist[-60:], np.array(value[-60:])-np.array(data_dict['original.chn'][-60:]))
+
 plt.xlabel('Wavelength(nm)')
 plt.ylabel("Radiance(uW/sr cm-2 nm)")
 plt.grid(True)
-plt.legend(filename)  # 显示图例
+legend=plt.legend(filename, loc="center left", bbox_to_anchor=(1, 0.5), ncol=2)  # 显示图例
+# plt.savefig('legend1.png', bbox_inches='tight')
+plt.setp(legend.get_texts(), fontsize="small")  # 设置图例文本的字体大小
 # 显示图形
 plt.show()

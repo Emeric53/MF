@@ -33,13 +33,13 @@ image_data = np.array(band_data_list)
 
 # 获取栅格数据的波段，行，列
 bands, rows, cols = image_data.shape
-b1 = image_data[48,:,:]
-b2 = image_data[49,:,:]
+b1 = image_data[48, :, :]
+b2 = image_data[49, :, :]
 concentration = np.zeros((rows, cols))
 for row in range(rows):
     for col in range(cols):
-        result = math.log(b2[row,col] / b1[row,col], math.e) / delta_crosssection
-        concentration[row,col] = result
+        result = math.log(b2[row, col] / b1[row, col], math.e) / delta_crosssection
+        concentration[row, col] = result
     # 指定输出的TIFF文件名
 output_tiff_file = "C:\\Users\\RS\\Desktop\\doas_test.tiff"
 # 获取数组的维度
