@@ -46,6 +46,11 @@ for row in range(padded_mask.shape[0]-2):
         mask[row, col] = np.median(pixel_window.flatten())
 #高斯卷积
 
+
+
+
+
+
 # 指定输出的TIFF文件名
 output_tiff_file = "C:\\Users\\RS\\\Desktop\\EMIT\\Result\\mask.tiff"
 # 获取数组的维度
