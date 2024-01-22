@@ -4,8 +4,8 @@ from osgeo import gdal
 import sys
 import math
 # 设置初始栅格文件路径
-file_path = "C:\\Users\\RS\\Desktop\\output\\test.tif"
-delta_crosssection = 1.8814446180099485e-21
+file_path = "C:\\Users\\RS\\Desktop\\EMIT\\Imageswithplume\\tiff\\EMIT_L1B_RAD_001_20230204T041009_2303503_016_subset.tif"
+delta_crosssection = 5.251440616846936e-22
 # 利用gdal打开数据
 dataset = gdal.Open(file_path, gdal.GA_ReadOnly)
 
@@ -33,15 +33,15 @@ image_data = np.array(band_data_list)
 
 # 获取栅格数据的波段，行，列
 bands, rows, cols = image_data.shape
-b1 = image_data[48, :, :]
-b2 = image_data[49, :, :]
+b1 = image_data[37, :, :]
+b2 = image_data[38, :, :]
 concentration = np.zeros((rows, cols))
 for row in range(rows):
     for col in range(cols):
         result = math.log(b2[row, col] / b1[row, col], math.e) / delta_crosssection
         concentration[row, col] = result
     # 指定输出的TIFF文件名
-output_tiff_file = "C:\\Users\\RS\\Desktop\\doas_test.tiff"
+output_tiff_file = "C:\\Users\\RS\\Desktop\\emit_test.tiff"
 # 获取数组的维度
 rows, cols = concentration.shape
 

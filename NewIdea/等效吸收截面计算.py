@@ -17,7 +17,7 @@ with open("C:\\Users\\RS\\Downloads\\SpectrMol_91609d00d88b68e018ee275935ba6dafa
         e_crosssection = math.exp(-1*crosssection*math.pow(10,20))
         crosssectionlist.append(crosssection*math.pow(10,20))
         e_crosssectionlist.append(e_crosssection)
-print(crosssectionlist)
+
 with open("C:\\Users\\RS\\Downloads\\SpectrMol_cf49cccd8b7d702caf40fb3d979798e7ec87336a.rad.txt","r") as  rad:
     data = rad.readlines()[6:]
     wavelengthlist = []
@@ -28,34 +28,41 @@ with open("C:\\Users\\RS\\Downloads\\SpectrMol_cf49cccd8b7d702caf40fb3d979798e7e
         rad = float(i[16:32])
         radlist.append(rad)
 
-with open("C:\\Users\\RS\\Desktop\\simu1.txt","r") as channels:
-    data = channels.readlines()[8:]
-    bandlist = []
+with open("C:\\Users\\RS\\Desktop\\wavelengths.csv", "r") as band:
+    data = band.readlines()
     for i in data:
-        band = float(i[2:12])
-        bandlist.append(band)
+        bandlist = i.strip().split(",")
+        bandlist = [float(i) for i in bandlist]
+print(bandlist)
 
+
+with open("C:\\Users\\RS\\Desktop\\fwhm.csv", "r") as fwhm:
+    data = fwhm.readlines()
+    for i in data:
+        fwhmlist = i.strip().split(",")
+        fwhmlist = [float(i) for i in fwhmlist]
+print(fwhmlist)
 csarray = np.array(e_crosssectionlist)
 radarray = np.array(radlist)
 wlarray = np.array(wavelengthlist)
+bdarray = np.array(bandlist)
+fwhmarray = np.array(fwhmlist)
 
-
-sigma_conv = 8.546/2  # 分辨率为20nm，即标准差为10nm
-
+print(csarray)
 convolved_channel = []
 band_crosssection = []
-for i in bandlist:
-    convolving_term = stats.norm(i, sigma_conv)
-    convolved_radiance = radarray*convolving_term.pdf(wavelengthlist)
-    convolved_radiance = np.trapz(convolved_radiance,wavelengthlist)
-    convolved_radiance_final = radarray*convolving_term.pdf(wavelengthlist)*csarray
-    convolved_radiance_final = np.trapz(convolved_radiance_final,wavelengthlist)
-    convolved_channel.append(convolved_radiance)
-    band_crosssection.append(-1*math.log(convolved_radiance_final/convolved_radiance, math.e)/math.pow(10,20))
+for i in range(len(bdarray)):
+     convolving_term = stats.norm(bdarray[i], fwhmarray[i])
+     convolved_radiance = radarray*convolving_term.pdf(wavelengthlist)
+     convolved_radiance = np.trapz(convolved_radiance,wavelengthlist)
+     convolved_radiance_final = radarray*convolving_term.pdf(wavelengthlist)*csarray
+     convolved_radiance_final = np.trapz(convolved_radiance_final, wavelengthlist)
+     convolved_channel.append(convolved_radiance)
+     band_crosssection.append(-1*math.log(convolved_radiance_final/convolved_radiance, math.e)/math.pow(10,20))
 
-print(convolved_channel)
+
 # 对光谱进行卷积
-plt.plot(bandlist,band_crosssection)
+plt.plot(bandlist, band_crosssection)
 plt.show()
 
 # 创建一个新数组
@@ -81,7 +88,7 @@ for i in range(len(band_crosssection)):
     # 将max_diff添加到新数组中
     new_array.append(max_diff)
 contrast = np.array(new_array)
-index = np.argmax(contrast)
+index = np.nanargmax(contrast)
 print(index)
 print(bandlist[index])
 print(band_crosssection[index-1:index+2])
