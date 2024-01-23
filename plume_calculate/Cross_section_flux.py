@@ -15,7 +15,6 @@ plume_data = plume_data.ReadAsArray()
 pixel_resolution = 60000
 
 # sourcerate = the intergral of the product of the plume concentration and the wind speed over the plume cross section
-
 import math
 
 # 当前像元的行列号
@@ -69,8 +68,10 @@ def move(current_row, current_col, wind_direction_degrees, step_size):
     new_col = current_col + delta_col
     return new_row, new_col
 
+#预定义当前像元的行列号
 current_row = original_row
 current_col = original_col
+#设置遍历的条件
 while 0 < current_row < 200 and 0 < current_col < 200:
     current_row, current_col = move(original_row, original_col, wind_direction_degrees, step_size)
     print(current_row, current_col)
