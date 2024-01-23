@@ -71,10 +71,10 @@ c = c / count_not_nan
 # 取协方差矩阵的逆矩阵
 c_inverse = np.linalg.inv(c)
 
-#基于单位吸收光谱和背景值 计算目标谱
+# 基于单位吸收光谱和背景值 计算目标谱
 target = np.multiply(u, unitabsorptionspectrum)
 
-#空间上遍历整个遥感影像
+# 空间上遍历整个遥感影像
 for row in range(rows):
     for col in range(cols):
         #计算甲烷浓度增强初步值
