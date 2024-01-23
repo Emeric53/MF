@@ -14,5 +14,7 @@ plume_data = plume_data.ReadAsArray()
 # Set the pixel resolution, unit: m
 pixel_resolution = 60000
 
+# sourcerate = the intergral of the product of the plume concentration and the wind speed over the plume cross section
+
 
 
