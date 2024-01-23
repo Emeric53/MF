@@ -2,6 +2,7 @@
 import numpy as np
 import cv2
 
+# 设置读取文件路径
 filepath = "C:\\Users\\RS\\Desktop\\EMIT\\Result\\EMIT_L1B_RAD_001_20230204T041009_2303503_016_Enhancement.tiff"
 # 读取TIFF格式的图像
 image = cv2.imread(filepath, cv2.IMREAD_UNCHANGED)

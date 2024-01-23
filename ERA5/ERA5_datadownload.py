@@ -20,3 +20,7 @@ c.retrieve(
         'format': 'netcdf', # 选择NetCDF格式
         },
     "C:\\Users\\RS\\Desktop\\ERA5\\China_2023010112.nc") # 指定下载文件的名称
+
+
+
+
