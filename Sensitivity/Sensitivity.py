@@ -1,4 +1,4 @@
-""" 敏感性分析 绘制plot """
+""" 对modtran 模拟出来的 传感器端radiance 进行 敏感性分析 绘制plot """
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt

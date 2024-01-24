@@ -16,6 +16,7 @@ pixel_resolution = 60000
 
 # sourcerate = the intergral of the product of the plume concentration and the wind speed over the plume cross section
 import math
+import pathlib
 
 # 当前像元的行列号
 original_row = 100

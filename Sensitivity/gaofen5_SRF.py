@@ -1,4 +1,4 @@
-'''该代码用于生成光谱响应函数'''
+'''该代码用于生成gaofen5 AHSI光谱响应函数，并填写为适合modtran运算的flt文件'''
 import numpy as np
 
 #读取文件 获取传感器的中心波长和 FWHM
@@ -39,7 +39,6 @@ def gaussian_response(wavelengths, center_wavelength, fwhm):
     # Calculate the Gaussian response
     response = np.exp(-((wavelengths - center_wavelength) ** 2) / (2 * sigma ** 2))
     return response
-
 
 with open('response.txt', 'w') as f:
     f.write("Nanometer data for GaoFen5B (assume Gaussian with maximum response of 1)\n")

@@ -1,3 +1,4 @@
+"""该代码用于将需要处理的文件填写到modtran批处理读取的文件"""
 import os
 import glob
 

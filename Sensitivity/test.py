@@ -18,6 +18,7 @@ row_indices, col_indices = np.unravel_index(top10_indices, array_without_nan.sha
 
 file_path = "C:\\Users\\RS\\Documents\\DataProcessing\\data\\EMIT\\EMIT_L1B_RAD_001_20230806T035031_2321803_033.tif"
 dataset = gdal.Open(file_path, gdal.GA_ReadOnly)
+
 # 从已存在的TIFF文件中获取地理参考信息
 geo_transform = dataset.GetGeoTransform()
 projection = dataset.GetProjection()
@@ -28,6 +29,7 @@ num_bands = dataset.RasterCount
 # 定义数组存储各波段数据,以及波段中非nan的相关个数
 band_data_list = []
 count_non_nan = 0
+
 # 遍历各个波段
 for band_index in range(1, num_bands + 1):
     # 依据索引获取波段数据
