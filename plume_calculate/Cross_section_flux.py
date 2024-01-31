@@ -5,12 +5,15 @@ import numpy as np
 from osgeo import gdal
 import math
 from scipy.integrate import quad
+
 # Set the path of the plume
 plume_filepath = r"C:\Users\RS\Desktop\EMIT\MethanePlume\EMIT_L2B_CH4PLM_001_20230204T041009_000618_tiff.tif"
 plume_filepath = plume_filepath.replace('\\', '/')
+
 # Read the plume data and remove the invalid values
 plume_data = gdal.Open(plume_filepath, gdal.GA_ReadOnly)
 plume_data = plume_data.ReadAsArray()
+
 # Set the pixel resolution, unit: m
 pixel_resolution = 60000
 
@@ -72,6 +75,7 @@ def move(current_row, current_col, wind_direction_degrees, step_size):
 #预定义当前像元的行列号
 current_row = original_row
 current_col = original_col
+
 #设置遍历的条件
 while 0 < current_row < 200 and 0 < current_col < 200:
     current_row, current_col = move(original_row, original_col, wind_direction_degrees, step_size)
