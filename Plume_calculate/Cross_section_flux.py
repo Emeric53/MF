@@ -28,6 +28,7 @@ wind_direction_degrees = 45
 # 移动步长
 step_size = 1  # 假设每次移动一个像元的距离
 
+#基于风向和步长计算目标像元的行列号
 def move(current_row, current_col, wind_direction_degrees, step_size):
     if wind_direction_degrees == 0:
         delta_row = 0*step_size
