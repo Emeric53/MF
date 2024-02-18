@@ -3,6 +3,7 @@ import os
 import glob
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
 
 # 指定目录路径
 directory = "C:\\Users\\RS\\Desktop\\modtran5.2.6\\TEST\\SensitivityAnalysis"
@@ -36,18 +37,27 @@ for index in range(len(files)):
     for i in rawdata:
         data_dict[filename[index]].append(float(i.split()[3])*1000000)
 
+selected_parameter = []
 
 # 绘制数据
+
 for name, value in data_dict.items():
     if not name == 'original.chn':
-        if not name =="albedo_1.chn":
-            plt.plot(wavelengthlist[-60:], np.array(value[-60:])-np.array(data_dict['original.chn'][-60:]))
+        if not name == "albedo_1.chn":
+            similarity = cosine_similarity(np.array(value[-50:]).reshape(1, -1),
+                                           np.array(data_dict['original.chn'][-50:]).reshape(1, -1))
+            if similarity < 1:
+                print(name, similarity)
+                plt.plot(wavelengthlist[-50:], (np.array(data_dict['original.chn'][-50:])-np.array(value[-50:]))/np.array(data_dict['original.chn'][-50:]), label=name)
+                selected_parameter.append(name)
+
 
 # 设置图形属性
 plt.xlabel('Wavelength(nm)')
-plt.ylabel("Radiance(uW/sr cm-2 nm)")
+#plt.ylabel("Radiance(uW/sr cm-2 nm)")
+plt.ylabel("Percent(%)")
 plt.grid(True)
-legend = plt.legend(filename, loc="center left", bbox_to_anchor=(1, 0.5), ncol=2)  # 显示图例
-# plt.savefig('legend1.png', bbox_inches='tight')
+legend = plt.legend(selected_parameter, loc="center left", bbox_to_anchor=(1, 0.5), ncol=2)  # 显示图例
+plt.savefig('legend1.png', bbox_inches='tight')
 plt.setp(legend.get_texts(), fontsize="small")  # 设置图例文本的字体大小
 plt.show()
