@@ -1,7 +1,4 @@
-"""
-    本程序用于对EMIT radiacne数据 基于匹配滤波算法 进行甲烷浓度增强的反演
-    通过设置tiff数据文件夹路径实现批量处理
-"""
+"""本程序用于对EMIT radiacne数据 基于匹配滤波算法 进行甲烷浓度增强的反演"""
 import numpy as np
 from osgeo import gdal
 import pathlib as pl
@@ -27,26 +24,26 @@ def open_unit_absorption_spectrum(filepath):
 uas_filepath = 'EMIT_unit_absorption_spectrum.txt'
 unitabsorptionspectrum = open_unit_absorption_spectrum(uas_filepath)
 
-# 定义遥感影像文件夹路径，遍历获取所有tiff文件路径组成的列表
-radiance_folder = "/Volumes/Penguin/EMIT/tiff"
-radiance_path_list = pl.Path(radiance_folder).glob('*.tif')
+# 基于EMIT——tiff文件夹下的所有tiff文件进行甲烷浓度增强/EMIT-envi文件夹下的所有envi文件进行甲烷浓度增强
+radiance_folder = "F:\\EMIT_DATA\\envi"
+radiance_path_list = pl.Path(radiance_folder).glob('*.img')
 
-# 定义输出文件夹路径
-root = pl.Path("/Users/nomoredrama/Local Documents/Result Folder")
+# 定义文件输出文件夹，并获取已经处理过的文件的列表，用于后续处理剔除
+root = pl.Path("F:\\EMIT_DATA\\result")
 output = root.glob('*.tif')
 outputfile = []
 for i in output:
     outputfile.append(str(i.name))
+
 for radiance_path in radiance_path_list:
-    if str(radiance_path.name.rstrip('radiance.tif') + 'Enhancement.tif') in outputfile:
+    currentfilename = str(radiance_path.name.rstrip("radiance.tif")+"enhancement.tif")
+    if  currentfilename in outputfile:
         continue
     else:
-    # 遍历所有文件路径
-        # 获取文件名称
-        name = radiance_path.name.rstrip('radiance.tif')
-        # 定义文件路径 并调用函数读取数据
+        # 获取文件名
+        name = radiance_path.name.rstrip("radiance.tif")
+        # 定义文件路径
         dataset = get_raster_array(str(radiance_path))
-
         # 从TIFF文件中获取地理参考信息以及波段数目
         geo_transform = dataset.GetGeoTransform()
         projection = dataset.GetProjection()
@@ -140,7 +137,8 @@ for radiance_path in radiance_path_list:
         #                 alpha[row, col] = np.nan
 
         # 指定输出路径
-        output_tiff_file = str(root / (name + 'Enhancement.tif'))
+        output_tiff_file = str(root / (name + 'enhancement.tif'))
+
         # 获取数组的维度
         rows, cols = alpha.shape
 
