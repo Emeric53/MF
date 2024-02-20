@@ -36,12 +36,12 @@ for i in output:
     outputfile.append(str(i.name))
 
 for radiance_path in radiance_path_list:
-    currentfilename = str(radiance_path.name.rstrip("radiance.tif")+"enhancement.tif")
+    currentfilename = str(radiance_path.name.rstrip("radiance.img")+"enhancement.tif")
     if  currentfilename in outputfile:
         continue
     else:
         # 获取文件名
-        name = radiance_path.name.rstrip("radiance.tif")
+        name = radiance_path.name.rstrip("radiance.img")
         # 定义文件路径
         dataset = get_raster_array(str(radiance_path))
         # 从TIFF文件中获取地理参考信息以及波段数目
@@ -99,6 +99,7 @@ for radiance_path in radiance_path_list:
                     # 计算地表反照率改正项
                     albedo[row, col] = (np.inner(image_data[:, row, col], u)
                                         / np.inner(u, u))
+                    # 计算甲烷浓度增强值
                     up = (image_data[:, row, col] - u) @ c_inverse @ target
                     down = albedo[row, col] * (target @ c_inverse @ target)
                     alpha[row, col] = up / down
