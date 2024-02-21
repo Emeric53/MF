@@ -1,8 +1,9 @@
-'''该代码用于绘制单位吸收谱的plt'''
+# 该代码用于绘制单位吸收谱的plot
 import matplotlib.pyplot as plt
 
 wavelength = []
 value = []
+
 # 打开单位吸收光谱文件
 with open("EMIT_unit_absorption_spectrum.txt", "r") as file:
     data = file.readlines()
