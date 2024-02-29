@@ -2,16 +2,16 @@ import numpy as np
 from osgeo import gdal
 import math
 
-#设置烟羽的路径
+# set the filepaht of methane plume image
 plume_filepath = r"C:\Users\RS\Desktop\EMIT\MethanePlume\EMIT_L2B_CH4PLM_001_20230204T041009_000618_tiff.tif"
 plume_filepath = plume_filepath.replace('\\', '/')
 
-#读取烟羽的tiff数据，然后剔除掉nan等无效值
+# read the array of the plume
 plume_data = gdal.Open(plume_filepath, gdal.GA_ReadOnly)
 plume_data = plume_data.ReadAsArray()
 
 #设置 像元的分辨率大小，单位为 m
-pixel_resolution = 60000
+pixel_resolution = 30
 pixel_area = pixel_resolution*pixel_resolution
 
 #统计烟羽的面积和尺度参数
@@ -33,7 +33,11 @@ IME = (np.sum(values)*pixel_area)/plume_area
 print(IME)
 
 #基于有效风速和尺度参数以及IME计算烟羽的排放量
-efficitive_windspeed = 1
+windspeed = 1
+a = 0.37
+b = 0.64
+efficitive_windspeed = a*windspeed + b
+
 q = efficitive_windspeed*IME/plume_L
 print(q)
 

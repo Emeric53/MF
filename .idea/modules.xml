@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/matchedfiltermethod.iml" filepath="$PROJECT_DIR$/.idea/matchedfiltermethod.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/Methane.iml" filepath="$PROJECT_DIR$/.idea/Methane.iml" />
     </modules>
   </component>
 </project>

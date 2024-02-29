@@ -1,14 +1,18 @@
-"""本程序用于对EMIT radiacne数据 基于匹配滤波算法 进行甲烷浓度增强的反演"""
+"""this code is used to process the radiance file by using the matching filter algorithm
+and the goal is to get the methane enhancement image"""
+
+# the necessary lib to be imported
 import numpy as np
 from osgeo import gdal
 import pathlib as pl
 
-
+# a function to get the raster array and return the dataset
 def get_raster_array(filepath):
     # 利用gdal打开数据
     dataset = gdal.Open(filepath, gdal.GA_ReadOnly)
     return dataset
 
+# a function to open the unit absorption spectrum file and returen the numpy array
 def open_unit_absorption_spectrum(filepath):
     # 打开AHSI的单位吸收光谱文件并转换为numpy数组
     unitabsorptionspectrum = []
@@ -21,39 +25,40 @@ def open_unit_absorption_spectrum(filepath):
     output = np.array(unitabsorptionspectrum)
     return output
 
-# 定义单位吸收光谱文件路径 以及打开单位吸收光谱文件
+# difine the path of the unit absorption spectrum file and open it
 uas_filepath = 'EMIT_unit_absorption_spectrum.txt'
 unitabsorptionspectrum = open_unit_absorption_spectrum(uas_filepath)
 
-# 基于EMIT——tiff文件夹下的所有tiff文件进行甲烷浓度增强/EMIT-envi文件夹下的所有envi文件进行甲烷浓度增强
+# define the path of the radiance folder and get the radiance file list with an img suffix
 radiance_folder = "F:\\EMIT_DATA\\envi"
 radiance_path_list = pl.Path(radiance_folder).glob('*.img')
 
-# 定义文件输出文件夹，并获取已经处理过的文件的列表，用于后续处理剔除
+# get the output file path and get the existing output file list to avoid the repeat process
 root = pl.Path("F:\\EMIT_DATA\\result")
 output = root.glob('*.tif')
 outputfile = []
 for i in output:
     outputfile.append(str(i.name))
 
-
+# define the main function to process the radiance file by using the matching filter algorithm
+# the input includes the radiance file path, the unit absorption spectrum, the output path and the is_iterate flag
 def mf_process(filepath, unitabsorptionspectrum, output_path, is_iterate=False):
-    # 获取文件名
+    # get the file name to make the output path string
     name = filepath.name.rstrip("radiance.img")
 
-    # 定义文件路径
-    dataset = get_raster_array(filepath)
+    # get the raster array from the radiance file
+    dataset = get_raster_array(str(filepath))
 
-    # 从TIFF文件中获取地理参考信息以及波段数目
+    # get the basic information of the raster file such as the geo transform, the projection and the number of bands
     geo_transform = dataset.GetGeoTransform()
     projection = dataset.GetProjection()
     num_bands = dataset.RasterCount
 
-    # 定义数组存储各波段数据,以及波段中非nan的相关个数
+    # pre-define the list to store the band data and the count of the non-nan value
     band_data_list = []
     count_not_nan = 0
 
-    # 遍历各个波段
+    # iterate the bands to get the band data and the count of the non-nan value
     for band_index in range(0, len(unitabsorptionspectrum)):
         # 依据索引获取波段数据
         band = dataset.GetRasterBand(num_bands - len(unitabsorptionspectrum) + band_index + 1)
@@ -164,5 +169,6 @@ for radiance_path in radiance_path_list:
     if currentfilename in outputfile:
         continue
     else:
+        print(f"{currentfilename} is now being processed")
         mf_process(radiance_path, unitabsorptionspectrum, root, is_iterate=False)
         print(f"{currentfilename} has been processed")
