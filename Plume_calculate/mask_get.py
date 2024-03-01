@@ -3,7 +3,6 @@ from osgeo import gdal
 import numpy as np
 import scipy.stats as stats
 
-
 # get the path of the methane enhancement images
 def get_raster_array(filepath):
     # 利用gdal打开数据
@@ -60,3 +59,8 @@ band.WriteArray(mask)
 # 设置获取的地理参考信息
 dataset.SetGeoTransform(geo_transform)
 dataset.SetProjection(projection)
+
+#2: set threshold = 200 ppm·m for the methane enhancement image as background
+
+
+

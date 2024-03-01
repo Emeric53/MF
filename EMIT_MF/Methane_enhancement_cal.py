@@ -1,48 +1,36 @@
-"""this code is used to process the radiance file by using the matching filter algorithm
-and the goal is to get the methane enhancement image"""
+"""
+this code is used to process the radiance file by using the matching filter algorithm
+and the goal is to get the methane enhancement image
+"""
 
 # the necessary lib to be imported
 import numpy as np
 from osgeo import gdal
 import pathlib as pl
 
+
 # a function to get the raster array and return the dataset
 def get_raster_array(filepath):
-    # 利用gdal打开数据
+    # open the dataset from the filepath
     dataset = gdal.Open(filepath, gdal.GA_ReadOnly)
     return dataset
 
+
 # a function to open the unit absorption spectrum file and returen the numpy array
 def open_unit_absorption_spectrum(filepath):
-    # 打开AHSI的单位吸收光谱文件并转换为numpy数组
-    unitabsorptionspectrum = []
+    # open the unit absorption spectrum file and convert it a numpy array
+    unit_absorption_spectrum = []
     with open(filepath, 'r') as file:
         data = file.readlines()
         for band in data:
             split_i = band.split(' ')
             band = split_i[1].rstrip('\n')
-            unitabsorptionspectrum.append(float(band))
-    output = np.array(unitabsorptionspectrum)
-    return output
+            unit_absorption_spectrum.append(float(band))
+    out_put = np.array(unit_absorption_spectrum)
+    return out_put
 
-# difine the path of the unit absorption spectrum file and open it
-uas_filepath = 'EMIT_unit_absorption_spectrum.txt'
-unitabsorptionspectrum = open_unit_absorption_spectrum(uas_filepath)
 
-# define the path of the radiance folder and get the radiance file list with an img suffix
-radiance_folder = "F:\\EMIT_DATA\\envi"
-radiance_path_list = pl.Path(radiance_folder).glob('*.img')
-
-# get the output file path and get the existing output file list to avoid the repeat process
-root = pl.Path("F:\\EMIT_DATA\\result")
-output = root.glob('*.tif')
-outputfile = []
-for i in output:
-    outputfile.append(str(i.name))
-
-# define the main function to process the radiance file by using the matching filter algorithm
-# the input includes the radiance file path, the unit absorption spectrum, the output path and the is_iterate flag
-def mf_process(filepath, unitabsorptionspectrum, output_path, is_iterate=False):
+def mf_process(filepath, unit_absorption_spectrum, output_path, is_iterate=False):
     # get the file name to make the output path string
     name = filepath.name.rstrip("radiance.img")
 
@@ -59,69 +47,79 @@ def mf_process(filepath, unitabsorptionspectrum, output_path, is_iterate=False):
     count_not_nan = 0
 
     # iterate the bands to get the band data and the count of the non-nan value
-    for band_index in range(0, len(unitabsorptionspectrum)):
-        # 依据索引获取波段数据
-        band = dataset.GetRasterBand(num_bands - len(unitabsorptionspectrum) + band_index + 1)
-        # 读取波段数据为NumPy数组
+    for band_index in range(0, len(unit_absorption_spectrum)):
+        # based on the band index, get the dataset of the image file
+        band = dataset.GetRasterBand(num_bands - len(unit_absorption_spectrum) + band_index + 1)
+        # convert the dataset into the numpy array
         band_data = band.ReadAsArray()
-        # 添加入波段数据总和中
+        # append the band data into the band data list
         band_data_list.append(band_data)
-        # 计算非nan像元的个数
-        count_not_nan = np.count_nonzero(~np.isnan(band_data))
+        # sum up all the non-nan value in the band data
+        if band_index == 0:
+            count_not_nan = np.count_nonzero(~np.isnan(band_data))
 
-    # 将波段数据转为np array
+    # convert the band data list into a 3-D numpy array
     image_data = np.array(band_data_list)
-
-    # 以每个波段为分割，计算非nan的平均值 作为背景光谱
-    u = np.nanmean(image_data, axis=(1, 2))
-
-    # 获取遥感影像的波段数，行，列
+    # get the number of bands, rows and columns of the image data
     bands, rows, cols = image_data.shape
 
-    # 构造总的甲烷浓度增强 地表反照率校正 用于稀疏校正的l1校正项 的二维数组变量
+    # alone the row and column axis to get the mean value of each band and
+    # the shape of the result should be the number of bands
+    u = np.nanmean(image_data, axis=(1, 2))
+
+    # build the albedo, alpha to store the needing result
     albedo = np.zeros((rows, cols))
     alpha = np.zeros((rows, cols))
-    l1filter = np.zeros((rows, cols))
 
-    # 构造协方差矩阵
+    # calculate the covariance matrix
     c = np.zeros((bands, bands))
     for row in range(rows):
         for col in range(cols):
             if not np.isnan(image_data[0, row, col]):
                 c += np.outer(image_data[:, row, col] - u, image_data[:, row, col] - u)
+    # get the average of the sum of covariance matrix
     c = c / count_not_nan
-    # 取协方差矩阵的逆矩阵
+    # get the inverse of the covariance matrix
     c_inverse = np.linalg.inv(c)
 
-    # 基于单位吸收光谱和背景值 计算目标谱
-    target = np.multiply(u, unitabsorptionspectrum)
+    # based on the background spectrum and the unit absorption spectrum, calculate the target spectrum
+    target = np.multiply(u, unit_absorption_spectrum)
 
-    # 空间上遍历整个遥感影像
+    # iterate the whole region of the image data to calculate the albedo and the alpha for each pixel
     for row in range(rows):
         for col in range(cols):
-            # 计算甲烷浓度增强初步值
+            # account the nan value in the image data and make the result to be nan
             if not np.isnan(image_data[0, row, col]):
-                # 计算地表反照率改正项
+                # based on the formula to calculate the albedo of each pixel and store it into the albedo array
                 albedo[row, col] = (np.inner(image_data[:, row, col], u)
                                     / np.inner(u, u))
-                # 计算甲烷浓度增强值
+                # based on the formula to calculate the methane enhancement of each pixel
+                # and store it in the alpha array
                 up = (image_data[:, row, col] - u) @ c_inverse @ target
                 down = albedo[row, col] * (target @ c_inverse @ target)
                 alpha[row, col] = up / down
             else:
                 alpha[row, col] = np.nan
+
     if is_iterate:
-        # 迭代计算甲烷浓度增强
-        for i in range(20):
+        # build the l1filter to store the result
+        l1filter = np.zeros((rows, cols))
+        # define a tiny value to avoid the zero division
+        epsilon = np.finfo(np.float32).tiny
+        # based on the former alpha result, update the background spectrum and the target spectrum
+        # and then update the covariance matrix
+        # and get the new methane enhancement result
+        for iter_num in range(20):
             iter_data = image_data.copy()
             for row in range(rows):
                 for col in range(cols):
                     if not np.isnan(image_data[0, row, col]):
                         iter_data[:, row, col] = image_data[:, row, col] - target * alpha[row, col]
-            # 更新背景光谱和目标谱
+                        l1filter[row, col] = 1/(alpha[row, col] + epsilon)
+            # get the new background spectrum and the target spectrum
             u = np.nanmean(iter_data, axis=(1, 2))
-            target = np.multiply(u, unitabsorptionspectrum)
-            # 更新协方差矩阵
+            target = np.multiply(u, unit_absorption_spectrum)
+            # get the new covariance matrix
             c = np.zeros((bands, bands))
             for row in range(rows):
                 for col in range(cols):
@@ -129,46 +127,64 @@ def mf_process(filepath, unitabsorptionspectrum, output_path, is_iterate=False):
                         c += np.outer(image_data[:, row, col] - (u + albedo[row, col] * alpha[row, col] * target),
                                       image_data[:, row, col] - (u + albedo[row, col] * alpha[row, col] * target))
             c = c / count_not_nan
-
-            # 取协方差矩阵的逆矩阵
+            # get the inverse of the covariance matrix
             c_inverse = np.linalg.inv(c)
 
-            # 空间上遍历整个遥感影像
+            # calculate the new methane enhancement result
             for row in range(rows):
                 for col in range(cols):
                     if not np.isnan(image_data[0, row, col]):
-                        # 计算新的甲烷浓度增强值
-                        up = (image_data[:, row, col] - u) @ c_inverse @ target
+                        up = (image_data[:, row, col] - u) @ c_inverse @ target - l1filter[row, col]
                         down = albedo[row, col] * target @ c_inverse @ target
                         alpha[row, col] = max(up / down, 0)
                     else:
                         alpha[row, col] = np.nan
 
-    # 指定输出路径
+    # set the output tiff file path
     output_tiff_file = str(output_path / (name + 'enhancement.tif'))
 
-    # 获取数组的维度
-    rows, cols = alpha.shape
+    #  get the number of rows and columns of the alpha array
+    result_rows, result_cols = alpha.shape
 
-    # 创建一个新的TIFF文件
+    # create a new raster file
     driver = gdal.GetDriverByName('GTiff')
-    dataset = driver.Create(output_tiff_file, cols, rows, 1, gdal.GDT_Float32)
+    dataset = driver.Create(output_tiff_file, result_cols, result_rows, 1, gdal.GDT_Float32)
 
-    # 将NumPy数组写入TIFF文件
+    # write the data to a single band raster
     band = dataset.GetRasterBand(1)
     band.WriteArray(alpha)
 
-    # 设置获取的地理参考信息
+    # set the geotransform and projection of the dataset
     dataset.SetGeoTransform(geo_transform)
     dataset.SetProjection(projection)
+    # reset the dataset to None
     dataset = None
 
 
+# define the path of the unit absorption spectrum file and open it
+uas_filepath = 'EMIT_unit_absorption_spectrum.txt'
+unit_absorption_spectrum = open_unit_absorption_spectrum(uas_filepath)
+
+# define the path of the radiance folder and get the radiance file list with an img suffix
+radiance_folder = "F:\\EMIT_DATA\\envi"
+radiance_path_list = pl.Path(radiance_folder).glob('*.img')
+
+# get the output file path and get the existing output file list to avoid the repeat process
+root = pl.Path("F:\\EMIT_DATA\\result")
+output = root.glob('*.tif')
+outputfile = []
+for i in output:
+    outputfile.append(str(i.name))
+
+# define the main function to process the radiance file by using the matching filter algorithm
+# the input includes the radiance file path, the unit absorption spectrum, the output path and the is_iterate flag
+
+# iterate the radiance file list to process the radiance file by using the matching filter algorithm
 for radiance_path in radiance_path_list:
-    currentfilename = str(radiance_path.name.rstrip("radiance.img") + "enhancement.tif")
-    if currentfilename in outputfile:
+    current_filename = str(radiance_path.name.rstrip("radiance.img") + "enhancement.tif")
+    if current_filename in outputfile:
         continue
     else:
-        print(f"{currentfilename} is now being processed")
-        mf_process(radiance_path, unitabsorptionspectrum, root, is_iterate=False)
-        print(f"{currentfilename} has been processed")
+        print(f"{current_filename} is now being processed")
+        mf_process(radiance_path, unit_absorption_spectrum, root, is_iterate=False)
+        print(f"{current_filename} has been processed")

@@ -1,11 +1,1 @@
-"""该代码用于进行快速的 语法测试 和 函数与方法测试 """
-from osgeo import gdal
-import numpy as np
-import xarray as xr
-
-u10_ds = 1
-v10_ds = 100
-wind_dir = np.arctan2(u10_ds, v10_ds) * 180 / np.pi + 180
-print(wind_dir)
-
-
+"""该代码用于进行快速的 语法测试 和 函数与方法测试 """from osgeo import gdalimport numpy as npimport xarray as xru10_ds = 1v10_ds = 100wind_dir = np.arctan2(u10_ds, v10_ds) * 180 / np.pi + 180print(wind_dir)import numpy as npepsilon = np.finfo(np.float32).tinyprint(epsilon)
