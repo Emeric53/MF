@@ -170,5 +170,10 @@ for radiance_path in radiance_path_list:
         continue
     else:
         print(f"{currentfilename} is now being processed")
-        mf_process(radiance_path, unitabsorptionspectrum, root, is_iterate=False)
-        print(f"{currentfilename} has been processed")
+        try:
+            mf_process(radiance_path, unitabsorptionspectrum, root, is_iterate=False)
+            print(f"{currentfilename} has been processed")
+        except Exception:
+            print(f"{currentfilename} has failed to process")
+            pass
+

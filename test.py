@@ -5,7 +5,7 @@ import xarray as xr
 
 u10_ds = 1
 v10_ds = 100
-wind_dir = np.arctan2(u10_ds, v10_ds) * 180 / np.pi + 180
+wind_dir = np.arctan2(u10_ds, v10_ds) * 180 / np.pi
 print(wind_dir)
 
 
