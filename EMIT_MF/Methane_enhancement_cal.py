@@ -16,23 +16,26 @@ def get_raster_array(filepath):
     return dataset
 
 
-# a function to open the unit absorption spectrum file and returen the numpy array
+# a function to open the unit absorption spectrum file and return the numpy array
 def open_unit_absorption_spectrum(filepath):
     # open the unit absorption spectrum file and convert it a numpy array
-    unit_absorption_spectrum = []
+    uas_list = []
     with open(filepath, 'r') as file:
         data = file.readlines()
         for band in data:
             split_i = band.split(' ')
             band = split_i[1].rstrip('\n')
-            unit_absorption_spectrum.append(float(band))
-    out_put = np.array(unit_absorption_spectrum)
+            uas_list.append(float(band))
+    out_put = np.array(uas_list)
     return out_put
 
 
-def mf_process(filepath, unit_absorption_spectrum, output_path, is_iterate=False):
+def mf_process(filepath, uas_path, output_path, is_iterate=False):
     # get the file name to make the output path string
     name = filepath.name.rstrip("radiance.img")
+
+    # open the unit absorption spectrum file and convert it a numpy array
+    unit_absorption_spectrum = open_unit_absorption_spectrum(uas_path)
 
     # get the raster array from the radiance file
     dataset = get_raster_array(str(filepath))
@@ -102,7 +105,7 @@ def mf_process(filepath, unit_absorption_spectrum, output_path, is_iterate=False
                 alpha[row, col] = np.nan
 
     if is_iterate:
-        # build the l1filter to store the result
+        # build the l1_filter to store the result
         l1filter = np.zeros((rows, cols))
         # define a tiny value to avoid the zero division
         epsilon = np.finfo(np.float32).tiny
@@ -154,16 +157,13 @@ def mf_process(filepath, unit_absorption_spectrum, output_path, is_iterate=False
     band = dataset.GetRasterBand(1)
     band.WriteArray(alpha)
 
-    # set the geotransform and projection of the dataset
+    # set the geo_transform and projection of the dataset
     dataset.SetGeoTransform(geo_transform)
     dataset.SetProjection(projection)
-    # reset the dataset to None
-    dataset = None
 
 
 # define the path of the unit absorption spectrum file and open it
 uas_filepath = 'EMIT_unit_absorption_spectrum.txt'
-unit_absorption_spectrum = open_unit_absorption_spectrum(uas_filepath)
 
 # define the path of the radiance folder and get the radiance file list with an img suffix
 radiance_folder = "F:\\EMIT_DATA\\envi"
@@ -186,5 +186,5 @@ for radiance_path in radiance_path_list:
         continue
     else:
         print(f"{current_filename} is now being processed")
-        mf_process(radiance_path, unit_absorption_spectrum, root, is_iterate=False)
+        mf_process(radiance_path, uas_path=uas_filepath, output_path=root, is_iterate=False)
         print(f"{current_filename} has been processed")
