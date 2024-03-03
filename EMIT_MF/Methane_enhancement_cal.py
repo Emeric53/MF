@@ -186,5 +186,11 @@ for radiance_path in radiance_path_list:
         continue
     else:
         print(f"{current_filename} is now being processed")
-        mf_process(radiance_path, uas_path=uas_filepath, output_path=root, is_iterate=False)
-        print(f"{current_filename} has been processed")
+        try :
+            mf_process(radiance_path, uas_path=uas_filepath, output_path=root, is_iterate=False)
+            print(f"{current_filename} has been processed")
+        except Exception as e:
+            print(f"{current_filename} has an error")
+            print(e)
+            pass
+
