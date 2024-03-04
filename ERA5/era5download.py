@@ -15,7 +15,7 @@ downloadedYears=['',]
 Regions=['ASIA','EUAF','AFR','NAM','SAM','MLY','AUS','NZD',]#'EBor','WBor','antarctic','arctic']
 
 Areas=  [
-        [90,-180,-90,180], ### world grib
+        [89,-178.5,-89,178.5], ### world grib  [89,-178.5,-89,178.5]?
         [60, 70, 0, 145,],   ### ASIA
         [60,-20,0,70,],       ## EUAF
         [0, 7, -36, 52,],  ## AFR
@@ -28,7 +28,6 @@ Areas=  [
         # [75, -180, 60, -15,], ### WBor
         # [-56, -180, -90, 180,], ### Antarctic
         # [75, -180, 90, 180,], ### Arctic
-
         ]
 
 ''' general setups '''
@@ -48,14 +47,11 @@ plevels=['50', '70', '100','125', '150', '175','200', '225', '250','300', '350',
 
 params=['relative_humidity', 'temperature']
 
-resolution= ['2', '3']
+resolution= ['3', '2']
 
 ''''''
 ## loops for downloading
 area = Areas[ia]
-# for ia, area in enumerate(Areas):
-if not os.path.exists(Regions[ia]):
-    os.mkdir(Regions[ia])
 UTC = utc_times
 for iy, year in enumerate(Years):
     for im, month in enumerate(Months):
@@ -66,7 +62,7 @@ for iy, year in enumerate(Years):
                 continue
             if (year not in leapyears) and month=='02' and day>='29':
                 continue
-            ncFileName = ''+year+'/ERA5_29ly'+'_'+year+month+day+'.nc'
+            ncFileName = "C:/Users/RS/Desktop/ERA5_profile/"+'ERA5_29ly'+'_'+year+month+day+'.nc'
             if os.path.exists(ncFileName):
                 continue
             c.retrieve('reanalysis-era5-pressure-levels',

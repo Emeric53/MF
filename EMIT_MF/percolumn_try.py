@@ -38,7 +38,6 @@ def nc_to_tiff(nc_file_path, output_tif_path,  resolution=None):
         geometry=gpd.points_from_xy(lons.flatten(), lats.flatten()),
         crs=crs
     )
-
     # Determine raster extent and resolution
     xmin, ymin, xmax, ymax = gdf.total_bounds
     if resolution is None:
