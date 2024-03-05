@@ -15,7 +15,7 @@ def get_raster_array(filepath):
     return dataset
 
 def read_nc_to_array(filepath):
-    dataset = xarray.open_dataset(filepath)
+    dataset = xr.open_dataset(filepath)
     radiance = dataset['radiance'].values
 
     return radiance
