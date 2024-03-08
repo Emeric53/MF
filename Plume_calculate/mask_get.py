@@ -60,7 +60,7 @@ band.WriteArray(mask)
 dataset.SetGeoTransform(geo_transform)
 dataset.SetProjection(projection)
 
-#2: set threshold = 200 ppm·m for the methane enhancement image as background
+# 2: set threshold = 200 ppm·m for the methane enhancement image as background
 
 
 

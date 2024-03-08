@@ -5,7 +5,7 @@ c = cdsapi.Client()
 
 ### specify the index of selected region
 
-ia =0
+ia =1
 
 ## SKIP Certain Arae or Year
 downloadedAreas=['',]
@@ -31,7 +31,7 @@ Areas=  [
         ]
 
 ''' general setups '''
-Years=['2018','2019','2020','2021']
+Years=['2022','2023']
 Months=['01','02','03','04','05','06','07','08','09','10','11','12']
 Days=['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20',
              '21','22','23','24','25','26','27','28','29','30','31']
@@ -45,9 +45,9 @@ leapyears=['2012','2016','2020',]
 plevels=['50', '70', '100','125', '150', '175','200', '225', '250','300', '350', '400', '450', '500', '550',
         '600', '650', '700', '750', '775', '800', '825', '850', '875','900', '925', '950','975', '1000',]
 
-params=['relative_humidity', 'temperature']
+params=['10m_u_component_of_wind', '10m_v_component_of_wind',] #'relative_humidity', 'temperature']
 
-resolution= ['3', '2']
+resolution= ['0.1', '0.1']
 
 ''''''
 ## loops for downloading
@@ -56,19 +56,19 @@ UTC = utc_times
 for iy, year in enumerate(Years):
     for im, month in enumerate(Months):
         for id, day in enumerate(Days):
-            if month in ['04','06','09','11'] and day>='31':
+            if month in ['04', '06', '09', '11'] and day >= '31':
                 continue
-            if year in leapyears and month=='02' and day>='30':
+            if year in leapyears and month == '02' and day >= '30':
                 continue
-            if (year not in leapyears) and month=='02' and day>='29':
+            if (year not in leapyears) and month == '02' and day >= '29':
                 continue
-            ncFileName = "C:/Users/RS/Desktop/ERA5_profile/"+'ERA5_29ly'+'_'+year+month+day+'.nc'
+            ncFileName = "C:/Users/RS/Desktop/ERA5_profile/"+'ERA5_wind_'+year+month+day+'.nc'
             if os.path.exists(ncFileName):
                 continue
-            c.retrieve('reanalysis-era5-pressure-levels',
-                {   'product_type': 'reanalysis',
+            c.retrieve('reanalysis-era5-single-levels', #'reanalysis-era5-pressure-levels',
+                {'product_type': 'reanalysis',
                     'variable': params,
-                    'pressure_level': plevels,
+                    #'pressure_level': plevels,
                     'year': year,
                     'month': month,
                     'day':   day,
