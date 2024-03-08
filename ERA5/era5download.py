@@ -65,6 +65,7 @@ for iy, year in enumerate(Years):
             ncFileName = "C:/Users/RS/Desktop/ERA5_profile/"+'ERA5_wind_'+year+month+day+'.nc'
             if os.path.exists(ncFileName):
                 continue
+            print(ncFileName + " is downloading")
             c.retrieve('reanalysis-era5-single-levels', #'reanalysis-era5-pressure-levels',
                 {'product_type': 'reanalysis',
                     'variable': params,

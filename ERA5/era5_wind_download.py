@@ -23,6 +23,8 @@ plumes = {
         {"name": "plume3", "data": ['2023', "02", '04']}
     ]}
 
+
+
 # 通过循环批量下载1979年到2020年所有月份数据
 for index in range(len(point)):  # 遍历年
     for plumeindex in range(len(plumes[point[index]])):  # 遍历月
