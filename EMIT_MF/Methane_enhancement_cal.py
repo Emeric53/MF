@@ -208,7 +208,6 @@ def export_result_to_netcdf(ds_array, filepath, output_folder):
     out_xr.to_netcdf(output_path)
     print(f"Exported to {output_path}")
 
-
 # define the path of the unit absorption spectrum file and open it
 uas_filepath = 'EMIT_unit_absorption_spectrum.txt'
 
@@ -224,14 +223,13 @@ for i in output:
     outputfile.append(str(i.name))
 
 # the input includes the radiance file path, the unit absorption spectrum, the output path and the is_iterate flag
-
 for radiance_path in radiance_path_list:
     current_filename = str(radiance_path.name)
     if current_filename in outputfile:
         continue
     else:
         print(f"{current_filename} is now being processed")
-        try :
+        try:
             mf_process(radiance_path, uas_path=uas_filepath, output_path=root, is_iterate=True,is_albedo=True, is_filter=True)
             print(f"{current_filename} has been processed")
         except Exception as e:
