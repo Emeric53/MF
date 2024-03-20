@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 
 fulltrans = pd.read_csv("H:\\mathced-filter processing\\fulltrans.csv")
 
-
 df = fulltrans[['FREQ(CM-1)', 'CH4 TRANS']]
 # 将波数转换为wavelength（nm）
 df['wavelength（nm）'] = 1 / (df['FREQ(CM-1)']) * 10**7

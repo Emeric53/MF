@@ -31,7 +31,7 @@ Areas=  [
         ]
 
 ''' general setups '''
-Years=['2022','2023']
+Years=['2023']
 Months=['01','02','03','04','05','06','07','08','09','10','11','12']
 Days=['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20',
              '21','22','23','24','25','26','27','28','29','30','31']
@@ -62,7 +62,7 @@ for iy, year in enumerate(Years):
                 continue
             if (year not in leapyears) and month == '02' and day >= '29':
                 continue
-            ncFileName = "C:/Users/RS/Desktop/ERA5_profile/"+'ERA5_wind_'+year+month+day+'.nc'
+            ncFileName = "C:/Users/RS/Documents/Past_documents/ERA5_profile/"+'ERA5_wind_'+year+month+day+'.nc'
             if os.path.exists(ncFileName):
                 continue
             print(ncFileName + " is downloading")

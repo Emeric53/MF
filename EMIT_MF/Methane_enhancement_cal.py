@@ -112,7 +112,7 @@ def mf_process(filepath, uas_path, output_path, is_iterate=False, is_albedo=Fals
             # and then update the covariance matrix
             # and get the new methane enhancement result
             iter_data = column_data.copy()
-            for iter_num in range(2):
+            for iter_num in range(4):
                 for row_index in range(rows):
                     if not np.isnan(column_data[row_index, 0]):
                         iter_data[row_index, :] = column_data[row_index, :] - albedo[row_index, col_index] * target * alpha[row_index, col_index]
@@ -160,8 +160,8 @@ def export_result_to_netcdf(ds_array, filepath, output_folder):
     loc = xr.open_dataset(str(filepath), group='location')
 
     # set the nodata value for glt and stack the x and y arrays together
-    GLT_NODATA_VALUE = 0
-    glt_array = np.nan_to_num(np.stack([loc['glt_x'].data, loc['glt_y'].data], axis=-1), nan=GLT_NODATA_VALUE).astype(
+    glt_nodata_value = 0
+    glt_array = np.nan_to_num(np.stack([loc['glt_x'].data, loc['glt_y'].data], axis=-1), nan=glt_nodata_value).astype(
         int)
 
     # Build Output Dataset
@@ -171,7 +171,7 @@ def export_result_to_netcdf(ds_array, filepath, output_folder):
     out_ds = np.zeros((glt_array.shape[0], glt_array.shape[1]), dtype=np.float32) + fill_value
 
     # get an boolean array with the same shape as the glt array where the values are True if the glt array is not equal to the nodata value
-    valid_glt = np.all(glt_array != GLT_NODATA_VALUE, axis=-1)
+    valid_glt = np.all(glt_array != glt_nodata_value, axis=-1)
     # Adjust for One based Index
     # subtract 1 from the glt array where the valid_glt array is True
     glt_array[valid_glt] -= 1
@@ -216,7 +216,7 @@ radiance_folder = "I:\\EMIT\\rad"
 radiance_path_list = pl.Path(radiance_folder).glob('*.nc')
 
 # get the output file path and get the existing output file list to avoid the repeat process
-root = pl.Path("I:\\EMIT\\methane_result\\iterate_20")
+root = pl.Path("I:\\EMIT\\methane_result\\direct")
 output = root.glob('*.nc')
 outputfile = []
 for i in output:
@@ -230,7 +230,7 @@ for radiance_path in radiance_path_list:
     else:
         print(f"{current_filename} is now being processed")
         try:
-            mf_process(radiance_path, uas_path=uas_filepath, output_path=root, is_iterate=True,is_albedo=True, is_filter=True)
+            mf_process(radiance_path, uas_path=uas_filepath, output_path=root, is_iterate=True, is_albedo=True, is_filter=True)
             print(f"{current_filename} has been processed")
         except Exception as e:
             print(f"{current_filename} has an error")
