@@ -19,6 +19,7 @@ data_dict = {}
 for name in filename:
     data_dict[name] = []
 
+
 # 创建波长和radiance数组
 wavelengthlist = []
 radiance = []
