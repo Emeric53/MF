@@ -48,7 +48,7 @@ print(len(wavelengthlist))
 #构造用于线性回归的x轴数组
 x = [0, 1000, 2000, 4000, 8000, 16000, 32000, 64000]
 x = np.array(x)
-x = x/8000
+x = x
 
 slopelist = []
 # 对每个波段进行线性回归拟合
@@ -71,6 +71,6 @@ plt.grid(True)
 plt.show()
 
 #  将单位吸收光谱写入文件
-with open('New_EMIT_unit_absorption_spectrum.txt', 'w') as output:
+with open('New_ppm_m_EMIT_unit_absorption_spectrum.txt', 'w') as output:
     for index in (range(len(wavelengthlist))):
         output.write(str(wavelengthlist[index])+' '+str(slopelist[index])+'\n')

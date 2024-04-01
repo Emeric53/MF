@@ -2,11 +2,15 @@
 this code is used to process the radiance file by using the matching filter algorithm
 and the goal is to get the methane enhancement image
 """
+
+
 # the necessary lib to be imported
+import os
 import numpy as np
-from osgeo import gdal
 import pathlib as pl
 import xarray as xr
+import rasterio
+from osgeo import gdal, gdalconst
 
 
 # a function to get the raster array and return the dataset
@@ -16,6 +20,7 @@ def get_raster_array(filepath):
     return dataset
 
 
+# define a function to get the dataarray from the nc file
 def read_nc_to_array(filepath):
     dataset = xr.open_dataset(filepath)
     radiance = dataset['radiance'].values
@@ -24,15 +29,17 @@ def read_nc_to_array(filepath):
 
 
 # a function to open the unit absorption spectrum file and return the numpy array
-def open_unit_absorption_spectrum(filepath):
+def open_unit_absorption_spectrum(filepath, min, max):
     # open the unit absorption spectrum file and convert it a numpy array
     uas_list = []
     with open(filepath, 'r') as file:
         data = file.readlines()
         for band in data:
             split_i = band.split(' ')
-            band = split_i[1].rstrip('\n')
-            uas_list.append(float(band))
+            wvl = float(split_i[0])
+            if min <= wvl <= max:
+                band = split_i[1].rstrip('\n')
+                uas_list.append(float(band))
     out_put = np.array(uas_list)
     return out_put
 
@@ -40,7 +47,7 @@ def open_unit_absorption_spectrum(filepath):
 # define the main function to process the radiance file by using the matching filter algorithm
 def mf_process(filepath, uas_path, output_path, is_iterate=False, is_albedo=False, is_filter=False):
     # open the unit absorption spectrum file and convert it a numpy array
-    unit_absorption_spectrum = open_unit_absorption_spectrum(uas_path)
+    unit_absorption_spectrum = open_unit_absorption_spectrum(uas_path,2100,2500)
 
     # get the raster array from the radiance file
     radiance_data = np.array(read_nc_to_array(str(filepath)))
@@ -147,91 +154,54 @@ def mf_process(filepath, uas_path, output_path, is_iterate=False, is_albedo=Fals
     output_folder = str(output_path)
 
     # use the function to export the methane enhancement result to a nc file
-    export_result_to_netcdf(alpha, filepath, output_folder)
+    export_result_to_netcdf_or_tiff(alpha, filepath, output_folder)
 
         # maybe directly convert into tiff file
 
+
 # define the function to export the methane enhancement result to a nc file
-def export_result_to_netcdf(ds_array, filepath, output_folder):
-
-    # open the location dadaset
-    filename = str(filepath.name)
-    ds = xr.open_dataset(str(filepath), engine='h5netcdf')
-    loc = xr.open_dataset(str(filepath), group='location')
-
-    # set the nodata value for glt and stack the x and y arrays together
-    glt_nodata_value = 0
-    glt_array = np.nan_to_num(np.stack([loc['glt_x'].data, loc['glt_y'].data], axis=-1), nan=glt_nodata_value).astype(
-        int)
-
-    # Build Output Dataset
-    # the fill value is set to -9999
-    fill_value = -9999
-    # get an array with the same shape as the glt array and fill it with the fill value -9999
-    out_ds = np.zeros((glt_array.shape[0], glt_array.shape[1]), dtype=np.float32) + fill_value
-
-    # get an boolean array with the same shape as the glt array where the values are True if the glt array is not equal to the nodata value
-    valid_glt = np.all(glt_array != glt_nodata_value, axis=-1)
-    # Adjust for One based Index
-    # subtract 1 from the glt array where the valid_glt array is True
-    glt_array[valid_glt] -= 1
-
-    # Use indexing/broadcasting to populate array cells with 0 values
-    out_ds[valid_glt] = ds_array[glt_array[valid_glt, 1], glt_array[valid_glt, 0]]
-
-    # get the geotransform from the root dataset
-    GT = ds.geotransform
-
-    # Create Array for Lat and Lon and fill
-    dim_x = loc.glt_x.shape[1]
-    dim_y = loc.glt_x.shape[0]
-    lon = np.zeros(dim_x)
-    lat = np.zeros(dim_y)
-
-    # fill the lat and lon arrays with the geotransform values
-    for x in np.arange(dim_x):
-        x_geo = (GT[0] + 0.5 * GT[1]) + x * GT[1]
-        lon[x] = x_geo
-    for y in np.arange(dim_y):
-        y_geo = (GT[3] + 0.5 * GT[5]) + y * GT[5]
-        lat[y] = y_geo
-
-    ## ** upacks the existing dictionary from the wvl dataset.
-    coords = {'lat': (['lat'], lat), 'lon': (['lon'], lon)}
-    data_vars = {'methane_enhancement': (['lat', 'lon'], out_ds)}
-
-    out_xr = xr.Dataset(data_vars=data_vars, coords=coords, attrs=ds.attrs)
-    out_xr.coords['lat'].attrs = loc['lat'].attrs
-    out_xr.coords['lon'].attrs = loc['lon'].attrs
-    out_xr.rio.write_crs(ds.spatial_ref, inplace=True)  # Add CRS in easily recognizable format
-    output_path = output_folder + '/' + filename
-    out_xr.to_netcdf(output_path)
-    print(f"Exported to {output_path}")
-
+def export_result_to_netcdf_or_tiff(ds_array, filepath, output_folder):
+    ds_array
 # define the path of the unit absorption spectrum file and open it
-uas_filepath = 'EMIT_unit_absorption_spectrum.txt'
+uas_filepath = 'New_ppm_m_EMIT_unit_absorption_spectrum.txt'
 
-# define the path of the radiance folder and get the radiance file list with an img suffix
-radiance_folder = "I:\\EMIT\\rad"
-radiance_path_list = pl.Path(radiance_folder).glob('*.nc')
+# based on the code to decide process mode
+process_mode = 1
+if process_mode == 0:
+    # run in batch:
+    # define the path of the radiance folder and get the radiance file list with an img suffix
+    radiance_folder = "I:\\EMIT\\rad"
+    radiance_path_list = pl.Path(radiance_folder).glob('*.nc')
 
-# get the output file path and get the existing output file list to avoid the repeat process
-root = pl.Path("I:\\EMIT\\methane_result\\direct")
-output = root.glob('*.nc')
-outputfile = []
-for i in output:
-    outputfile.append(str(i.name))
+    # get the output file path and get the existing output file list to avoid the repeat process
+    root = pl.Path("I:\\EMIT\\methane_result\\Direct_result")
+    output = root.glob('*.nc')
+    outputfile = []
+    for i in output:
+        outputfile.append(str(i.name))
 
-# the input includes the radiance file path, the unit absorption spectrum, the output path and the is_iterate flag
-for radiance_path in radiance_path_list:
-    current_filename = str(radiance_path.name)
-    if current_filename in outputfile:
-        continue
-    else:
-        print(f"{current_filename} is now being processed")
-        try:
-            mf_process(radiance_path, uas_path=uas_filepath, output_path=root, is_iterate=True, is_albedo=True, is_filter=True)
-            print(f"{current_filename} has been processed")
-        except Exception as e:
-            print(f"{current_filename} has an error")
-            pass
+    # the input includes the radiance file path, the unit absorption spectrum, the output path and the is_iterate flag
+    for radiance_path in radiance_path_list:
+        current_filename = str(radiance_path.name)
+        if current_filename in outputfile:
+            continue
+        else:
+            print(f"{current_filename} is now being processed")
+            try:
+                mf_process(radiance_path, uas_path=uas_filepath, output_path=root, is_iterate=True, is_albedo=True, is_filter=True)
+                print(f"{current_filename} has been processed")
+            except Exception as e:
+                print(f"{current_filename} has an error")
+                pass
+elif process_mode == 1:
+    # run a single file
+    file_path = pl.Path(r"I:\EMIT\rad\EMIT_L1B_RAD_001_20230204T041009_2303503_016.nc")
+    single_result_output = pl.Path("I:\\EMIT\\methane_result\\plume_onebyone")
+    filename = os.path.basename(file_path)
+    print(f"{file_path} is now being processed.")
+    try:
+        mf_process(file_path, uas_path=uas_filepath, output_path=single_result_output, is_iterate=False, is_albedo=True, is_filter=True)
+        print(f"{filename} has been processed")
+    except Exception as e:
+        print(e)
+        print(f"{filename} has an error")
