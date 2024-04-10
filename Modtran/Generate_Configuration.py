@@ -47,11 +47,6 @@ for i in range(8):
             for line in lines[10:]:
                 temp_file.write(line)
 
-# 批量修改并生成 tp5 文件
-
-
-
-
 # 将生成的tp5文件路径写入 modtran 批量处理文件中
 # 指定目录路径
 directory = r"E:\\modtran5.2.6\\TEST\\EMIT_tp5"

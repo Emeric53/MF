@@ -3,12 +3,14 @@ from osgeo import gdal
 import math
 
 # set the filepath of methane plume image or the enhancement of methane
-#plume_filepath = r"J:\GF5B_AHSI_W104.1_N32.8_20220209_002267_L10000074984\result\bigplume.tif"
-plume_filepath = r"J:\GF5B_AHSI_W104.3_N32.3_20220209_002267_L10000074985\result\bigplume.tif"
+# plume_filepath = r"F:\ahsi\GF5B_AHSI_E112.4_N36.7_20211109_000918_L10000102086\result\plume.tif"
+# plume_filepath = r"F:\ahsi\GF5B_AHSI_W104.1_N32.8_20220209_002267_L10000074984\result\GF5B_AHSI_W104.1_N32.8_20220209_002267_L10000074984_plume.tif"
+plume_filepath = r"F:\ahsi\GF5B_AHSI_W104.3_N32.3_20220209_002267_L10000074985\result\plume"
 # read the array of the plume
 plume_data = gdal.Open(plume_filepath, gdal.GA_ReadOnly)
 plume_data = plume_data.ReadAsArray()
 
+# get the max value of the plume
 print(np.max(plume_data))
 # set the resolution of the pixel with the unit of meter
 pixel_resolution = 30

@@ -202,8 +202,35 @@ def mf_process(filepath, uas_path, output_path, is_iterate=False, is_albedo=Fals
     # use the function to export the methane enhancement result to a nc file
     export_array2tiff(alpha, filepath, output_folder)
 
+
+def get_subdirectories(folder_path):
+    """
+    获取指定文件夹中所有子文件夹的路径列表。
+
+    :param folder_path: 父文件夹的路径。
+    :return: 子文件夹路径列表。
+    """
+    subdirectories = [os.path.join(folder_path, name) for name in os.listdir(folder_path)
+                      if os.path.isdir(os.path.join(folder_path, name))]
+    filename = [name for name in os.listdir(folder_path)
+                      if os.path.isdir(os.path.join(folder_path, name))]
+    return subdirectories,filename
 if '__main__' == __name__:
-    mf_process("J:\GF5B_AHSI_W104.3_N32.3_20220209_002267_L10000074985\GF5B_AHSI_W104.3_N32.3_20220209_002267_L10000074985_SW.tif","unit_absorption_spectrum.txt", "J:\\GF5B_AHSI_W104.3_N32.3_20220209_002267_L10000074985\\result", True)
+
+    filefolder = "F:\\ahsi"
+    filelist,namelist = get_subdirectories(filefolder)
+    for index in range(len(filelist)):
+        filepath = os.path.join(filelist[index],namelist[index]+'_SW.tif')
+        outputfolder = os.path.join(filelist[index],'result')
+        outputfile = os.path.join(outputfolder,namelist[index]+'_SW.tif')
+        if os.path.exists(outputfile):
+            pass
+        else:
+            print(namelist[index] + ' is processing')
+            try:
+                 mf_process(filepath,"unit_absorption_spectrum.txt",outputfolder, False)
+            except Exception as e:
+                print("ERROR")
 
 #
 # # define the path of the unit absorption spectrum file and open it
