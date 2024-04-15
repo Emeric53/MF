@@ -1,4 +1,4 @@
-""" 本代码：利用匹配滤波算法计算甲烷增强的浓度，单位为 ppm*m 并转换为 单位为ppm的混合比增强 输出为tiff影像 """
+#based on the matching filter algorithm to process the AHSI data and get the methane enhancement result
 import pathlib as pl
 import numpy as np
 from osgeo import gdal
@@ -214,21 +214,23 @@ def get_subdirectories(folder_path):
                       if os.path.isdir(os.path.join(folder_path, name))]
     filename = [name for name in os.listdir(folder_path)
                       if os.path.isdir(os.path.join(folder_path, name))]
-    return subdirectories,filename
+    return subdirectories, filename
+
+
 if '__main__' == __name__:
 
     filefolder = "F:\\ahsi"
     filelist,namelist = get_subdirectories(filefolder)
     for index in range(len(filelist)):
-        filepath = os.path.join(filelist[index],namelist[index]+'_SW.tif')
-        outputfolder = os.path.join(filelist[index],'result')
-        outputfile = os.path.join(outputfolder,namelist[index]+'_SW.tif')
+        filepath = os.path.join(filelist[index], namelist[index]+'_SW.tif')
+        outputfolder = os.path.join(filelist[index], 'result')
+        outputfile = os.path.join(outputfolder, namelist[index]+'_SW.tif')
         if os.path.exists(outputfile):
             pass
         else:
             print(namelist[index] + ' is processing')
             try:
-                 mf_process(filepath,"unit_absorption_spectrum.txt",outputfolder, False)
+                mf_process(filepath,"unit_absorption_spectrum.txt", outputfolder, False)
             except Exception as e:
                 print("ERROR")
 
