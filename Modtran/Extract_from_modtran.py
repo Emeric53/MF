@@ -62,7 +62,8 @@ plt.grid(True)
 # 显示图表
 plt.show()
 
-    # with open('unit_absorption_spectrum.txt','w') as output:
-    #     for index in (range(len(wavelengthlist))):
-    #         output.write(str(wavelengthlist[index])+' '+str(slopelist[index])+'\n')
+# export the unit absorption spectrum result to a txt file
+with open('../AHSI_MF/unit_absorption_spectrum.txt', 'w') as output:
+    for index in (range(len(wavelengthlist))):
+        output.write(str(wavelengthlist[index])+' '+str(slopelist[index])+'\n')
 

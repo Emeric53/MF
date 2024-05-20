@@ -1,15 +1,12 @@
 import xarray as xr
 import numpy as np
-from osgeo import osr
-from osgeo import gdal, ogr
 import geopandas as gpd
 from shapely.geometry import Point
-import metpy.calc as mpcalc
 import pathlib as pl
 
-filefolder = pl.Path("C:\\Users\\RS\\Desktop\\ERA5\\new")
+filefolder = pl.Path("H:\\ERA5_Data")
 filepaths = filefolder.glob('*.nc')
-
+outputfolder = pl.Path("H:\\ERA5_shp")
 
 def calculate_wind_speed_dir(u, v):
     speed = np.sqrt(u ** 2 + v ** 2)
@@ -22,8 +19,8 @@ for filepath in filepaths:
     v10 = np.array(ds['v10'].values)
     # u10 = np.average(u10, axis=0)
     # v10 = np.average(v10, axis=0)
-    u10 = u10[1,:,:]
-    v10 = v10[1,:,:]
+    u10 = u10[1, :, :]
+    v10 = v10[1, :, :]
     lats = ds['latitude'].values
     lons = ds['longitude'].values
     wind_speed, wind_direction = calculate_wind_speed_dir(u10, v10)
@@ -35,6 +32,6 @@ for filepath in filepaths:
             point = Point(lon, lat)
             data.append([point, wind_speed[i, j], wind_direction[i,j]])
     gdf = gpd.GeoDataFrame(data, columns=['geometry', 'wind_speed', 'wind_direction'])
-    outputpath = filefolder / (filepath.name.rstrip('.nc') + '_4.shp')
+    outputpath = outputfolder / (filepath.name.rstrip('.nc') + '.shp')
     gdf.to_file(outputpath)
 

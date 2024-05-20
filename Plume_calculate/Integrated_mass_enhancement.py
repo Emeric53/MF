@@ -2,52 +2,29 @@ import numpy as np
 from osgeo import gdal
 import math
 
-# set the filepath of methane plume image or the enhancement of methane
-# plume_filepath = r"F:\ahsi\GF5B_AHSI_E112.4_N36.7_20211109_000918_L10000102086\result\plume.tif"
-# plume_filepath = r"F:\ahsi\GF5B_AHSI_W104.1_N32.8_20220209_002267_L10000074984\result\GF5B_AHSI_W104.1_N32.8_20220209_002267_L10000074984_plume.tif"
-plume_filepath = r"F:\ahsi\GF5B_AHSI_W104.3_N32.3_20220209_002267_L10000074985\result\plume"
-# read the array of the plume
-plume_data = gdal.Open(plume_filepath, gdal.GA_ReadOnly)
-plume_data = plume_data.ReadAsArray()
 
-# get the max value of the plume
-print(np.max(plume_data))
-# set the resolution of the pixel with the unit of meter
-pixel_resolution = 30
-pixel_area = pixel_resolution*pixel_resolution
+# 基于IME算法进行排放量的估算
+def emission_estimate(plume_array, pixel_resolution, windspeed_10m, slope, intercept, enhancement_unit='ppmm'):
+    # calculate the area and the length of the plume
+    nan_count = np.count_nonzero(~np.isnan(plume_array))
+    pixel_area = math.pow(pixel_resolution, 2)
+    plume_area = nan_count * pixel_area
+    plume_length = math.sqrt(plume_area)
+    # get the values of the plume
+    plume_values = [value for value in plume_array.flatten() if value != -9999]
+    if enhancement_unit == 'ppmm':
+        # convert the unit from  ppm*m to kg/ppm*m, then calculate the integrated mass enhancement
+        integrated_mass_enhancement = sum(plume_values) * 0.716 * 0.000001 * pixel_area
+    elif enhancement_unit == 'ppm':
+        # convert the unit from  ppm*m to kg/ppm by setting 8km as the scale of troposphere,
+        # then calculate the integrated mass enhancement
+        integrated_mass_enhancement = sum(plume_values) * 0.716 * 0.000001 * pixel_area * 8000
+    else:
+        print("The unit of the enhancement is not supported, please enter 'ppmm' or 'ppm'.")
+    # calculate the effective windspeed with the formula
+    effective_windspeed = slope * windspeed_10m + intercept
+    # calculate the emission rate of the plume in the unit of kg/h
+    emission_rate = (effective_windspeed * 3600 * integrated_mass_enhancement) / plume_length
+    return emission_rate
 
-# cal the area and the length of the plume
-nan_count = np.count_nonzero(~np.isnan(plume_data))
-plume_area = nan_count*pixel_area
-plume_L = math.sqrt(plume_area)
-
-# get all the values of the plume
-cols, rows = plume_data.shape
-values = []
-for col in range(cols):
-    for row in range(rows):
-        if plume_data[col][row] != -9999:
-            values.append(plume_data[col][row])
-
-# calculate the integrated mass enhancement
-IME = np.sum(values)
-print(IME)
-# 如何进行量纲的转换   ppm to kg/m2
-IME = IME*5.155*3600
-
-# get the windspeed at 10m m/s
-windspeed_10 = 1.57
-
-# set the parameters of the formula
-a = 0.38
-b = 0.41
-
-# calculate the efficitive windspeed with the formula
-efficitive_windspeed = a*windspeed_10 + b
-
-print(plume_L)
-# calculate the emission rate of the plume  kg/h
-q = efficitive_windspeed*IME/plume_L
-
-print(plume_filepath+" Emission rate: "+str(q))
 

@@ -1,7 +1,22 @@
+"""
+    该代码 读取 GF5B的光谱响应文件，然后计算高斯响应函数，最后将结果写入文件。
+
+    Returns:
+        _type_: _description_
+"""
 import numpy as np
 
-filepath = "H:\\重新下载数据\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222\\GF5B_AHSI_Spectralresponse_SWIR.raw"
-data = np.genfromtxt(filepath)
+# 读取 GF5B的光谱响应文件
+filepath = "AHSI_MF\GF5B_AHSI_Spectralresponse_SWIR.raw"
+response = []
+with open('AHSI_MF\GF5B_AHSI_RadCal_SWIR.raw', 'r') as radiation_calibration_file:
+    result = radiation_calibration_file.readlines()
+    for i in result:
+        wvl = i.split(',')[0]
+        res = i.split(',')[1].rstrip('\n')
+        response.append([wvl, res])
+print(response)
+
 
 def gaussian_response(wavelengths, center_wavelength, fwhm):
     """
@@ -22,11 +37,11 @@ def gaussian_response(wavelengths, center_wavelength, fwhm):
 
 
 with open('response.txt', 'w') as f:
-    f.write("Nanometer data for EMIT (assume Gaussian with maximum response of 1)\n")
+    f.write("Nanometer data for AHSI (assume Gaussian with maximum response of 1)\n")
 
 # for k in  range(len(fwhm)):
-for k in range(len(fwhm)):
-    center = wavelength[k]
+for k in range(len(response)):
+    center = response[k][0]
     thisfwhm = fwhm[k]
     waveband = np.linspace(center - 9, center + 9, 51)
     response = gaussian_response(waveband, center, thisfwhm)

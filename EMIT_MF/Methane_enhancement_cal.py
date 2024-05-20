@@ -1,16 +1,14 @@
 """
-this code is used to process the radiance file by using the matching filter algorithm
-and the goal is to get the methane enhancement image
+   this code is used to process the radiance file by using the matching filter algorithm
+   and the goal is to get the methane enhancement image
 """
-
 
 # the necessary lib to be imported
 import os
 import numpy as np
 import pathlib as pl
-import xarray as xr
-import rasterio
-from osgeo import gdal, gdalconst
+import array as xr
+from osgeo import gdal
 
 
 # a function to get the raster array and return the dataset
@@ -24,22 +22,15 @@ def get_raster_array(filepath):
 def read_nc_to_array(filepath):
     dataset = xr.open_dataset(filepath)
     radiance = dataset['radiance'].values
-
     return radiance
 
 
 # a function to open the unit absorption spectrum file and return the numpy array
 def open_unit_absorption_spectrum(filepath, min, max):
     # open the unit absorption spectrum file and convert it a numpy array
-    uas_list = []
     with open(filepath, 'r') as file:
         data = file.readlines()
-        for band in data:
-            split_i = band.split(' ')
-            wvl = float(split_i[0])
-            if min <= wvl <= max:
-                band = split_i[1].rstrip('\n')
-                uas_list.append(float(band))
+        uas_list = [float(line.split(" ")[1].rstrip('\n')) for line in data if min <= float(line.split(' ')[0]) <= max]
     out_put = np.array(uas_list)
     return out_put
 
@@ -162,12 +153,18 @@ def mf_process(filepath, uas_path, output_path, is_iterate=False, is_albedo=Fals
 # define the function to export the methane enhancement result to a nc file
 def export_result_to_netcdf_or_tiff(ds_array, filepath, output_folder):
     ds_array
+
+
 # define the path of the unit absorption spectrum file and open it
 uas_filepath = 'New_ppm_m_EMIT_unit_absorption_spectrum.txt'
+uas = open_unit_absorption_spectrum(uas_filepath, 1500, 2500)
+print(uas)
 
 # based on the code to decide process mode
-process_mode = 1
+process_mode = 2
+
 if process_mode == 0:
+    
     # run in batch:
     # define the path of the radiance folder and get the radiance file list with an img suffix
     radiance_folder = "I:\\EMIT\\rad"
@@ -193,9 +190,20 @@ if process_mode == 0:
             except Exception as e:
                 print(f"{current_filename} has an error")
                 pass
+            
+            
 elif process_mode == 1:
+    
     # run a single file
-    file_path = pl.Path(r"I:\EMIT\rad\EMIT_L1B_RAD_001_20230204T041009_2303503_016.nc")
+    file_path = pl.Path(r"I:\\EMIT\\rad\\EMIT_L1B_RAD_001_20230204T041009_2303503_016.nc")
+    # EMIT_L2B_CH4PLM_001_20220818T070105_000508.tif
+    # EMIT_L2B_CH4PLM_001_20230217T063221_000646.tif
+    # EMIT_L2B_CH4PLM_001_20230221T045604_000716.tif
+    # EMIT_L2B_CH4PLM_001_20230420T060148_000837.tif
+    # EMIT_L2B_CH4PLM_001_20230424T042444_000856.tif
+    # EMIT_L2B_CH4PLM_001_20230609T045106_000937.tif
+    # EMIT_L2B_CH4PLM_001_20230627T030822_000060.tif
+    # EMIT_L2B_CH4PLM_001_20230805T060827_000999.tif
     single_result_output = pl.Path("I:\\EMIT\\methane_result\\plume_onebyone")
     filename = os.path.basename(file_path)
     print(f"{file_path} is now being processed.")

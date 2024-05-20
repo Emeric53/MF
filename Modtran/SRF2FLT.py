@@ -41,6 +41,17 @@ for line in lines:
 wavelength = np.array(column1)
 fwhm = np.array(column2)
 
+# 读取 EMIT 卫星传感器的 光谱频段参数
+# with open(r"C:\Users\RS\Desktop\EMIT_wavelengths.csv",'r') as wvl:
+#     wvl = wvl.readline().rstrip('\n').split(',')
+#     wvl = np.array(wvl)
+#     wvl = wvl.astype(np.float32)
+#
+# with open(r"C:\Users\RS\Desktop\EMIT_fwhm.csv",'r') as fwhm:
+#     fwhm = fwhm.readline().rstrip('\n').split(',')
+#     fwhm = np.array(fwhm)
+#     fwhm = fwhm.astype(np.float32)
+
 # 设置输出路径
 output_filepath = ""
 with open(output_filepath, 'w') as f:

@@ -1,9 +1,11 @@
 # This script is used to move the result of the image processing to the corresponding folder and export the RGB image.
 
+import os
+import shutil
+
 # import the necessary packages
 from osgeo import gdal
-import shutil
-import os
+
 
 def image_coordinate(image_path):
     dataset = gdal.Open(image_path)
@@ -16,6 +18,8 @@ def image_coordinate(image_path):
         corrected_dataset = None
         dataset = None
         print("校正完成")
+
+
 def array_to_dataset(array, filepath):
     # 确定数组的行数、列数和波段数
     rows, cols = array.shape[1], array.shape[2]
@@ -30,12 +34,14 @@ def array_to_dataset(array, filepath):
     shutil.copy(rpb_file, target_rpb)
     # 将 NumPy 数组写入 GDAL 数据集
     for i in range(bands):
-        dataset.GetRasterBand(i+1).WriteArray(array[i, :, :])
+        dataset.GetRasterBand(i + 1).WriteArray(array[i, :, :])
     # 关闭 GDAL 数据集
     dataset = None
     image_coordinate(tmp_filepath)
 
     return None
+
+
 def get_subdirectories(folder_path):
     """
     获取指定文件夹中所有子文件夹的路径列表。
@@ -45,13 +51,14 @@ def get_subdirectories(folder_path):
     subdirectories = [os.path.join(folder_path, name) for name in os.listdir(folder_path)
                       if os.path.isdir(os.path.join(folder_path, name))]
     filename = [name for name in os.listdir(folder_path)
-                      if os.path.isdir(os.path.join(folder_path, name))]
+                if os.path.isdir(os.path.join(folder_path, name))]
     return subdirectories, filename
+
 
 folder_path = r"F:\ahsi"
 sub, filename = get_subdirectories(folder_path)
 total = zip(sub, filename)
-for folder,name in total:
+for folder, name in total:
     image_path = os.path.join(folder, name + '_VN.tif')
     dataset = gdal.Open(image_path)
     image = dataset.ReadAsArray()

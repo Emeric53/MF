@@ -126,7 +126,7 @@ def load_ch4_dataset():
     # if correcthash != filehash:
     #     raise RuntimeError('Dataset file is invalid.')
     # datafile = np.load(filename)
-    datafile = h5py.File('modtran_ch4_full/dataset_ch4_full.hdf5', 'r', rdcc_nbytes=4194304)
+    datafile = h5py.File("C:\\Users\\RS\\Downloads\\dataset_ch4_full.hdf5", 'r', rdcc_nbytes=4194304)
     return datafile['modtran_data'], datafile['modtran_param'], datafile['wave'], 'ch4'
 
 

@@ -47,7 +47,7 @@ p_levels = ['50', '70', '100', '125', '150', '175', '200', '225', '250', '300', 
 params = ['temperature', 'relative_humidity', 'ozone_mass_mixing_ration', 'specific_humidity', 'u_component_of_wind',
           'v_component_of_wind']  # 'relative_humidity', 'temperature'
 params2 = ['2m_temperature', 'surface_pressure', 'forecast_albedo']
-resolution = ['1', '1']
+resolution = ['0.25', '0.25']
 
 ''''''
 # loops for downloading
@@ -83,7 +83,7 @@ for iy, year in enumerate(Years):
             if os.path.exists(ncFileName):
                 continue
             print(ncFileName + " is downloading")
-            c.retrieve('reanalysis-era5-single-levels',  # 'reanalysis-era5-pressure-levels',
+            c.retrieve('reanalysis-era5-single-levels',  # 'reanalysis-era5-single-levels',
                        {'product_type': 'reanalysis',
                         'variable': params2,
                         'year': year,

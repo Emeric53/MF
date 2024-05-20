@@ -42,31 +42,31 @@ fig, axes = plt.subplots(3,2,figsize=(20, 20), dpi=200, sharex=True, sharey=True
 # set the plot in row 1 and column 1
 axes[0, 0].plot(wvl, orginal, 'b',label='Original',)
 axes[0, 0].plot(wvl, methane,'r', label='Methane')
-axes[0, 0].set_title('Methane Sensitivity')
+axes[0, 0].set_title('Methane Sensitivity_analysis')
 axes[0, 0].set_ylabel('Radiance')
 # set the plot in row 1 and column 2
 axes[0, 1].plot(wvl, orginal,'b', label='Original')
 axes[0, 1].plot(wvl, vapor,'r', label='Vapor')
-axes[0, 1].set_title('Vapor Sensitivity')
+axes[0, 1].set_title('Vapor Sensitivity_analysis')
 # set the plot in row 2 and column 1
 axes[1, 0].plot(wvl, orginal,'b', label='Original')
 axes[1, 0].plot(wvl, co2, 'r', label='Carbon Dioxide')
-axes[1, 0].set_title('Carbon Dioxide Sensitivity')
+axes[1, 0].set_title('Carbon Dioxide Sensitivity_analysis')
 # set the plot in row 2 and column 2
 axes[1, 1].plot(wvl, orginal, 'b', label='Original')
 axes[1, 1].plot(wvl, o3, 'r', label='O3')
-axes[1, 1].set_title('O3 Sensitivity')
+axes[1, 1].set_title('O3 Sensitivity_analysis')
 axes[1, 1].set_ylabel('Radiance')
 # set the plot in row 3 and column 1
 axes[2, 0].plot(wvl, orginal, 'b', label='Original')
 axes[2, 0].plot(wvl, n2o, 'r', label='N2O')
-axes[2, 0].set_title('N2O Sensitivity')
+axes[2, 0].set_title('N2O Sensitivity_analysis')
 axes[2, 0].set_ylabel('Radiance')
 axes[2, 0].set_xlabel('Wavelength (nm)')
 # set the plot in row 3 and column 2
 axes[2, 1].plot(wvl, orginal, 'b', label='Original')
 axes[2, 1].plot(wvl, albedo, 'r', label='Albedo')
-axes[2, 1].set_title('Albedo Sensitivity')
+axes[2, 1].set_title('Albedo Sensitivity_analysis')
 axes[2, 1].set_xlabel('Wavelength (nm)')
 # set the total plot
 plt.legend()
