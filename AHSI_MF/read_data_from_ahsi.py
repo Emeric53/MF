@@ -38,7 +38,7 @@ def get_raster_array(filepath):
 
 # operate the radiation calibration on the AHSI l1 data
 def rad_calibration(dataset):
-    with open("GF5B_AHSI_RadCal_SWIR.raw", "r") as file:
+    with open("../MF/GF5B_AHSI_RadCal_SWIR.raw", "r") as file:
         lines = file.readlines()
         index = 0
         for line in lines:

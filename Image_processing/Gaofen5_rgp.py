@@ -1,4 +1,3 @@
-# 用于对 GF5 进行 几何校正 基于同名文件 .RPB
 from osgeo import gdal
 
 image_path = r"J:\GF5B_AHSI_W104.1_N32.8_20220209_002267_L10000074984\result\GF5B_AHSI_W104.1_N32.8_20220209_002267_L10000074984_SW.tif"

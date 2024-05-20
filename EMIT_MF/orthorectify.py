@@ -68,5 +68,5 @@ out_xr = xr.Dataset(data_vars=data_vars, coords=coords, attrs=ds.attrs)
 out_xr['radiance'].attrs = ds[('radiance')].attrs
 out_xr.coords['lat'].attrs = loc['lat'].attrs
 out_xr.coords['lon'].attrs = loc['lon'].attrs
-out_xr.rio.write_crs(ds.spatial_ref, inplace=True) # Add CRS in easily recognizable format
+out_xr.rio.write_crs(ds.spatial_ref, inplace=True)# Add CRS in easily recognizable format
 out_xr.to_netcdf("C:\\Users\\RS\\Desktop\\export1.nc")

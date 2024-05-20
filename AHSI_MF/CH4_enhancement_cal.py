@@ -3,8 +3,7 @@ import numpy as np
 from osgeo import gdal
 import os
 from MF import matched_filter as mf
-from MF import AHSI_data as ad
-from MF import EMIT_data as ed
+
 
 # 读取 一个文件夹中的所有子文件夹路径 以及文件夹名称
 def get_subdirectories(folder_path):
@@ -160,7 +159,7 @@ def image_coordinate(image_path):
         print(f"An error occurred: {e}")
 
 if '__main__' == __name__:
-    # 设置 数据文件夹路径 以及 基于函数 获取文件夹和文件名称列表
+    # 设置 数据文件夹路径 以及 获取文件夹和文件名称列表
     filefolder1 = "F:\\AHSI_part1"
     filefolder2 = "F:\\AHSI_part2"
     filefolder3 = "F:\\AHSI_part3"
@@ -181,8 +180,8 @@ if '__main__' == __name__:
         else:
             print(namelist[index] + ' is processing')
             try:
-                mf.matched_filter(data_array= ,unit_absorption_spectrum= ,is_iterate=False, is_albedo=True, is_filter=True)
-                mf_process(filepath,"unit_absorption_spectrum.txt", outputfolder, False)
+                mf.matched_filter(data_array=_, unit_absorption_spectrum=_,is_iterate=False, is_albedo=True, is_filter=True)
+                #mf_process(filepath,"unit_absorption_spectrum.txt", outputfolder, False)
             except Exception as e:
                 print(e)
 

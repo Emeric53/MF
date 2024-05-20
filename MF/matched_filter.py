@@ -61,8 +61,8 @@ def matched_filter(data_array, unit_absorption_spectrum, is_iterate=False, is_al
 
         if is_albedo:
             albedo[valid_rows, col_index] = (
-                np.einsum('ij,j->i', current_column[valid_rows, :], background_spectrum) /
-                np.inner(background_spectrum, background_spectrum)
+                    np.einsum('ij,j->i', current_column[valid_rows, :], background_spectrum) /
+                    np.inner(background_spectrum, background_spectrum)
             )
 
         up = np.einsum('ij,jk,k->i', current_column[valid_rows, :] - background_spectrum,
@@ -77,9 +77,9 @@ def matched_filter(data_array, unit_absorption_spectrum, is_iterate=False, is_al
 
             for iter_num in range(4):
                 iter_data[valid_rows, :] = current_column[valid_rows, :] - (
-                    albedo[valid_rows, col_index][:, None] *
-                    target_spectrum *
-                    concentration[valid_rows, col_index][:, None]
+                        albedo[valid_rows, col_index][:, None] *
+                        target_spectrum *
+                        concentration[valid_rows, col_index][:, None]
                 )
 
                 if is_filter:
@@ -99,4 +99,3 @@ def matched_filter(data_array, unit_absorption_spectrum, is_iterate=False, is_al
                 concentration[valid_rows, col_index] = np.maximum(up / down, 0)
 
     return concentration
-

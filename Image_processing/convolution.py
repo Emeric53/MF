@@ -48,15 +48,9 @@ band_radiance = []
 # 计算每个波段的卷积积分
 for center, fwhm in zip(center_wavelengths, fwhms):
     response = gaussian_response(simulated_wavelengths, center, fwhm)
-    print(max(response))
     product = simulated_radiance * response
     integrated_radiance = trapz(product, simulated_wavelengths)
     band_radiance.append(integrated_radiance * 1000000)
 band_radiance = np.array(band_radiance)
 np.save("EMIT_band_radiance.npy", band_radiance)
 
-# 打印结果（optional）
-# for idx, radiance in enumerate(band_radiance):
-#     print(f"Band {idx+1} at {center_wavelengths[idx]} nm: Integrated Radiance = {radiance:.4e}")
-
-# 可视化（optional）

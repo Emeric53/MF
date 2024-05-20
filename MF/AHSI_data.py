@@ -30,7 +30,7 @@ def get_raster_array(filepath):
     return data_array
 
 
-# operate the radiation calibration on the AHSI l1 data
+# 对ahsi数据进行光谱校正
 def rad_calibration(dataset, cal_file="GF5B_AHSI_RadCal_SWIR.raw"):
     """
     Perform radiation calibration on the AHSI L1 data using calibration coefficients.
@@ -116,6 +116,7 @@ def export_array_to_tiff(result, filepath, output_folder):
         print(f"An error occurred: {e}")
 
 
+# 影像几何校正
 def image_coordinate(image_path):
     """
     Use RPC file to get the projection for the TIFF file and apply correction.
