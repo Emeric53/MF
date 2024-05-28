@@ -42,11 +42,10 @@ def mf_process(filepath, uas_path, output_path, is_iterate=False, is_albedo=Fals
 
     # get the raster array from the radiance file
     radiance_data = np.array(read_nc_to_array(str(filepath)))
-    radiance_window = radiance_data[:, :, radiance_data.shape[2]-len(unit_absorption_spectrum) -1 :-1]
+    radiance_window = radiance_data[:, :, radiance_data.shape[2]-len(unit_absorption_spectrum) -1: -1]
 
     name = pl.Path(filepath).name.rstrip(".nc")
     # pre-define the list to store the band data and the count of the non-nan value
-
 
     # get the number of bands, rows and columns of the image data
     rows, cols, bands = radiance_window.shape
@@ -147,7 +146,7 @@ def mf_process(filepath, uas_path, output_path, is_iterate=False, is_albedo=Fals
     # use the function to export the methane enhancement result to a nc file
     export_result_to_netcdf_or_tiff(alpha, filepath, output_folder)
 
-        # maybe directly convert into tiff file
+    # maybe directly convert into tiff file
 
 
 # define the function to export the methane enhancement result to a nc file
@@ -156,7 +155,7 @@ def export_result_to_netcdf_or_tiff(ds_array, filepath, output_folder):
 
 
 # define the path of the unit absorption spectrum file and open it
-uas_filepath = 'New_ppm_m_EMIT_unit_absorption_spectrum.txt'
+uas_filepath = '../../../MF/New_ppm_m_EMIT_unit_absorption_spectrum.txt'
 uas = open_unit_absorption_spectrum(uas_filepath, 1500, 2500)
 print(uas)
 

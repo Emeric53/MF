@@ -1,23 +1,66 @@
 # This script is used to move the result of the image processing to the corresponding folder and export the RGB image.
 
 import os
+import pathlib
 import shutil
 
 # import the necessary packages
 from osgeo import gdal
 
 
-def image_coordinate(image_path):
-    dataset = gdal.Open(image_path)
-    if dataset.GetMetadata('RPC') is None:
-        print("RPC file is not found.")
-    else:
-        corrected_image_path = image_path.replace('tmp.tif', 'rgb.tif')
-        warp_options = gdal.WarpOptions(rpc=True)
-        corrected_dataset = gdal.Warp(corrected_image_path, dataset, options=warp_options)
-        corrected_dataset = None
-        dataset = None
-        print("校正完成")
+def move_previous_result():
+    target_path = "I:\\AHSI_result"
+    filefolder_list = ["F:\\AHSI_part1", "H:\\AHSI_part2", "L:\\AHSI_part3", "I:\\AHSI_part4"]
+    for filefolder in filefolder_list:
+        filelist, namelist = get_subdirectories(filefolder)
+        # 遍历每一个数据文件夹 并进行处理
+        for index in range(len(filelist)):
+            # 获取 SW波段的文件路径
+            filepath = os.path.join(filelist[index] + '\\result\\' + namelist[index] + '_SW.tif')
+            rpbpath = os.path.join(filelist[index] + '\\result\\' + namelist[index] + '_SW.rpb')
+            if os.path.exists(filepath):
+                shutil.copy(filepath, target_path)
+            if os.path.exists(rpbpath):
+                shutil.copy(rpbpath, target_path)
+            print(filepath + ' is finished')
+
+
+def move_rpbs():
+    target_path = "I:\\AHSI_result"
+    filefolder_list = ["F:\\AHSI_part1", "H:\\AHSI_part2", "L:\\AHSI_part3", "I:\\AHSI_part4"]
+    for filefolder in filefolder_list:
+        filelist, namelist = get_subdirectories(filefolder)
+        # 遍历每一个数据文件夹 并进行处理
+        for index in range(len(filelist)):
+            # 获取 SW波段的文件路径
+            rpbpath = os.path.join(filelist[index], namelist[index] + '_SW.rpb')
+            if os.path.exists(rpbpath):
+                shutil.copy(rpbpath, target_path)
+            print(rpbpath + ' is finished')
+
+
+def image_coordinate(image_path: str):
+    """
+    Use RPC file to get the projection for the TIFF file and apply correction.
+
+    :param image_path: Path to the input TIFF file
+    """
+    try:
+        dataset = gdal.Open(image_path)
+        if dataset is None:
+            raise FileNotFoundError(f"Unable to open file: {image_path}")
+
+        if dataset.GetMetadata('RPC') is None:
+            print("RPC file is not found.")
+        else:
+            corrected_image_path = image_path.replace('SW.tif', "_Corrected.tif")
+            warp_options = gdal.WarpOptions(rpc=True)
+            corrected_dataset = gdal.Warp(str(corrected_image_path), dataset, options=warp_options)
+            corrected_dataset = None
+            dataset = None
+            print("Correction completed.")
+    except FileNotFoundError as fnf_error:
+        print(fnf_error)
 
 
 def array_to_dataset(array, filepath):
@@ -55,12 +98,16 @@ def get_subdirectories(folder_path):
     return subdirectories, filename
 
 
-folder_path = r"F:\ahsi"
-sub, filename = get_subdirectories(folder_path)
-total = zip(sub, filename)
-for folder, name in total:
-    image_path = os.path.join(folder, name + '_VN.tif')
-    dataset = gdal.Open(image_path)
-    image = dataset.ReadAsArray()
-    rgb = image[[59, 38, 20], :, :]
-    array_to_dataset(rgb, image_path)
+testfile = "I:\AHSI_result\GF5B_AHSI_W104.3_N32.3_20220209_002267_L10000074985_SW.tif"
+image_coordinate(testfile)
+
+# move_previous_result()
+# folder_path = r"F:\ahsi"
+# sub, filename = get_subdirectories(folder_path)
+# total = zip(sub, filename)
+# for folder, name in total:
+#     image_path = os.path.join(folder, name + '_VN.tif')
+#     dataset = gdal.Open(image_path)
+#     image = dataset.ReadAsArray()
+#     rgb = image[[59, 38, 20], :, :]
+#     array_to_dataset(rgb, image_path)

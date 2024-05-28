@@ -71,6 +71,6 @@ plt.grid(True)
 plt.show()
 
 #  将单位吸收光谱写入文件
-with open('New_ppm_m_EMIT_unit_absorption_spectrum.txt', 'w') as output:
+with open('../../../MF/New_ppm_m_EMIT_unit_absorption_spectrum.txt', 'w') as output:
     for index in (range(len(wavelengthlist))):
         output.write(str(wavelengthlist[index])+' '+str(slopelist[index])+'\n')

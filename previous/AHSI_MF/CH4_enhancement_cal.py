@@ -181,13 +181,13 @@ if '__main__' == __name__:
             print(namelist[index] + ' is processing')
             try:
                 mf.matched_filter(data_array=_, unit_absorption_spectrum=_,is_iterate=False, is_albedo=True, is_filter=True)
-                #mf_process(filepath,"unit_absorption_spectrum.txt", outputfolder, False)
+                #mf_process(filepath,"unit_absorption_spectrum_ahsi.txt", outputfolder, False)
             except Exception as e:
                 print(e)
 
 # # 批量计算
 # # define the path of the unit absorption spectrum file and open it
-# uas_filepath = 'unit_absorption_spectrum.txt'
+# uas_filepath = 'unit_absorption_spectrum_ahsi.txt'
 #
 # # based on the code to decide process mode
 # process_mode = 1
