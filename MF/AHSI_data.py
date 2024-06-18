@@ -31,7 +31,7 @@ def get_ahsi_array(filepath):
 
 
 # 对ahsi数据进行光谱校正
-def rad_calibration(dataset: np.array, cal_file="GF5B_AHSI_RadCal_SWIR.raw") -> np.array:
+def rad_calibration(dataset: np.array, cal_file="MF\GF5B_AHSI_RadCal_SWIR.raw") -> np.array:
     """
     Perform radiation calibration on the AHSI L1 data using calibration coefficients.
 

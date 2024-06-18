@@ -29,7 +29,7 @@ subplot(2,2,2); plot(nu2,coef_CH4); title('CH4 k(w): p=1 atm, T=296K')
 subplot(2,2,3); plot(nu3,coef_H2O); title('H2O k(w): p=1 atm, T=296K')
 show()
 
-nu,transm = hapi.transmittanceSpectrum(nu1,coef1,Environment={'l':1000.})
+nu,transm = hapi.transmittanceSpectrum(nu1,coef_CH4,Environment={'l':1000.})
 # print(coef_CH4)
 #
 # nu,trans = transmittanceSpectrum(nu2, coef_CH4)

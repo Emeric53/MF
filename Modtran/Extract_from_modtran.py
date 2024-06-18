@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 total_radiance = []
 original_radiance = []
 wavelengthlist = []
+
 # 打开原始文件进行读取
 # with open("C:\\Users\\RS\\Desktop\\AHSI\\AHSI_0.chn", 'r', encoding='utf-8') as file:
 #         lines = file.readlines()[5:]
