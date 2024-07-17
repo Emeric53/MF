@@ -2,7 +2,7 @@ import pathlib as pl
 import numpy as np
 from osgeo import gdal
 import os
-from MF import matched_filter as mf
+from MatchedFilter import matched_filter as mf
 
 
 # 读取 一个文件夹中的所有子文件夹路径 以及文件夹名称
