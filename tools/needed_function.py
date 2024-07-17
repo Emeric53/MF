@@ -51,7 +51,6 @@ def generate_transmittance_cube(plumes: np.ndarray,low_wavelength,high_wavelengt
         for j in range(plumes.shape[0]):
             current_concentration = plumes[i,j]
             _,transmittance_cube[:,i,j] = lookup_spectrum(current_concentration,loaded_wavelengths, loaded_lookup_table,low_wavelength,high_wavelength)
-            
     return transmittance_cube
 
 

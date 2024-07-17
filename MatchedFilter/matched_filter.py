@@ -482,7 +482,6 @@ def modifiedmatched_filter(data_array: np.array, base_unit_absorption_spectrum: 
                     
                     # 更新背景光谱和目标光谱
                     column_replacement = current_column[:, valid_rows] - (albedo[valid_rows, col_index] *concentration[valid_rows, col_index])[None,:]*target_spectrum[:,None]
-                    
                     # 计算更新后的 背景光谱 和 目标谱
                     background_spectrum = np.mean(column_replacement, axis=1)
                     target_spectrum = np.multiply(background_spectrum, base_unit_absorption_spectrum)
