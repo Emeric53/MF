@@ -498,6 +498,28 @@ def modifiedmatched_filter(data_array: np.array, base_unit_absorption_spectrum: 
                     up = (radiancediff_with_back.T @ covariance_inverse @ target_spectrum) - l1filter[valid_rows, col_index]
                     down = albedo[valid_rows, col_index] * (target_spectrum.T @ covariance_inverse @ target_spectrum)
                     concentration[valid_rows, col_index] = np.maximum(up / down, 0.0)
+                    high_concentration_mask = concentration[valid_rows, col_index] > 5000
+                    
+                    if np.any(high_concentration_mask):
+                        # 使用新的单位吸收谱重新计算目标光谱
+                        con = concentration[valid_rows, col_index].copy()
+                        con[low_concentration_mask] = 5000
+                        background_spectrum = np.nanmean(current_column[:,valid_rows] - albedo[valid_rows,col_index]*con*target_spectrum[:, np.newaxis], axis=1)
+                        target_spectrum = np.multiply(background_spectrum, interval_unit_absorption_spectrum)
+                        radiancediff_with_back = current_column[:, valid_rows] -albedo[valid_rows,col_index]*con*target_spectrum[:, np.newaxis] - background_spectrum[:, None]
+                        covariance = np.zeros((bands, bands))
+                        for i in range(valid_rows.shape[0]):
+                            covariance += np.outer(radiancediff_with_back[:, i], radiancediff_with_back[:, i])
+                        covariance = covariance/count_not_nan
+                        covariance_inverse = np.linalg.inv(covariance)
+                        # 基于新的目标光谱重新计算高浓度像素的甲烷浓度增强值
+                        up = (radiancediff_with_back[:, high_concentration_mask].T @ covariance_inverse @ target_spectrum)
+                        down = albedo[valid_rows, col_index][high_concentration_mask] * (target_spectrum.T @ covariance_inverse @ target_spectrum)
+                        # 直接更新原数组
+                        valid_indices = np.where(valid_rows)[0]
+                        high_concentration_indices = valid_indices[high_concentration_mask]
+                        concentration[high_concentration_indices, col_index] = up / down + 5000
+                    
 
     if not is_columnwise:
         count_not_nan = np.count_nonzero(~np.isnan(data_array[0, :, :]))
