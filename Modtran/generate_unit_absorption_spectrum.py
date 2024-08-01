@@ -1,57 +1,100 @@
 import numpy as np
 import math
 import matplotlib.pyplot as plt
-from tools.needed_function import get_simulated_satellite_radiance
+import sys
+sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod")
+from Tools.needed_function import get_simulated_satellite_radiance,read_simulated_radiance,load_satellite_channels,convolution
+from matplotlib import pyplot as plt
 
 
-# 处理流程分为三步
-# 1.读取模拟数据
-# 2.提取单位吸收光谱
-# 3.绘制单位吸收光谱并进行保存
+def generate_uas_thenconvolve(satellite,enhancement_range,lower_wavelength,upper_wavelength):
+    if satellite == "AHSI":
+        channels_path = "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\\AHSI_channels.npz"
+    elif satellite == "EMIT":
+        channels_path = "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\\EMIT_channels.npz"
+    else:
+        print("Satellite name error!")
+        return
+    basepath = f"C:\\PcModWin5\\Bin\\batch\\{satellite}_Methane_0_ppmm_tape7.txt"
+    bands,base_radiance = read_simulated_radiance(basepath)
+    total_radiance = []
+    for enhancement in enhancement_range:
+        filepath = f"C:\\PcModWin5\\Bin\\batch\\{satellite}_Methane_{int(enhancement)}_ppmm_tape7.txt"
+        _,radiance = read_simulated_radiance(filepath)
+        current_convoluved_radiance = radiance/base_radiance
+        total_radiance.append(current_convoluved_radiance)
+    total_radiance = np.transpose(np.log(np.array(total_radiance)))
+    slopelist = []
+    for data in total_radiance:
+        slope, intercept = np.polyfit(enhance_range, data, 1)
+        slopelist.append(slope)
+        # plt.scatter(enhance_range, data, label=f'Data {index + 1}')
+        # plt.plot(enhance_range, slope * enhance_range + intercept, label=f'Fit {index + 1}', linestyle='--')
+        # plt.legend()
+        # plt.xlabel('Enhance Range')
+        # plt.ylabel('Radiance')
+        # plt.title('Original Data and Linear Fit')
+        # plt.show()
+    used_central_wavelengths, used_fwhms = load_satellite_channels(channels_path, lower_wavelength, upper_wavelength)
+    convoluted_slope = convolution(used_central_wavelengths, used_fwhms, bands, slopelist)
+    with open(f"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\\AHSI_unit_absorption_spectrum_alt.txt", 'w') as output:
+        for index,data in enumerate(convoluted_slope):
+            output.write(str(used_central_wavelengths[index])+' '+str(convoluted_slope[index])+'\n')
+    return bands,slopelist
 
 
-# 1.从modtran模拟结果中提取单位吸收光谱
+def generate_uas(satellite,enhancement_range,lower_wavelength,upper_wavelength):
+    if satellite == "AHSI":
+        channels_path = "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\\AHSI_channels.npz"
+    elif satellite == "EMIT":
+        channels_path = "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\\EMIT_channels.npz"
+    else:
+        print("Satellite name error!")
+        return
+    total_radiance = []
+    basepath = f"C:\\PcModWin5\\Bin\\batch\\AHSI_Methane_0_ppmm_tape7.txt"
+    bands,base_radiance = get_simulated_satellite_radiance(basepath,channels_path,lower_wavelength,upper_wavelength)
+    for enhancement in enhancement_range:
+        filepath = f"C:\\PcModWin5\\Bin\\batch\\AHSI_Methane_{int(enhancement)}_ppmm_tape7.txt"
+        _,convoluved_radiance = get_simulated_satellite_radiance(filepath,channels_path,lower_wavelength,upper_wavelength)
+        current_convoluved_radiance = [i for i in convoluved_radiance]
+        current_convoluved_radiance = np.array(current_convoluved_radiance)/base_radiance
+        total_radiance.append(current_convoluved_radiance)
+    total_radiance = np.log(np.transpose(np.array(total_radiance)))
+    slopelist = []
+    for index,data in enumerate(total_radiance):
+        slope, intercept = np.polyfit(enhance_range, data, 1)
+        slopelist.append(slope)
+        # # 绘制原始数据点
+        # plt.scatter(enhance_range, data, label=f'Data {index + 1}')     
+        # # 绘制拟合直线
+        # plt.plot(enhance_range, slope * enhance_range + intercept, label=f'Fit {index + 1}', linestyle='--')
+        # plt.legend()
+        # plt.xlabel('Enhance Range')
+        # plt.ylabel('Radiance')
+        # plt.title('Original Data and Linear Fit')
+        # plt.show()
+    # export the unit absorption spectrum result to a txt file
+    with open(f"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\\{satellite}_unit_absorption_spectrum.txt", 'w') as output:
+        for index,data in enumerate(slopelist):
+            output.write(str(bands[index])+' '+str(data)+'\n')
+    return bands,slopelist
 
-ahsi_channels_path = "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\\AHSI_channels.npz"
-emit_channels_path = "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\\EMIT_channels.npz"
-lower_wavelength=1200
-upper_wavelength=2500
+
+
 
 # 读取
 interval_range = np.array([5000,7500,10000])
-enhance_range = np.arange(0,40.1,0.1)
-for interval in interval_range:
-    total_radiance = []
-    for i in enhance_range:
-        filepath = f"C:\\PcModWin5\\Bin\\batch\\AHSI_Methane_{int(i*500)}_ppmm_interval{int(interval)}_tape7.txt"
-        try:
-            bands,convoluved_radiance = get_simulated_satellite_radiance(filepath,ahsi_channels_path,lower_wavelength,upper_wavelength)
-            log_convoluved_radiance = [math.log(i,math.e) for i in convoluved_radiance]
-            total_radiance.append(log_convoluved_radiance)
-        except Exception as e:
-    # Code that runs for any other exception
-            print(f"An unexpected error occurred: {e}")
-            print(filepath)
-    # 将数据转为numpy数组,并转置,使得第一个维度为波长,第二个维度为模拟中的variable(例如methane,water vapor等)
-    total_radiance = np.transpose(np.array(total_radiance))
+enhance_range = np.arange(0,20500,500)
+bands,slopelist= generate_uas("EMIT",enhance_range,900,2500)
 
-    # 2.提取单位吸收光谱
-    slopelist = []
-    for index,data in enumerate(total_radiance):
-        # 使用polyfit函数进行线性回归拟合
-        slope,_ = np.polyfit(enhance_range*500,data,1)
-        slopelist.append(slope)
-    # export the unit absorption spectrum result to a txt file
-    with open(f"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\\AHSI_unit_absorption_spectrum_interval{interval}.txt", 'w') as output:
-        for index,data in enumerate(total_radiance):
-            output.write(str(bands[index])+' '+str(slopelist[index])+'\n')
+# 创建主图
+fig, ax1 = plt.subplots()
 
-# 3.绘制单位吸收光谱并进行保存
-plt.figure(figsize=(5, 3))
-plt.plot(bands, slopelist)
-plt.xlabel('Wavelength(nm)')
-plt.ylabel("Unit absorption spectrum(ppm*m-1)")
-# plt.ylim(-0.6, 0.05)
-plt.grid(True)
-# 显示图表
+ax1.plot(bands,slopelist, 'r', label='slope')
+ax1.set_xlabel('wvl')
+ax1.set_ylabel('slope', color='k')
+ax1.tick_params(axis='y', labelcolor='k')
+ax1.legend(loc='upper left')
 plt.show()
+

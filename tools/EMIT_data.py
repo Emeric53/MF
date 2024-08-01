@@ -3,7 +3,7 @@ import xarray as xr
 import os
 
 
-# 数据读取相关
+# 读取emit的数组
 def get_emit_array(file_path: str) -> np.array:
     """
     Reads a nc file and returns a NumPy array containing all the bands.
@@ -25,6 +25,7 @@ def get_emit_array(file_path: str) -> np.array:
     return radiance_array
 
 
+# 获取 emit的通道波长信息
 def get_emit_bands(file_path: str) -> np.array:
     """
     Reads a nc file and returns a NumPy array containing all the bands.
@@ -111,7 +112,7 @@ def export_array_to_nc(result: np.array, filepath: str, output_folder: str):
         out_xr.coords['lat'].attrs = loc['lat'].attrs
         out_xr.coords['lon'].attrs = loc['lon'].attrs
         out_xr.rio.write_crs(ds.spatial_ref, inplace=True)
-        output_path = output_folder + filename
+        output_path = os.path.join(output_folder,filename)
         out_xr.to_netcdf(output_path)
         print(f"File saved successfully at {output_path}")
     except FileNotFoundError as fnf_error:
@@ -125,9 +126,10 @@ def export_array_to_nc(result: np.array, filepath: str, output_folder: str):
 def main():
     filepath = "I:\\EMIT\\Radiation_data\\EMIT_L1B_RAD_001_20220810T064957_2222205_033.nc"
     emit_bands = get_emit_bands(filepath)
-    print(type(emit_bands))
-    np.save('emit_bands.npy', emit_bands)
+    print(emit_bands)
 
 
 if __name__ == '__main__':
-    main()
+    filepath = "I:\\EMIT\\radiance_data\\EMIT_L1B_RAD_001_20220810T064957_2222205_033.nc"
+    test = np.ones((1280, 1242))
+    export_array_to_nc(test,filepath,output_folder="I:\\EMIT\\runfor1\\")

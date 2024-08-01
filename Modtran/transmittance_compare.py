@@ -1,5 +1,5 @@
 from matplotlib import pyplot as plt
-from tools.needed_function import get_simulated_satellite_transmittance
+from Tools.needed_function import get_simulated_satellite_transmittance
 # Description: This script demonstrates how to convolve a spectrum with a Gaussian response function.
 
 transmittance_path1 = r"C:\\PcModWin5\\Usr\\Trans_1.fl7"

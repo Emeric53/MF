@@ -3,39 +3,27 @@ import numpy as np
 import pathlib as pl
 import os
 from matplotlib import pyplot as plt
+import sys 
+sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod")
+from Tools.needed_function import export_to_tiff,read_tiff
 
 # 数据读取相关
-def get_ahsi_array(filepath):
+def get_ahsi_array(filepath:str) -> np.array:
     """
     Reads a raster file and returns a NumPy array containing all the bands.
 
     :param filepath: the path of the raster file
     :return: a 3D NumPy array with shape (bands, height, width)
     """
-    try:
-        # 打开文件路径中的数据集
-        dataset = gdal.Open(filepath, gdal.GA_ReadOnly)
-        if dataset is None:
-            raise FileNotFoundError(f"Unable to open file: {filepath}")
-    except Exception as ex:
-        print(f"Error: {ex}")
-        return None
-
-    # 获取波段数
-    band_count = dataset.RasterCount
-
-    # 创建一个 NumPy 数组来存储所有波段的数据
-    data_array = np.array([dataset.GetRasterBand(i).ReadAsArray() for i in range(1, band_count + 1)], dtype=np.float32)
-
-    return data_array
+    return read_tiff(filepath)
 
 
 # 对ahsi数据进行光谱校正
-def rad_calibration(dataset: np.array, cal_file) -> np.array:
+def rad_calibration(dataset: np.array, cal_file: str ) -> np.array:
     """
     Perform radiation calibration on the AHSI L1 data using calibration coefficients.
 
-    :param cal_file:
+    :param cal_file: calibration filepath
     :param dataset: 3D NumPy array of shape (bands, height, width)
     :return: Calibrated dataset as a 3D NumPy array
     """
@@ -65,7 +53,48 @@ def rad_calibration(dataset: np.array, cal_file) -> np.array:
         return None
 
 
-# 影像几何校正
+# 获得光谱校正后的辐射亮度
+def get_calibrated_radiance(filepath) -> np.array:
+    """
+    Perform radiation calibration on the AHSI L1 data using calibration coefficients and return the output.
+
+    :param filepath: AHSI filepath
+    :return: Calibrated dataset as a 3D NumPy array
+    """
+    ahsi_array = get_ahsi_array(filepath)
+    calibration_filepath = os.path.dirname(filepath) + "//GF5B_AHSI_RadCal_SWIR.raw"
+    calibrated_radiance = rad_calibration(ahsi_array, calibration_filepath)
+    return calibrated_radiance
+    
+
+# 将反演结果的数组导出为GeoTIFF文件,并使用与输入文件相同的地理参考
+def export_array_to_tiff(result: np.array, filepath: str, output_folder: str):
+    """
+    Export a NumPy array to a GeoTIFF file with the same geo-referencing as the input file.
+
+    :param result: NumPy array to be exported
+    :param filepath: Path to the input GeoTIFF file
+    :param output_folder: Folder to save the output GeoTIFF file
+    """
+    try:
+        # get the file name
+        filename = pl.Path(filepath).name
+
+        # generate the whole output_folder_file path
+        output_path = os.path.join(output_folder, filename)
+
+        # Export with geo-referencing
+        export_to_tiff(result, output_path, reference_filepath=filepath)
+
+    except FileNotFoundError as fnf_error:
+        print(fnf_error)
+    except IOError as io_error:
+        print(io_error)
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+
+# 利用rpc文件对影像进行几何校正
 def image_coordinate(image_path: str):
     """
     Use RPC file to get the projection for the TIFF file and apply correction.
@@ -101,64 +130,10 @@ def image_coordinate(image_path: str):
         print(f"An error occurred: {e}")
 
 
-# 导出为tiff
-def export_array_to_tiff(result: np.array, filepath: str, output_folder: str):
-    """
-    Export a NumPy array to a GeoTIFF file with the same geo-referencing as the input file.
-
-    :param result: NumPy array to be exported
-    :param filepath: Path to the input GeoTIFF file
-    :param output_folder: Folder to save the output GeoTIFF file
-    """
-    try:
-        # get the file name
-        filename = pl.Path(filepath).name
-
-        # generate the whole output_folder_file path
-        output_path = os.path.join(output_folder, filename)
-
-        # generate a new dataset by gdal
-        dataset = gdal.Open(filepath, gdal.GA_ReadOnly)
-        if dataset is None:
-            raise FileNotFoundError(f"Unable to open file: {output_path}")
-
-        # 获取地理参考信息
-        geo_transform = dataset.GetGeoTransform()
-        projection = dataset.GetProjection()
-
-        # 创建输出文件
-        driver = gdal.GetDriverByName('GTiff')
-        out_dataset = driver.Create(output_path, result.shape[1], result.shape[0], 1, gdal.GDT_Float32)
-        if out_dataset is None:
-            raise IOError(f"Unable to create file: {output_path}")
-
-        # 设置空间参考信息
-        out_dataset.SetProjection(projection)
-        out_dataset.SetGeoTransform(geo_transform)
-
-        # 将 NumPy 数组写入输出文件
-        out_dataset.GetRasterBand(1).WriteArray(result)
-
-        # 关闭输出文件
-        out_dataset.FlushCache()
-
-        print(f"File saved successfully at {output_path}")
-
-    except FileNotFoundError as fnf_error:
-        print(fnf_error)
-    except IOError as io_error:
-        print(io_error)
-    except Exception as e:
-        print(f"An error occurred: {e}")
-
-
 def main():
     ahsi_file = ("F:\\GF5-02_李飞论文所用数据\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222\\"
                  "GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222_SW.tif")
-    radiance = get_ahsi_array(ahsi_file)
-    folder_path = os.path.dirname(ahsi_file)
-    cal_file = os.path.join(folder_path, "GF5B_AHSI_RadCal_SWIR.raw")
-    calibrated_radiance = rad_calibration(radiance,cal_file=cal_file)
+    calibrated_radiance = get_calibrated_radiance(ahsi_file)
     plt.plot(calibrated_radiance[:,0,0])
     plt.show()
 

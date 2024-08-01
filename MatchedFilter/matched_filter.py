@@ -4,64 +4,9 @@ import numpy as np
 import sys
 import os
 sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod")
-import tools.AHSI_data as ad
-import tools.EMIT_data as ed
-from tools.needed_function import read_tiff,export2tiff,get_tiff_files
-from tools import AHSI_data
-
-def open_unit_absorption_spectrum(filepath: str) -> np.array:
-    """
-    Open the unit absorption spectrum file, filter it by the spectrum range, and convert it to a NumPy array.
-
-    :param filepath: Path to the unit absorption spectrum file
-    :return: NumPy array of the filtered unit absorption spectrum
-    """
-    try:
-        with open(filepath, 'r') as file:
-            # 读取文件并过滤波长范围
-            uas_list = [
-                [float(line.split(' ')[0]), float(line.split(' ')[1].strip())]
-                for line in file.readlines()
-            ]
-
-        # 转换为 NumPy 数组并返回
-        return np.array(uas_list)
-
-    except FileNotFoundError:
-        print(f"Error: The file '{filepath}' was not found.")
-        return None
-    except Exception as e:
-        print(f"Error: {e}")
-        return None
-
-
-def filter_and_slice(arr: np.array, min_val: float, max_val: float):
-    """
-    根据最大最小值阈值，筛选数组并获取原数组的切片。
-
-    :param arr: 输入的 NumPy 数组
-    :param min_val: 最小值阈值
-    :param max_val: 最大值阈值
-    :return: 筛选后的数组和原数组中的切片
-    """
-    # 筛选条件
-    condition = (arr >= min_val) & (arr <= max_val)
-
-    # 筛选后的数组
-    filtered_arr = arr[condition]
-
-    # 计算切片范围
-    nonzero_indices = np.nonzero(condition)[0]
-    if len(nonzero_indices) == 0:
-        return filtered_arr, None  # 如果没有满足条件的元素，返回None
-
-    slice_start = nonzero_indices[0]
-    slice_end = nonzero_indices[-1] + 1  # +1 因为 slice 的结束索引是开区间
-
-    # 创建切片
-    arr_slice = slice(slice_start, slice_end)
-
-    return filtered_arr, arr_slice
+import Tools.AHSI_data as ad
+import Tools.EMIT_data as ed
+from Tools.needed_function import read_tiff,export_to_tiff,get_tiff_files,open_unit_absorption_spectrum,filter_and_slice,slice_data
 
 
 def matched_filter(data_array: np.array, unit_absorption_spectrum: np.array, is_iterate=False,
@@ -123,7 +68,7 @@ def matched_filter(data_array: np.array, unit_absorption_spectrum: np.array, is_
             if is_iterate:
                 l1filter = np.zeros((rows, cols))
                 epsilon = np.finfo(np.float32).tiny
-                for iter_num in range(2):
+                for iter_num in range(5):
                     if is_filter:
                         l1filter[valid_rows, col_index] = 1 / (concentration[valid_rows, col_index] + epsilon)
                     else:
@@ -175,7 +120,6 @@ def matched_filter(data_array: np.array, unit_absorption_spectrum: np.array, is_
         if is_iterate:
             l1filter = np.zeros((rows, cols))
             epsilon = np.finfo(np.float32).tiny
-            iter_data = data_array.copy()
             
             for iter_num in range(5):
                 if is_filter:
@@ -186,7 +130,7 @@ def matched_filter(data_array: np.array, unit_absorption_spectrum: np.array, is_
                 background_spectrum = np.nanmean(iter_data, axis=(1,2))
                 target_spectrum = np.multiply(background_spectrum, unit_absorption_spectrum)
                 
-                radiancediff_with_back = iter_data - background_spectrum[:, None, None]
+                radiancediff_with_back = data_array - background_spectrum[:, None, None]
                 covariance = np.zeros((bands, bands))
                 for i in range(rows):
                     for j in range(cols):
@@ -201,12 +145,10 @@ def matched_filter(data_array: np.array, unit_absorption_spectrum: np.array, is_
                         concentration[row_index, col_index] = np.maximum(up / down, 0)
 
     # 返回 甲烷浓度增强的结果
-    return concentration
+    return concentration,albedo
 
 
-
-
-def modifiedmatched_filter(data_array: np.array, base_unit_absorption_spectrum: np.array, interval_unit_absorption_spectrum: np.array, is_iterate=False,
+def modifiedmatched_filter(data_array: np.array, stacked_unit_absorption_spectrum: np.array, is_iterate=False,
                    is_albedo=False, is_filter=False, is_columnwise=False) -> np.array:
     """
     Calculate the methane enhancement of the image data based on the original matched filter
@@ -238,7 +180,7 @@ def modifiedmatched_filter(data_array: np.array, base_unit_absorption_spectrum: 
 
             # 对于非空列，取均值作为背景光谱，再乘以单位吸收光谱，得到目标光谱
             background_spectrum = np.nanmean(current_column, axis=1)
-            target_spectrum = background_spectrum*base_unit_absorption_spectrum
+            target_spectrum = background_spectrum*stacked_unit_absorption_spectrum[0,:]
 
             # 对当前目标光谱的每一行进行去均值操作，得到调整后的光谱，以此为基础计算协方差矩阵，并获得其逆矩阵
             radiancediff_with_back = current_column[:, valid_rows] - background_spectrum[:, None]
@@ -262,13 +204,13 @@ def modifiedmatched_filter(data_array: np.array, base_unit_absorption_spectrum: 
             concentration[valid_rows, col_index] = up / down
             
             high_concentration_mask = concentration[valid_rows, col_index] > 5000
-            low_concentration_mask = concentration[valid_rows, col_index] > 5000
+            low_concentration_mask = concentration[valid_rows, col_index] <= 5000
             if np.any(high_concentration_mask):
                 # 使用新的单位吸收谱重新计算目标光谱
                 con = concentration[valid_rows, col_index].copy()
-                con[low_concentration_mask] = 5000
+                con[low_concentration_mask] = 2500
                 background_spectrum = np.nanmean(current_column[:,valid_rows] - albedo[valid_rows,col_index]*con*target_spectrum[:, np.newaxis], axis=1)
-                target_spectrum = np.multiply(background_spectrum, interval_unit_absorption_spectrum)
+                target_spectrum = np.multiply(background_spectrum, stacked_unit_absorption_spectrum[1,:])
                 radiancediff_with_back = current_column[:, valid_rows] -albedo[valid_rows,col_index]*con*target_spectrum[:, np.newaxis] - background_spectrum[:, None]
                 covariance = np.zeros((bands, bands))
                 for i in range(valid_rows.shape[0]):
@@ -281,13 +223,13 @@ def modifiedmatched_filter(data_array: np.array, base_unit_absorption_spectrum: 
                 # 直接更新原数组
                 valid_indices = np.where(valid_rows)[0]
                 high_concentration_indices = valid_indices[high_concentration_mask]
-                concentration[high_concentration_indices, col_index] = up / down + 5000
+                concentration[high_concentration_indices, col_index] = up / down + 2500
             
             # 判断是否进行迭代，若是，则进行如下迭代计算
             if is_iterate:
                 l1filter = np.zeros((rows, cols))
                 epsilon = np.finfo(np.float32).tiny
-                for iter_num in range(2):
+                for iter_num in range(5):
                     if is_filter:
                         l1filter[valid_rows, col_index] = 1 / (concentration[valid_rows, col_index] + epsilon)
                     else:
@@ -297,8 +239,7 @@ def modifiedmatched_filter(data_array: np.array, base_unit_absorption_spectrum: 
                     column_replacement = current_column[:, valid_rows] - (albedo[valid_rows, col_index] *concentration[valid_rows, col_index])[None,:]*target_spectrum[:,None]
                     # 计算更新后的 背景光谱 和 目标谱
                     background_spectrum = np.mean(column_replacement, axis=1)
-                    target_spectrum = np.multiply(background_spectrum, base_unit_absorption_spectrum)
-                    
+                    target_spectrum = np.multiply(background_spectrum, stacked_unit_absorption_spectrum[0,:])
                     # 基于新的目标谱 和 背景光谱 计算协方差矩阵
                     radiancediff_with_back = current_column[:, valid_rows] -(albedo[valid_rows, col_index] *concentration[valid_rows, col_index])[None,:]*target_spectrum[:,None] - background_spectrum[:,None]
                     covariance = np.zeros((bands, bands))
@@ -318,7 +259,7 @@ def modifiedmatched_filter(data_array: np.array, base_unit_absorption_spectrum: 
                         con = concentration[valid_rows, col_index].copy()
                         con[low_concentration_mask] = 5000
                         background_spectrum = np.nanmean(current_column[:,valid_rows] - albedo[valid_rows,col_index]*con*target_spectrum[:, np.newaxis], axis=1)
-                        target_spectrum = np.multiply(background_spectrum, interval_unit_absorption_spectrum)
+                        target_spectrum = np.multiply(background_spectrum, stacked_unit_absorption_spectrum)
                         radiancediff_with_back = current_column[:, valid_rows] -albedo[valid_rows,col_index]*con*target_spectrum[:, np.newaxis] - background_spectrum[:, None]
                         covariance = np.zeros((bands, bands))
                         for i in range(valid_rows.shape[0]):
@@ -331,13 +272,12 @@ def modifiedmatched_filter(data_array: np.array, base_unit_absorption_spectrum: 
                         # 直接更新原数组
                         valid_indices = np.where(valid_rows)[0]
                         high_concentration_indices = valid_indices[high_concentration_mask]
-                        concentration[high_concentration_indices, col_index] = up / down + 5000
-                    
+                        concentration[high_concentration_indices, col_index] = up / down + 2500
 
     if not is_columnwise:
         count_not_nan = np.count_nonzero(~np.isnan(data_array[0, :, :]))
         background_spectrum = np.nanmean(data_array, axis=(1,2))
-        target_spectrum = np.multiply(background_spectrum, base_unit_absorption_spectrum)   
+        target_spectrum = np.multiply(background_spectrum, stacked_unit_absorption_spectrum[0,:])   
         radiancediff_with_back = data_array - background_spectrum[:, None, None]
         covariance = np.zeros((bands, bands))
         for i in range(rows):
@@ -369,9 +309,8 @@ def modifiedmatched_filter(data_array: np.array, base_unit_absorption_spectrum: 
                     target_spectrum[:, None, None] * albedo[None, :, :] * concentration[None, :, :]
                 )
                 background_spectrum = np.nanmean(iter_data, axis=(1,2))
-                target_spectrum = np.multiply(background_spectrum, base_unit_absorption_spectrum)
-                
-                radiancediff_with_back = iter_data - background_spectrum[:, None, None]
+                target_spectrum = np.multiply(background_spectrum, stacked_unit_absorption_spectrum[0,:])
+                radiancediff_with_back = data_array - background_spectrum[:, None, None]
                 covariance = np.zeros((bands, bands))
                 for i in range(rows):
                     for j in range(cols):
@@ -393,14 +332,15 @@ def get_subfolders(directory):
     subfolders = [os.path.join(directory, folder) for folder in os.listdir(directory) if os.path.isdir(os.path.join(directory, folder))]
     return subfolders
 
+
 if __name__ == '__main__':
-    filefolder = get_subfolders(r"F:\GF5-02_李飞论文所用数据")
-    outputfolder = r"F:\GF5-02_李飞论文所用数据\result"
+    filefolder = get_subfolders(r"F:\\GF5-02_李飞论文所用数据")
+    outputfolder = r"F:\\GF5-02_李飞论文所用数据\\result"
     for folder in filefolder:
         folder_name = os.path.basename(folder)
         tif_file_name = f"{folder_name}_sw.tif"
         outputfile = os.path.join(outputfolder, tif_file_name)
-        AHSI_data.image_coordinate(outputfile)
+        ad.image_coordinate(outputfile)
         tif_file_path = os.path.join(folder, tif_file_name)
         cal_file = os.path.join(folder, "GF5B_AHSI_RadCal_SWIR.raw")
         # 检查文件是否存在

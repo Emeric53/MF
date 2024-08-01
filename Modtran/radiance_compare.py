@@ -1,9 +1,10 @@
-from scipy.integrate import trapz
-from matplotlib import pyplot as plt
 import sys
 sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod")
-from tools import needed_function
- 
+from scipy.integrate import trapz
+from matplotlib import pyplot as plt
+import numpy as np
+from Tools import needed_function as nf
+from Tools import AHSI_data as ad
 
 # Description: compare the simulated radiance with different methane concentration profiles 
 
@@ -13,9 +14,22 @@ radiance_path2 = "C:\\PcModWin5\\Usr\\EMIT_methane.fl7"
 radiance_path3 = "C:\\PcModWin5\\Usr\\EMIT_methane_2.fl7"
 emit_channel_path = "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\\EMIT_channels.npz"
 
-bands,convoluved_radiance1 = needed_function.get_simulated_satellite_radiance(radiance_path1,emit_channel_path,1500,2500)
-_,convoluved_radiance2 = needed_function.get_simulated_satellite_radiance(radiance_path2,emit_channel_path,1500,2500)
-_,convoluved_radiance3 = needed_function.get_simulated_satellite_radiance(radiance_path3,emit_channel_path,1500,2500)
+bands,convoluved_radiance1 = nf.get_simulated_satellite_radiance(radiance_path1,emit_channel_path,1500,2500)
+_,convoluved_radiance2 = nf.get_simulated_satellite_radiance(radiance_path2,emit_channel_path,1500,2500)
+_,convoluved_radiance3 = nf.get_simulated_satellite_radiance(radiance_path3,emit_channel_path,1500,2500)
+
+
+# real radiance
+filepath = r"F:\\GF5-02_李飞论文所用数据\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222_SW.tif"
+dataset = ad.get_ahsi_array(filepath)
+calibration = ad.rad_calibration(dataset)
+mean = np.mean(calibration, axis=(1,2))
+
+plt.subplot(2, 1, 2)
+plt.plot(mean)
+plt.show()
+
+
 
 # names = ["wetland","urban","grassland","desert"]
 # convoluved_radiance_list = []
@@ -45,6 +59,4 @@ ln4 = ax1_left.plot(bands,portation2, label='Methane extinction', color='blue', 
 ax1_left.set_ylabel('Extinction ratio')
 ax1_left.set_ylim(0.85, 1)  # 根据实际透射率数据范围调整
 ax1_left.set_xlim(1000, 2500)
-
 plt.show()
-

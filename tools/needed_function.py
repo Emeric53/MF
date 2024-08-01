@@ -2,72 +2,206 @@ import os
 import numpy as np
 from scipy.integrate import trapz
 from scipy.interpolate import interp1d
-import pickle
 from osgeo import gdal
-
 
 # 构建查找表
 def build_lookup_table(enhancements):
+    """build a lookup table for transmittance 
+
+    Args:
+        enhancements (np.array): the enhancement range of methane 
+
+    Returns:
+        np.array, dictionary: return the wavelengths and lookup_table 
+    """
     lookup_table = {}
     basepath = r"C:\\PcModWin5\\Bin\\batch\\AHSI_trans_0_ppmm_tape7.txt"
     ahsi_channels_path = "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\\AHSI_channels.npz"
-    wavelengths, base_spectrum = get_simulated_satellite_transmittance(basepath,ahsi_channels_path,1000,2500)
+    wavelengths, base_spectrum = get_simulated_satellite_transmittance(basepath, ahsi_channels_path, 900, 2500)
     for enhancement in enhancements:
         filepath = f"C:\\PcModWin5\\Bin\\batch\\AHSI_trans_{int(enhancement)}_ppmm_tape7.txt"
-        _, spectrum = get_simulated_satellite_transmittance(filepath,ahsi_channels_path,1000,2500)    
-        lookup_table[enhancement] = np.array(spectrum)/np.array(base_spectrum)
+        _, spectrum = get_simulated_satellite_transmittance(filepath, ahsi_channels_path, 900, 2500)    
+        lookup_table[enhancement] = np.array(spectrum) / np.array(base_spectrum)
     return wavelengths, lookup_table
 
 
-# 保存查找表到文件 b means binary mode
+# 保存查找表
 def save_lookup_table(filename, wavelengths, lookup_table):
-    with open(filename, 'wb') as f:
-        pickle.dump((wavelengths, lookup_table), f)
+    """
+    Save the lookup table to a file.
 
+    :param filename: Path to the file where the lookup table will be saved
+    :param wavelengths: List or array of wavelengths
+    :param lookup_table: Dictionary where keys are enhancements and values are spectra
+    """
+    np.savez(filename, wavelengths=wavelengths, enhancements=list(lookup_table.keys()), spectra=list(lookup_table.values()))
 
 # 从文件加载查找表
 def load_lookup_table(filename):
-    with open(filename, 'rb') as f:
-        wavelengths, lookup_table = pickle.load(f)
+    """
+    Load the lookup table from a file.
+
+    :param filename: Path to the file from which the lookup table will be loaded
+    :return: Tuple of wavelengths and the lookup table (dictionary of enhancements and spectra)
+    """
+    data = np.load(filename)
+    wavelengths = data['wavelengths']
+    enhancements = data['enhancements']
+    spectra = data['spectra']
+    lookup_table = {enhancement: spectrum for enhancement, spectrum in zip(enhancements, spectra)}
     return wavelengths, lookup_table
 
 
 # 插值查找
-def lookup_spectrum(enhancement, wavelengths,lookup_table,low_wavelength,high_wavelength):
-    condition = np.where((np.array(wavelengths)>= low_wavelength) & (np.array(wavelengths) <= high_wavelength))
+def lookup_spectrum(enhancement, wavelengths, lookup_table, low_wavelength, high_wavelength):
+    """
+    Interpolate the spectrum for a given enhancement within a specified wavelength range.
+
+    :param enhancement: The enhancement value for which the spectrum is needed
+    :param wavelengths: List or array of wavelengths
+    :param lookup_table: Dictionary where keys are enhancements and values are spectra
+    :param low_wavelength: Lower bound of the wavelength range
+    :param high_wavelength: Upper bound of the wavelength range
+    :return: Tuple of filtered wavelengths and interpolated spectrum
+    """
+    condition = np.where((np.array(wavelengths) >= low_wavelength) & (np.array(wavelengths) <= high_wavelength))
     enhancements = np.array(list(lookup_table.keys()))
-    spectra = np.array(list(lookup_table.values()))[:,condition]
+    spectra = np.array(list(lookup_table.values()))[:, condition]
     interpolator = interp1d(enhancements, spectra, axis=0, fill_value="extrapolate")
-    result = np.clip(interpolator(enhancement)[0,:],0,1)
-    return np.array(wavelengths)[condition],result
+    result = np.clip(interpolator(enhancement)[0, :], 0, 1)
+    return np.array(wavelengths)[condition], result
 
 
-# 加载查找表
-def generate_transmittance_cube(plumes: np.ndarray,low_wavelength,high_wavelength): 
-    loaded_wavelengths, loaded_lookup_table = load_lookup_table("C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\\AHSI_trans_lookup_table_new.pkl")
-    used_wavelengths,_ = lookup_spectrum(0, loaded_wavelengths,loaded_lookup_table, low_wavelength,high_wavelength)
-    transmittance_cube = np.ones((len(used_wavelengths),plumes.shape[0], plumes.shape[1]))
+# 基于查找表和浓度值获得透射率cube
+def generate_transmittance_cube(plumes: np.ndarray, low_wavelength, high_wavelength):
+    """
+    Generate a transmittance cube based on the lookup table and concentration values.
+
+    :param plumes: 2D NumPy array of concentration values
+    :param low_wavelength: Lower bound of the wavelength range
+    :param high_wavelength: Upper bound of the wavelength range
+    :return: 3D NumPy array of transmittance values
+    """
+    loaded_wavelengths, loaded_lookup_table = load_lookup_table("C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\\AHSI_trans_lookup_table.npz")
+    used_wavelengths, _ = lookup_spectrum(0, loaded_wavelengths, loaded_lookup_table, low_wavelength, high_wavelength)
+    transmittance_cube = np.ones((len(used_wavelengths), plumes.shape[0], plumes.shape[1]))
     for i in range(plumes.shape[1]):
         for j in range(plumes.shape[0]):
-            current_concentration = plumes[i,j]
-            _,transmittance_cube[:,i,j] = lookup_spectrum(current_concentration,loaded_wavelengths, loaded_lookup_table,low_wavelength,high_wavelength)
+            current_concentration = plumes[i, j]
+            _, transmittance_cube[:, i, j] = lookup_spectrum(current_concentration, loaded_wavelengths, loaded_lookup_table, low_wavelength, high_wavelength)
     return transmittance_cube
 
+
+# 基于单位吸收谱和浓度值获得透射率cube
+def generate_transmittance_cube_fromuas(plumes: np.ndarray, low_wavelength, high_wavelength):
+    """
+    Generate a transmittance cube based on unit absorption spectrum and concentration values.
+
+    :param plumes: 2D NumPy array of concentration values
+    :param low_wavelength: Lower bound of the wavelength range
+    :param high_wavelength: Upper bound of the wavelength range
+    :return: 3D NumPy array of transmittance values
+    """
+    uas = open_unit_absorption_spectrum(r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\\AHSI_unit_absorption_spectrum.txt")
+    _, used_uas = slice_data(np.ones_like(uas)[:, :, np.newaxis], uas, low_wavelength, high_wavelength)
+    transmittance_cube = np.ones((len(used_uas), plumes.shape[0], plumes.shape[1]))
+    for i in range(plumes.shape[1]):
+        for j in range(plumes.shape[0]):
+            current_concentration = plumes[i, j]
+            transmittance_cube[:, i, j] = 1 + used_uas * current_concentration
+    return np.clip(transmittance_cube, 0, 1)
+
+
+
+# 打开单位吸收谱文件
+def open_unit_absorption_spectrum(filepath: str) -> np.array:
+    """
+    Open the unit absorption spectrum file, and convert it to a NumPy array.
+
+    :param filepath: Path to the unit absorption spectrum file
+    :return: NumPy array of the unit absorption spectrum
+    """
+    try:
+        with open(filepath, 'r') as file:
+            uas_list = [
+                [float(line.split(' ')[0]), float(line.split(' ')[1].strip())]
+                for line in file.readlines()
+            ]
+        return np.array(uas_list)
+    except FileNotFoundError:
+        print(f"Error: The file '{filepath}' was not found.")
+        return None
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
+
+
+# 从 NumPy 数组中筛选数据并获取切片
+def filter_and_slice(arr: np.array, min_val: float, max_val: float):
+    """
+    根据最大最小值阈值，筛选数组并获取原数组的切片。
+
+    :param arr: 输入的 NumPy 数组
+    :param min_val: 最小值阈值
+    :param max_val: 最大值阈值
+    :return: 筛选后的数组和原数组中的切片
+    """
+    condition = (arr >= min_val) & (arr <= max_val)
+    filtered_arr = arr[condition]
+    nonzero_indices = np.nonzero(condition)[0]
+    if len(nonzero_indices) == 0:
+        return filtered_arr, None
+    slice_start = nonzero_indices[0]
+    slice_end = nonzero_indices[-1] + 1
+    arr_slice = slice(slice_start, slice_end)
+    return filtered_arr, arr_slice
+
+
+# 基于波长最低值和最高值对radiance和uas进行切片
+def slice_data(radiance_array, uas, low, high):
+    """
+    Slice radiance and unit absorption spectrum data based on the lowest and highest wavelengths.
+
+    :param radiance_array: NumPy array of radiance data
+    :param uas: NumPy array of unit absorption spectrum data
+    :param low: Lower bound of the wavelength range
+    :param high: Upper bound of the wavelength range
+    :return: Tuple of sliced radiance array and used unit absorption spectrum
+    """
+    _, slice_uas = filter_and_slice(uas[:, 0], low, high)
+    used_radiance = radiance_array[slice_uas, :, :]
+    used_uas = uas[slice_uas, 1]
+    return used_radiance, used_uas
 
 
 # define the gaussian response function
 def gaussian_response(wavelengths, center, fwhm):
+    """
+    Define the Gaussian response function.
+
+    :param wavelengths: List or array of wavelengths
+    :param center: Center wavelength of the Gaussian function
+    :param fwhm: Full width at half maximum of the Gaussian function
+    :return: Gaussian response function values
+    """
     sigma = fwhm / (2 * np.sqrt(2 * np.log(2)))
     normalization_factor = sigma * np.sqrt(2 * np.pi)
-    response = np.exp(-0.5 * ((wavelengths - center) / sigma) ** 2)/normalization_factor
+    response = np.exp(-0.5 * ((wavelengths - center) / sigma) ** 2) / normalization_factor
     return response
 
 
 # define the convolution function
-def convolution(center_wavelengths:list, fwhms:list, raw_wvls:list, raw_data:list):
-        # 存储每个波段的卷积结果
+def convolution(center_wavelengths: list, fwhms: list, raw_wvls: list, raw_data: list):
+    """
+    Perform convolution of raw data with Gaussian response functions for specific center wavelengths and FWHMs.
+
+    :param center_wavelengths: List of center wavelengths
+    :param fwhms: List of full widths at half maximum (FWHMs)
+    :param raw_wvls: List of raw wavelengths
+    :param raw_data: List or array of raw data
+    :return: Convoluted data as a NumPy array
+    """
     convoluved_data = []
-    # 计算每个波段的卷积积分
     for center, fwhm in zip(center_wavelengths, fwhms):
         response = gaussian_response(raw_wvls, center, fwhm)
         product = raw_data * response
@@ -75,9 +209,16 @@ def convolution(center_wavelengths:list, fwhms:list, raw_wvls:list, raw_data:lis
         convoluved_data.append(integrated_data)
     return np.array(convoluved_data)
 
+# 选择在1000-2500nm范围内的EMIT的中心波长和FWHMs
+def load_satellite_channels(path, lower_wavelength=1000, upper_wavelength=2500):
+    """
+    Load the central wavelengths and FWHMs of EMIT channels within the range of 1000-2500 nm.
 
-# select the central wavelengths and FWHMs of EMIT that are within the range of 1000-2500 nm
-def load_satellite_channels(path,lower_wavelength=1000,upper_wavelength=2500):
+    :param path: Path to the file containing the satellite channel data
+    :param lower_wavelength: Lower bound of the wavelength range (default is 1000)
+    :param upper_wavelength: Upper bound of the wavelength range (default is 2500)
+    :return: Tuple of central wavelengths and FWHMs within the specified range
+    """
     channels = np.load(path)
     central_wavelengths = channels['central_wvls']
     fwhms = channels['fwhms']
@@ -87,10 +228,14 @@ def load_satellite_channels(path,lower_wavelength=1000,upper_wavelength=2500):
     return used_central_wavelengths, used_fwhms
 
 
-# read the simulated radiance data from the modtran output file and return the wavelength and radiance
+# 从modtran输出文件读取模拟辐射数据，返回波长和辐射
 def read_simulated_radiance(path):
-    # radiance 卷积
-    # 读取 modtran 模拟的光谱数据
+    """
+    Read the simulated radiance data from the modtran output file and return the wavelengths and radiance.
+
+    :param path: Path to the modtran output file
+    :return: Tuple of wavelengths and radiance
+    """
     with open(path, 'r') as f:
         radiance_wvl = []
         radiance_list = []
@@ -98,14 +243,21 @@ def read_simulated_radiance(path):
         for data in datalines:
             wvl = 10000000 / float(data[0:9])
             radiance_wvl.append(wvl)
-            radiance = float(data[97:108])*10e7/wvl**2*10000
+            radiance = float(data[97:108]) * 10e7 / wvl ** 2 * 10000
             radiance_list.append(radiance)
     simulated_rad_wavelengths = np.array(radiance_wvl)[::-1]
     simulated_radiance = np.array(radiance_list)[::-1]
     return simulated_rad_wavelengths, simulated_radiance
 
 
+# 从modtran输出文件读取模拟透射数据，返回波长和透射率
 def read_simulated_transmittance(path):
+    """
+    Read the simulated transmittance data from the modtran output file and return the wavelengths and transmittance.
+
+    :param path: Path to the modtran output file
+    :return: Tuple of wavelengths and transmittance
+    """
     with open(path, 'r') as f:
         trans_wvl = []
         trans_list = []
@@ -120,52 +272,76 @@ def read_simulated_transmittance(path):
     return simulated_trans_wavelengths, simulated_trans
 
 
-def get_simulated_satellite_radiance(radiance_path,channels_path,lower_wavelength,upper_wavelength):
-    # read the simulated radiance data
-   # read the simulated radiance data
+# 获取模拟辐射数据并与特定的卫星响应函数进行卷积
+def get_simulated_satellite_radiance(radiance_path, channels_path, lower_wavelength, upper_wavelength):
+    """
+    Get the simulated radiance data and convolve it with the specific satellite response functions.
+
+    :param radiance_path: Path to the simulated radiance data file
+    :param channels_path: Path to the file containing the satellite channel data
+    :param lower_wavelength: Lower bound of the wavelength range
+    :param upper_wavelength: Upper bound of the wavelength range
+    :return: Tuple of central wavelengths and convolved radiance
+    """
     simulated_rad_wavelengths, simulated_radiance = read_simulated_radiance(radiance_path)
-    # load the central wavelengths and FWHMs of the EMIT channels
-    central_wavelengths,fwhms = load_satellite_channels(channels_path,lower_wavelength=lower_wavelength,upper_wavelength=upper_wavelength)
-    # convolve the simulated radiance with the EMIT response functions
-    convoluved_radiance = convolution(central_wavelengths,fwhms,simulated_rad_wavelengths,simulated_radiance)
-    return central_wavelengths,convoluved_radiance
+    central_wavelengths, fwhms = load_satellite_channels(channels_path, lower_wavelength=lower_wavelength, upper_wavelength=upper_wavelength)
+    convoluved_radiance = convolution(central_wavelengths, fwhms, simulated_rad_wavelengths, simulated_radiance)
+    return central_wavelengths, convoluved_radiance
 
 
-def get_simulated_satellite_transmittance(radiance_path,channels_path,lower_wavelength,upper_wavelength):
-    # read the simulated radiance data
-   # read the simulated radiance data
+# 获取模拟透射数据并与特定的卫星响应函数进行卷积
+def get_simulated_satellite_transmittance(radiance_path, channels_path, lower_wavelength, upper_wavelength):
+    """
+    Get the simulated transmittance data and convolve it with the specific satellite response functions.
+
+    :param radiance_path: Path to the simulated transmittance data file
+    :param channels_path: Path to the file containing the satellite channel data
+    :param lower_wavelength: Lower bound of the wavelength range
+    :param upper_wavelength: Upper bound of the wavelength range
+    :return: Tuple of central wavelengths and convolved transmittance
+    """
     simulated_rad_wavelengths, simulated_transmittance = read_simulated_transmittance(radiance_path)
-    # load the central wavelengths and FWHMs of the EMIT channels
-    central_wavelengths,fwhms = load_satellite_channels(channels_path,lower_wavelength=lower_wavelength,upper_wavelength=upper_wavelength)
-    # convolve the simulated radiance with the EMIT response functions
-    convoluved_transmittance = convolution(central_wavelengths,fwhms,simulated_rad_wavelengths,simulated_transmittance)
-    return central_wavelengths,convoluved_transmittance
+    central_wavelengths, fwhms = load_satellite_channels(channels_path, lower_wavelength=lower_wavelength, upper_wavelength=upper_wavelength)
+    convoluved_transmittance = convolution(central_wavelengths, fwhms, simulated_rad_wavelengths, simulated_transmittance)
+    return central_wavelengths, convoluved_transmittance
 
 
-def read_tiff(path):
-    # 打开 TIFF 文件
-    dataset = gdal.Open(path, gdal.GA_ReadOnly)
-    if not dataset:
-        print("文件无法打开！")
-    else:
-        # 获取波段数量
-        bands = dataset.RasterCount
-        # 初始化一个用于存储所有波段数据的数组
-        img_data = []
-        # 循环读取每个波段
-        for b in range(bands):
-            band = dataset.GetRasterBand(b + 1)  # 波段计数从1开始
-            data = band.ReadAsArray()  # 将波段数据读取为 NumPy 数组
-            img_data.append(data)
-        # 将列表转换为 NumPy 数组
-        img_array = np.array(img_data)
+# read the tiff file and export the data as a numpy array
+def read_tiff(filepath):
+    """
+    Reads a TIFF file and returns a NumPy array containing all the bands.
+
+    :param filepath: Path to the TIFF file
+    :return: a 3D NumPy array with shape (bands, height, width)
+    """
+    try:
+        # 打开文件路径中的数据集
+        dataset = gdal.Open(filepath, gdal.GA_ReadOnly)
+        if dataset is None:
+            raise FileNotFoundError(f"Unable to open file: {filepath}")
+    except Exception as ex:
+        print(f"Error: {ex}")
+        return None
+
+    # 获取波段数
+    band_count = dataset.RasterCount
+    # 创建一个 NumPy 数组来存储所有波段的数据
+    data_array = np.array([dataset.GetRasterBand(i + 1).ReadAsArray() for i in range(band_count)], dtype=np.float32)
 
     # 关闭数据集
     dataset = None
-    return img_array
+
+    return data_array
 
 
+# get all the tiff files in the directory, return the full path and the file name
 def get_tiff_files(directory):
+    """
+    get all the tiff files in the directory, return the full path and the file name
+
+    :directory: the directory path
+    :return: two list containing the full path and the file name
+    """
     tiff_paths = []  # 用于存储完整路径
     tiff_names = []  # 用于存储文件名
 
@@ -179,8 +355,16 @@ def get_tiff_files(directory):
 
     return tiff_paths, tiff_names   
 
-  
-def export2tiff(dataarray,outputpath):
+
+# Export a NumPy array to a TIFF file, optionally with the same geo-referencing as a reference file.
+def export_to_tiff(dataarray, outputpath, reference_filepath=None):
+    """
+    Export a NumPy array to a TIFF file, optionally with the same geo-referencing as a reference file.
+
+    :param dataarray: NumPy array to be exported
+    :param outputpath: Path to save the output TIFF file
+    :param reference_filepath: (Optional) Path to a reference GeoTIFF file for geo-referencing information
+    """
     if len(dataarray.shape) == 2:
         rows, cols = dataarray.shape
         bands = 1
@@ -189,13 +373,22 @@ def export2tiff(dataarray,outputpath):
     else:
         raise ValueError("dataarray should be a 2D or 3D numpy array")
 
-    # 创建 TIFF 文件
     driver = gdal.GetDriverByName('GTiff')
     dataset = driver.Create(outputpath, cols, rows, bands, gdal.GDT_Float64)
 
-    # 如果需要，设置地理变换和投影
-    # dataset.SetGeoTransform(geo_transform)  # 设置地理变换（六参数模型）
-    # dataset.SetProjection(projection)       # 设置投影
+    geo_transform = None
+    projection = None
+
+    if reference_filepath:
+        ref_dataset = gdal.Open(reference_filepath, gdal.GA_ReadOnly)
+        if ref_dataset:
+            geo_transform = ref_dataset.GetGeoTransform()
+            projection = ref_dataset.GetProjection()
+
+    if geo_transform:
+        dataset.SetGeoTransform(geo_transform)
+    if projection:
+        dataset.SetProjection(projection)
 
     if bands == 1:
         band = dataset.GetRasterBand(1)
@@ -207,20 +400,68 @@ def export2tiff(dataarray,outputpath):
             band.WriteArray(dataarray[i, :, :])
             band.FlushCache()
 
-    # 清理
     dataset.FlushCache()
-
-    # 关闭文件
     dataset = None
 
+    print(f"File saved successfully at {outputpath}")
+
+
 if __name__ == "__main__":
+    path = "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\\AHSI_trans_lookup_table"
     low_wavelength = 1500
     high_wavelength = 2500
-    loaded_wavelengths, loaded_lookup_table = load_lookup_table("C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\\AHSI_trans_lookup_table_new.pkl")
-    used_wavelengths,_ = lookup_spectrum(0, loaded_wavelengths,loaded_lookup_table, low_wavelength,high_wavelength)
-    _,lookup = lookup_spectrum(50000,loaded_wavelengths, loaded_lookup_table,low_wavelength,high_wavelength)
-    cube = generate_transmittance_cube(np.array([[61500],]),low_wavelength,high_wavelength)
-    import matplotlib.pyplot as plt
-    plt.plot(used_wavelengths,cube[:,0,0])
+    cube = generate_transmittance_cube_fromuas(np.array([[10000],]),900,2500)
+    
+    filepath = f"C:\\PcModWin5\\Bin\\batch\\AHSI_Methane_0_ppmm_tape7.txt"
+    channels_path=r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\\AHSI_channels.npz"
+    bands,radiance = get_simulated_satellite_radiance(filepath,channels_path,900,2500)
+    filepath2 = f"C:\\PcModWin5\\Bin\\batch\\AHSI_Methane_10000_ppmm_tape7.txt"
+    channels_path=r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\\AHSI_channels.npz"
+    bands,radiance2 = get_simulated_satellite_radiance(filepath2,channels_path,900,2500) 
+    
+    channels,orginal_radiance = read_simulated_radiance(filepath)
+    channels,orginal_radiance2 = read_simulated_radiance(filepath2)
+    # from matplotlib import pyplot as plt
+    # # plt.plot(channels,orginal_radiance)
+    # # plt.plot(channels,orginal_radiance2)
+    # # plt.plot(bands,radiance)
+    # # plt.plot(bands,radiance2)
+    # plt.plot(channels,orginal_radiance2/orginal_radiance)
+    # plt.plot(bands,radiance2/radiance)
+    # plt.ylim(0,1.01)
+    # plt.show()
+    
+    
+    
+    
+    
+    
+    from matplotlib import pyplot as plt
+    # 计算比值
+    ratio = radiance * cube[:, 0, 0] / radiance2
+
+    # 创建主图
+    fig, ax1 = plt.subplots()
+
+    # 绘制 radiance*cube[:,0,0] 和 radiance2
+    ax1.plot(bands,cube[:, 0, 0], 'r', label='Radiance * Cube')
+    ax1.plot(bands,radiance2/radiance, 'b', label='Radiance2')
+    ax1.set_xlabel('Index')
+    ax1.set_ylabel('Radiance', color='k')
+    ax1.tick_params(axis='y', labelcolor='k')
+    # 添加图例
+    ax1.legend(loc='upper left')
+
+    # 创建第二个 y 轴
+    ax2 = ax1.twinx()
+    ax2.plot(bands,ratio, 'g', label='Ratio')
+    ax2.set_ylabel('Ratio', color='g')
+    ax2.tick_params(axis='y', labelcolor='g')
+    ax2.set_ylim(0, 1)
+
+    # 添加图例
+    ax2.legend(loc='upper right')
+
+    plt.title('Radiance and Ratio Plot')
     plt.show()
     

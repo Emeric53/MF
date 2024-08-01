@@ -3,10 +3,10 @@ import os
 import pathlib as pl
 import sys
 sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod")
+import Tools.needed_function as nf
+import Tools.AHSI_data as ad
+import Tools.EMIT_data as ed
 import MatchedFilter.matched_filter as mf
-import tools.AHSI_data as ad
-import tools.EMIT_data as ed
-
 
 
 def get_subdirectories(folder_path: str):
@@ -50,17 +50,17 @@ def runinbatch(satellite_name: str):
                     # define the path of the unit absorption spectrum file
                     ahsi_unit_absorption_spectrum_path = r"C:\Users\RS\VSCode\matchedfiltermethod\Needed_data\AHSI_unit_absorption_spectrum.txt"
                     # 读取单位吸收谱,按照波长范围进行筛选
-                    all_uas = mf.open_unit_absorption_spectrum(ahsi_unit_absorption_spectrum_path)
-                    _, used_slice = mf.filter_and_slice(all_uas[:, 0], 2100, 2500)
+                    all_uas = nf.open_unit_absorption_spectrum(ahsi_unit_absorption_spectrum_path)
+                    _, used_slice = nf.filter_and_slice(all_uas[:, 0], 2100, 2500)
                     used_uas = all_uas[used_slice, 1]
                     
                     # 获取目标反演窗口范围内的 单位吸收谱和辐亮度数据
                     ahsi_channels_path = r"C:\Users\RS\VSCode\matchedfiltermethod\Needed_data\AHSI_channels.npz"
                     ahsibands = np.load(ahsi_channels_path)['central_wvls']
-                    _, ahsi_slice = mf.filter_and_slice(ahsibands, 2100, 2500)
+                    _, ahsi_slice = nf.filter_and_slice(ahsibands, 2100, 2500)
                     used_radiance = radiance[ahsi_slice, :, :]
                     # call the main function to process the radiance file
-                    enhancement = mf.matched_filter(used_radiance, used_uas, is_iterate=True,
+                    enhancement = nf.matched_filter(used_radiance, used_uas, is_iterate=True,
                                                     is_albedo=True, is_filter=True,is_columnwise=True)
                     ad.export_array_to_tiff(enhancement, filepath, outputfolder)
 
@@ -77,15 +77,15 @@ def runinbatch(satellite_name: str):
             outputfile.append(str(i.name))
         emit_uas = 'C:\\Users\\RS\\PycharmProjects\\Methane\\unit_absorption_spectrum_emit.txt'
         # 读取单位吸收谱
-        all_uas = mf.open_unit_absorption_spectrum(emit_uas)
+        all_uas = nf.open_unit_absorption_spectrum(emit_uas)
         # 按照波长范围进行筛选，并获得slice 用于 uas 的筛选
-        _, uas_slice = mf.filter_and_slice(all_uas[:, 0], 2100, 2500)
+        _, uas_slice = nf.filter_and_slice(all_uas[:, 0], 2100, 2500)
         # 获取目标反演窗口范围内的 单位吸收谱和辐亮度数据
         used_uas = all_uas[uas_slice, 1]
 
         # 按照波长范围进行筛选，并获得slice 用于 radiance 的筛选
         emit_bands = np.load("emit_bands.npy")
-        _, emit_slice = mf.filter_and_slice(emit_bands, 2100, 2500)
+        _, emit_slice = nf.filter_and_slice(emit_bands, 2100, 2500)
 
         # the input includes the radiance file path, the unit absorption spectrum, the output path and the is_iterate flag
         for radiance_path in radiance_path_list:
@@ -98,7 +98,7 @@ def runinbatch(satellite_name: str):
                     # 读取radiance数据
                     radiance = ed.get_emit_array(radiance_path)
                     used_radiance = radiance[emit_slice, :, :]
-                    enhancement = mf.matched_filter(used_radiance, emit_uas, is_iterate=True, is_albedo=True, is_filter=True)
+                    enhancement = nf.matched_filter(used_radiance, emit_uas, is_iterate=True, is_albedo=True, is_filter=True)
                     ed.export_array_to_nc(enhancement, radiance_path, "I:\\")
                     print(f"{current_filename} has been processed")
                 except Exception as e:
@@ -109,71 +109,65 @@ def runinbatch(satellite_name: str):
         # 读取radiance数据
         radiance = ed.get_emit_array(radiance_path)
         # define the path of the unit absorption spectrum file
-        unit_absorption_spectrum_path = r"C:\Users\RS\PycharmProjects\MF\New_ppm_m_EMIT_unit_absorption_spectrum.txt"
+        unit_absorption_spectrum_path = r"C:\Users\RS\PycharmProjects\mf\New_ppm_m_EMIT_unit_absorption_spectrum.txt"
         # 读取单位吸收谱
-        all_uas = mf.open_unit_absorption_spectrum(unit_absorption_spectrum_path)
+        all_uas = nf.open_unit_absorption_spectrum(unit_absorption_spectrum_path)
         # 按照波长范围进行筛选，并获得slice 用于 uas 的筛选
-        _, uas_slice = mf.filter_and_slice(all_uas[:, 0], 2100, 2500)
+        _, uas_slice = nf.filter_and_slice(all_uas[:, 0], 2100, 2500)
         # 获取目标反演窗口范围内的 单位吸收谱和辐亮度数据
         used_uas = all_uas[uas_slice, 1]
         # 按照波长范围进行筛选，并获得slice 用于 radiance 的筛选
         emit_bands = np.load("emit_bands.npy")
-        _, emit_slice = mf.filter_and_slice(emit_bands, 2100, 2500)
+        _, emit_slice = nf.filter_and_slice(emit_bands, 2100, 2500)
         used_radiance = radiance[emit_slice, :, :]
         # call the main function to process the radiance file
-        enhancement = mf.matched_filter(used_radiance, used_uas, is_iterate=False, is_albedo=False, is_filter=False)
+        enhancement = nf.matched_filter(used_radiance, used_uas, is_iterate=False, is_albedo=False, is_filter=False)
         ed.export_array_to_nc(enhancement, radiance_path, result_folder)
     else:
         print("Invalid satellite name, please select from 'AHSI' or 'EMIT'.")
 
 
-def runfor_AHSI(filepath,outputfolder,mf_type):
+# 单个AHSI文件处理
+def rumfor_AHSI(filepath,outputfolder,mf_type):
     # 设置 输出文件夹 路径
     filename = os.path.basename(filepath)
     outputfile = os.path.join(outputfolder, filename)
+    
     # 避免重复计算 进行文件是否存在判断
     if os.path.exists(outputfile):
         pass
     else:
         # 读取radiance数据
-        radiance = ad.get_ahsi_array(filepath)
-        dir = os.path.dirname(filepath)
-        cal_file = os.path.join(dir, "GF5B_AHSI_RadCal_SWIR.raw")
-        radiance = ad.rad_calibration(radiance,cal_file)
-        # define the path of the unit absorption spectrum file
-        ahsi_unit_absorption_spectrum_path = r"C:\Users\RS\VSCode\matchedfiltermethod\Needed_data\AHSI_unit_absorption_spectrum.txt"
-        # 读取单位吸收谱
-        all_uas = mf.open_unit_absorption_spectrum(ahsi_unit_absorption_spectrum_path)
-        # 按照波长范围进行筛选，并获得slice 用于 radiance的筛选
-        _, used_slice = mf.filter_and_slice(all_uas[:, 0], 2100, 2500)
-        # 获取目标反演窗口范围内的 单位吸收谱和辐亮度数据
-        used_uas = all_uas[used_slice, 1]
+        radiance = ad.get_calibrated_radiance(filepath)
         
-        ahsi_interval_unit_absorption_spectrum_path = r"C:\Users\RS\VSCode\matchedfiltermethod\Needed_data\AHSI_unit_absorption_spectrum_interval5000.txt"
         # 读取单位吸收谱
-        all_interval_uas = mf.open_unit_absorption_spectrum(ahsi_interval_unit_absorption_spectrum_path)
-        # 按照波长范围进行筛选，并获得slice 用于 radiance的筛选
-        _, used_slice = mf.filter_and_slice(all_interval_uas[:, 0], 2100, 2500)
-        # 获取目标反演窗口范围内的 单位吸收谱和辐亮度数据
-        used_interval_uas = all_interval_uas[used_slice, 1]
+        ahsi_unit_absorption_spectrum_path = r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\\AHSI_unit_absorption_spectrum.txt"
+        uas = nf.open_unit_absorption_spectrum(ahsi_unit_absorption_spectrum_path)
+        ahsi_interval_unit_absorption_spectrum_path = r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\AHSI_unit_absorption_spectrum_interval5000.txt"
+        interval_uas = nf.open_unit_absorption_spectrum(ahsi_interval_unit_absorption_spectrum_path)
         
-        # 读取ahsi的swir范围波段波长列表
-        ahsibands = np.load(r"C:\Users\RS\VSCode\matchedfiltermethod\Needed_data\AHSI_channels.npz")['central_wvls']
-        _, ahsi_slice = mf.filter_and_slice(ahsibands, 2100, 2500)
-        used_radiance = radiance[ahsi_slice, :, :]
+        # 按照波长范围进行筛选，并获得slice 用于 radiance的筛选
+        used_radiance, used_uas = nf.slice_data(radiance, uas, 2100, 2500)
+        _, used_interval_uas = nf.slice_data(radiance, interval_uas, 2100, 2500)
+        
+        
+        # 运行匹配滤波算法,基于标识符选择不同的算法
         if mf_type == 0:
             # call the main function to process the radiance file
-            enhancement = mf.matched_filter(used_radiance, used_uas, is_iterate=False,
+            enhancement = nf.matched_filter(used_radiance, used_uas, is_iterate=False,
                                             is_albedo=False, is_filter=False,is_columnwise=True)
         elif mf_type == 1:
-            enhancement = mf.modified_matched_filter(used_radiance, used_uas,used_interval_uas, is_iterate=False,
+            enhancement = nf.modified_matched_filter(used_radiance, used_uas,used_interval_uas, is_iterate=False,
                                             is_albedo=False, is_filter=False,is_columnwise=True)
         else: 
-            print("0 for original MF and 1 for modified MF")
+            print("0 for original mf and 1 for modified mf")
+        
+        # 将结果导出为tiff文件
         ad.export_array_to_tiff(enhancement, filepath, outputfolder)
     
 
-def runfor_EMIT(filepath,outputfolder,mf_type):
+# 单个EMIT文件处理
+def rumfor_EMIT(filepath,outputfolder,mf_type):
     # 设置 输出文件夹 路径
     filename = os.path.basename(filepath)
     outputfile = os.path.join(outputfolder, filename)
@@ -182,42 +176,37 @@ def runfor_EMIT(filepath,outputfolder,mf_type):
         pass
     else:
         # 读取radiance数据
-        radiance = ed.get_ahsi_array(filepath)
-        dir = os.path.dirname(filepath)
+        radiance = ed.get_emit_array(filepath)
+        emit_bands = ed.get_emit_bands(filepath)
         # define the path of the unit absorption spectrum file
         EMIT_unit_absorption_spectrum_path = r"C:\Users\RS\VSCode\matchedfiltermethod\Needed_data\EMIT_unit_absorption_spectrum.txt"
-        # 读取单位吸收谱
-        all_uas = mf.open_unit_absorption_spectrum(EMIT_unit_absorption_spectrum_path)
-        # 按照波长范围进行筛选，并获得slice 用于 radiance的筛选
-        _, used_slice = mf.filter_and_slice(all_uas[:, 0], 2100, 2500)
-        # 获取目标反演窗口范围内的 单位吸收谱和辐亮度数据
-        used_uas = all_uas[used_slice, 1]
+        uas = nf.open_unit_absorption_spectrum(EMIT_unit_absorption_spectrum_path)
+        EMIT_interval_unit_absorption_spectrum_path = r"C:\Users\RS\VSCode\matchedfiltermethod\Needed_data\AHSI_unit_absorption_spectrum.txt"
+        interval_uas = nf.open_unit_absorption_spectrum(EMIT_interval_unit_absorption_spectrum_path)
         
-        EMIT_interval_unit_absorption_spectrum_path = r"C:\Users\RS\VSCode\matchedfiltermethod\Needed_data\AHSI_unit_absorption_spectrum_interval5000.txt"
-        # 读取单位吸收谱
-        all_interval_uas = mf.open_unit_absorption_spectrum(EMIT_interval_unit_absorption_spectrum_path)
         # 按照波长范围进行筛选，并获得slice 用于 radiance的筛选
-        _, used_slice = mf.filter_and_slice(all_interval_uas[:, 0], 2100, 2500)
-        # 获取目标反演窗口范围内的 单位吸收谱和辐亮度数据
-        used_interval_uas = all_interval_uas[used_slice, 1]
-        
-        # 读取ahsi的swir范围波段波长列表
-        ahsibands = np.load(r"C:\Users\RS\VSCode\matchedfiltermethod\Needed_data\AHSI_channels.npz")['central_wvls']
-        _, ahsi_slice = mf.filter_and_slice(ahsibands, 2100, 2500)
-        used_radiance = radiance[ahsi_slice, :, :]
+        _,slice = nf.filter_and_slice(uas[:,0],2150,2500)
+        used_uas = uas[:,1][slice]
+        used_interval_uas = interval_uas[:,1][slice]
+        _,slice = nf.filter_and_slice(emit_bands,2150,2500)
+        used_radiance = radiance[slice,:,:]
+        print(used_radiance.shape)
         if mf_type == 0:
             # call the main function to process the radiance file
-            enhancement = mf.matched_filter(used_radiance, used_uas, is_iterate=False,
-                                            is_albedo=False, is_filter=False,is_columnwise=True)
+            enhancement,_ = mf.matched_filter(used_radiance, used_uas, is_iterate=True,
+                                            is_albedo=True, is_filter=False,is_columnwise=True)
         elif mf_type == 1:
-            enhancement = mf.modified_matched_filter(used_radiance, used_uas,used_interval_uas, is_iterate=False,
+            enhancement,_ = mf.modified_matched_filter(used_radiance, used_uas,used_interval_uas, is_iterate=False,
                                             is_albedo=False, is_filter=False,is_columnwise=True)
         else: 
-            print("0 for original MF and 1 for modified MF")
-        ad.export_array_to_tiff(enhancement, filepath, outputfolder)
+            print("0 for original mf and 1 for modified mf")
+        ed.export_array_to_nc(enhancement,filepath,outputfolder)
+
 
 
 if __name__ == "__main__":
-    outputfolder = r"I:\mmf"
-    testpath = r"F:\GF5-02_李飞论文所用数据\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222_SW.tif"
-    runfor_AHSI(testpath,outputfolder,1)
+    testpaths = ["I:\\EMIT\\radiance_data\\EMIT_L1B_RAD_001_20220827T060753_2223904_013.nc",
+                 "I:\\EMIT\\radiance_data\\EMIT_L1B_RAD_001_20220826T065435_2223805_007.nc"]
+    outputfolder = "I:\\EMIT\\runfor1"
+    for testpath in testpaths:
+        rumfor_EMIT(testpath,outputfolder,0)
