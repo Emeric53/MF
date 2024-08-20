@@ -3,8 +3,8 @@ sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod")
 from scipy.integrate import trapz
 from matplotlib import pyplot as plt
 import numpy as np
-from Tools import needed_function as nf
-from Tools import AHSI_data as ad
+from MyFunctions import needed_function as nf
+from MyFunctions import AHSI_data as ad
 
 # Description: compare the simulated radiance with different methane concentration profiles 
 
@@ -12,7 +12,7 @@ from Tools import AHSI_data as ad
 radiance_path1 = "C:\\PcModWin5\\Usr\\EMIT.fl7"
 radiance_path2 = "C:\\PcModWin5\\Usr\\EMIT_methane.fl7"
 radiance_path3 = "C:\\PcModWin5\\Usr\\EMIT_methane_2.fl7"
-emit_channel_path = "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\\EMIT_channels.npz"
+emit_channel_path = "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\EMIT_channels.npz"
 
 bands,convoluved_radiance1 = nf.get_simulated_satellite_radiance(radiance_path1,emit_channel_path,1500,2500)
 _,convoluved_radiance2 = nf.get_simulated_satellite_radiance(radiance_path2,emit_channel_path,1500,2500)

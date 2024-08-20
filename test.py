@@ -6,6 +6,31 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 all_result = np.load("C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Image_simulations\\pixelenhancementresult\\resultdict.npz")
 
+
+
+# 获取 以 波段 行数 列数 为顺序的数据
+    bands, rows, cols = data_cube.shape
+    # 初始化 concentration 数组，大小与卫星数据尺寸一直
+    concentration = np.zeros((rows, cols))
+    # 对于非空列，取均值作为背景光谱，再乘以单位吸收光谱，得到目标光谱
+    background_spectrum = np.nanmean(data_cube, axis=(1,2))
+    target_spectrum = background_spectrum*unit_absorption_spectrum
+
+    # 对当前目标光谱的每一行进行去均值操作，得到调整后的光谱，以此为基础计算协方差矩阵，并获得其逆矩阵
+    radiancediff_with_back =data_cube - background_spectrum[:, None,None]
+    covariance = np.zeros((bands, bands))
+    for row in range(rows): 
+        for col in range(cols):
+            covariance += np.outer(radiancediff_with_back[:, row, col], radiancediff_with_back[:, row, col])
+    covariance = covariance/(rows*cols)
+    covariance_inverse = np.linalg.inv(covariance)
+
+    for row in range(rows):
+        for col in range(cols):
+            # 基于最优化公式计算每个像素的甲烷浓度增强值
+            numerator = (radiancediff_with_back[:,row,col].T @ covariance_inverse @ target_spectrum)
+            denominator = (target_spectrum.T @ covariance_inverse @ target_spectrum)
+            concentration[row,col] = numerator/denominator
 # test1 = all_result["non_result"].flatten()
 # from matplotlib import pyplot as plt
 # plt.hist(test1,bins=100,color='g')
@@ -98,3 +123,10 @@ ax.set_title('Scatter plot with Linear Regression and Statistics')
 
 plt.legend()
 plt.savefig("test.png")
+
+
+ax, fig = plt.subplots(figsize=(12, 10))
+
+
+
+
