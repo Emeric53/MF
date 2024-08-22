@@ -8,21 +8,6 @@ from Image_simulations import image_simulation as ims
 import seaborn as sns
 
 
-def profile_matched_filter(base_array,data_array: np.array, unit_absorption_spectrum: np.array) :
-    # 获取 以 波段 行数 列数 为顺序的数据
-    # 对于非空列，取均值作为背景光谱，再乘以单位吸收光谱，得到目标光谱
-    background_spectrum = base_array
-    target_spectrum = background_spectrum*unit_absorption_spectrum
-    radiancediff_with_back = data_array - background_spectrum
-    covariance = np.outer(radiancediff_with_back, radiancediff_with_back)
-    covariance_inverse = np.linalg.inv(covariance)
-    # 基于最优化公式计算每个像素的甲烷浓度增强值
-    up = (radiancediff_with_back.T @ covariance_inverse @ target_spectrum)
-    down = target_spectrum.T @ covariance_inverse @ target_spectrum
-    concentration = up / down             
-    return concentration
-
-
 def image_matched_filter(base_array,data_array: np.array, unit_absorption_spectrum: np.array) :
         bands,rows,cols = data_array.shape
         # 对于非空列，取均值作为背景光谱，再乘以单位吸收光谱，得到目标光谱
@@ -49,6 +34,11 @@ def profile_matched_filter(base_array, data_array: np.array, unit_absorption_spe
     background_spectrum = base_array
     target_spectrum = background_spectrum*unit_absorption_spectrum
     concentration, _, _, _ = np.linalg.lstsq(target_spectrum[:, np.newaxis],(data_array - background_spectrum), rcond=None) 
+    if concentration > 5000:
+        background_spectrum = base_array + 5000*target_spectrum
+        target_spectrum = background_spectrum*unit_absorption_spectrum
+        concentration, _, _, _ = np.linalg.lstsq(target_spectrum[:, np.newaxis],(data_array - background_spectrum), rcond=None) 
+        concentration += 5000
     return concentration
 
 
@@ -91,11 +81,11 @@ def profilelevel_test1():
         else:
             concentration = profile_matched_filter(base,radiance, uas)
             total_concentration += concentration
-            biaslists.append(((concentration-enhancement)/enhancement)[0])
+            biaslists.append(((concentration-enhancement)/enhancement))
             print("original concentration is " + str(enhancement))
-            print("matched filter result is " + str(concentration[0]))
+            print("matched filter result is " + str(concentration))
             print("bias is " + str(float(concentration-enhancement)/enhancement))
-
+    return biaslists
     # # visulization
     # plt.plot(enhancements[1:],biaslists)
     # plt.show()
@@ -111,23 +101,22 @@ def imagelevel_test0():
     col_num = 100
     row_num = 100
     
+    basefilepath = f"C:\\PcModWin5\\Bin\\batch\\AHSI_Methane_0_ppmm_tape7.txt"
+    base_radiance,used_uas,band = radiacne_uas_bands(basefilepath)
     for enhancement in enhancements:
         filepath = f"C:\\PcModWin5\\Bin\\batch\\AHSI_Methane_{int(enhancement)}_ppmm_tape7.txt"
         used_radiance,used_uas,band = radiacne_uas_bands(filepath)
-        basefilepath = f"C:\\PcModWin5\\Bin\\batch\\AHSI_Methane_0_ppmm_tape7.txt"
-        _,used_uas,band = radiacne_uas_bands(basefilepath)
+        
         simulated_noisyimage = np.zeros((len(band), row_num, col_num))
         for i in range(len(band)):  
             current = used_radiance[i]
             noise = np.random.normal(0, current / 100 , (row_num, col_num))  # 生成高斯噪声
             simulated_noisyimage[i,:,:] = np.ones((row_num,col_num))*current + noise   # 添加噪声到原始数据
 
-        concentration = mf.modified_matched_filter(simulated_noisyimage,used_uas)
-        hist_original, bin_edges_original = np.histogram(concentration.flatten(), bins=50)
-        max_bin_index_original = np.argmax(hist_original)
-        max_value_original = (bin_edges_original[max_bin_index_original] + bin_edges_original[max_bin_index_original + 1]) / 2
+        concentration = image_matched_filter(base_radiance,simulated_noisyimage,used_uas)
+        # concentration =mf.matched_filter(simulated_noisyimage,used_uas)
         print("enhancement is"+str(enhancement))
-        print(max_value_original)
+        print(np.mean(concentration))
         
         # visulization 
         # plt.subplot(1, 2, 1)
@@ -148,12 +137,14 @@ def imagelevel_test1():
     #         for windspeed in [2,4,6,8,10]:
     #            radiance_path = f"C:\\PcModWin5\\Usr\\AHSI_{name}.fl7"
     
-    enhancements = np.arange(0,10000,1000)
+    enhancements = np.arange(10000,20000,2000)
     surface_types = ["wetland","urban","grassland","desert"]
     
     # for type in surface_types:
+    resultlist = []
+    resultlist2 = []
     for enhancement in enhancements:
-        radiance_path = f"C:\\PcModWin5\\Usr\\AHSI_grassland.fl7"
+        radiance_path = f"C:\\PcModWin5\\Bin\\batch\\AHSI_Methane_0_ppmm_tape7.txt"
         matrix_size = 100
         num_pixels = 200
         enhance_value = enhancement  # 设定增强的强度值
@@ -165,7 +156,6 @@ def imagelevel_test1():
         np.put(plume, indices, enhance_value)
         # 选取剩余的像素点作为未增强的像素点
         all_indices = np.arange(plume.size)
-        print(np.max(plume))
         unenhanced_indices = np.setdiff1d(all_indices, indices)
         # 将选取的像素点转换为行列索引，分别是增强和未增强的像素点
         enhanced_mask = np.unravel_index(indices, (matrix_size, matrix_size))
@@ -183,25 +173,39 @@ def imagelevel_test1():
         original,result = mf.modified_matched_filter(simulated_image, uas)
         enhanced = result[enhanced_mask]
         unenhanced = result[unenhanced_mask]
-        enhanced1 = original[enhanced_mask]
-        unenhanced1 = original[unenhanced_mask]
-        print(enhancement)
-        print(np.mean(enhanced))
-        print(np.mean(enhanced)/enhancement)
-        print(np.mean(unenhanced))
-        print(np.mean(enhanced1))
-        print(np.mean(enhanced1)/enhancement)
-        print(np.mean(unenhanced1))
+        resultlist.append(np.mean(enhanced))
+        print("改动匹配滤波算法")
+        print("当前浓度增强为："+ str(enhancement))
+        print("增强像素反演均值：", np.mean(enhanced))
+        print("非增强像素反演均值：", np.mean(unenhanced))
+        print("偏差：",np.mean(enhanced-enhancement)/enhancement)
+        print("\n")
+        enhanced = original[enhanced_mask]
+        unenhanced = original[unenhanced_mask]
+        print("当前浓度增强为："+ str(enhancement))
+        print("增强像素反演均值：", np.mean(enhanced))
+        print("非增强像素反演均值：", np.mean(unenhanced))
+        print("偏差：",np.mean(enhanced-enhancement)/enhancement)
+        print("\n")
+        # print(np.mean(enhanced1))
+        # print(np.mean(enhanced1)/enhancement)
+        # print(np.mean(unenhanced1))
         
         # result = mf.matched_filter(simulated_image, uas)
         # enhanced = result[enhanced_mask]
         # unenhanced = result[unenhanced_mask]
-
-        # print(enhancement)
-        # print(np.mean(enhanced))
-        # print(np.mean(enhanced)/enhancement)
-        # print(np.mean(unenhanced))
-    
+        # resultlist2.append(np.mean(enhanced))
+        # print("传统匹配滤波算法")
+        # print("当前浓度增强为："+ str(enhancement))
+        # print("增强像素反演均值：", np.mean(enhanced))
+        # print("非增强像素反演均值：", np.mean(unenhanced))
+        # print("偏差：",np.mean(enhanced-enhancement)/enhancement)
+        # print("\n")
+    # from matplotlib import pyplot as plt
+    # fig, ax = plt.subplots(1,1)
+    # ax.plot(enhancements,resultlist)
+    # ax.plot(enhancements,resultlist2)
+    # plt.savefig("c.png")
         # np.save(f"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Image_simulations\\pixelenhancementresult\\{enhancement}",enhanced)
         # # enhancement2 = matched_filter.matched_filter(simulated_image, used_uas,is_iterate=True, is_albedo= True, is_filter= False,is_columnwise=False)
         # print("highest plume concentration is " + str(np.max(plume)))
@@ -224,11 +228,9 @@ def imagelevel_test2():
         simulated_image = ims.image_simulation(radiance_path,plume,sf, 2150, 2500, 100, 100, 0.01)       
         uas_filepath = r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\\AHSI_unit_absorption_spectrum_0to5000.txt"
         _,uas = nf.open_unit_absorption_spectrum(uas_filepath,2100,2500)
-
-        
-        enhancement,_ = mf.matched_filter(simulated_image, uas,is_iterate=False, is_albedo= False, is_filter= False,is_columnwise=False)
-        print("MF highest concentration is " +str(np.max(enhancement)))
-        print("interative MF highest concentration is " +str(np.max(enhancement)))
+        enhancement,_ = mf.matched_filter(simulated_image, uas)
+        print("MF highest concentration is " + str(np.max(enhancement)))
+        print("interative MF highest concentration is " + str(np.max(enhancement)))
         print("highest plume concentration is " + str(np.max(plume)))
         
         plume_mask = plume > 100
@@ -249,8 +251,7 @@ def imagelevel_test2():
         print("simulated emission is "+ str(emission))  
         print("retrieved emission is "+ str(retrieval_emission))    
         print("bias is "  + str(retrieval_emission/emission))
-        print("retrieved iterated emission is "+ str(retrieval_emission2))    
-        print("bias is "  + str(retrieval_emission2/emission))
+        
     """对叠加了高斯扩散模型的甲烷烟羽模拟影像进行浓度反演"""
 
 
@@ -311,7 +312,12 @@ def imagelevel_test3():
 
 
 if __name__ == "__main__":
+    # biaslist = profilelevel_test1()
+    # from matplotlib import pyplot as plt
+    # plt.plot(np.arange(500,20500,500),biaslist)
+    # plt.show()
     imagelevel_test1()
+    # imagelevel_test0()
 
 
 
