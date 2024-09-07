@@ -61,10 +61,12 @@ def generate_uas(satellite,enhancement_range,lower_wavelength,upper_wavelength):
         current_convoluved_radiance = np.array(current_convoluved_radiance)/base_radiance
         total_radiance.append(current_convoluved_radiance)
     total_radiance = np.log(np.transpose(np.array(total_radiance)))
+    
     slopelist = []
     for index,data in enumerate(total_radiance):
         slope, intercept = np.polyfit(enhance_range, data, 1)
         slopelist.append(slope)
+    
     # export the unit absorption spectrum result to a txt file
     with open(f"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\uas\\{satellite}_UAS_{enhance_range[0]}.txt", 'w') as output:
         for index,data in enumerate(slopelist):  
@@ -76,6 +78,7 @@ def generate_uas(satellite,enhancement_range,lower_wavelength,upper_wavelength):
 # for i in range(0,15500,500):
 #     enhance_range = np.arange(i,i+5000,500)
 #     bands,slopelist= generate_uas("AHSI",enhance_range,900,2500)
+
 enhance_range = np.arange(0,15500,500)
 # 创建主图
 fig, ax1 = plt.subplots()

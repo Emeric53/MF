@@ -7,29 +7,6 @@ from MatchedFilter import matched_filter as mf
 from Image_simulations import image_simulation as ims
 import seaborn as sns
 
-
-def image_matched_filter(base_array,data_array: np.array, unit_absorption_spectrum: np.array) :
-        bands,rows,cols = data_array.shape
-        # 对于非空列，取均值作为背景光谱，再乘以单位吸收光谱，得到目标光谱
-        background_spectrum = base_array
-        target_spectrum = background_spectrum*unit_absorption_spectrum
-        # 对当前目标光谱的每一行进行去均值操作，得到调整后的光谱，以此为基础计算协方差矩阵，并获得其逆矩阵
-        radiancediff_with_back = data_array - background_spectrum[:,np.newaxis,np.newaxis]
-        covariance = np.zeros((bands,bands))
-        concentration = np.zeros((rows,cols))
-        for i in range(rows):
-            for j in range(cols):
-                covariance += np.outer(radiancediff_with_back[:,i,j], radiancediff_with_back[:,i,j])
-        covariance /= rows*cols
-        covariance_inverse = np.linalg.inv(covariance)
-        for i in range(rows):
-            for j in range(cols):
-                up = (radiancediff_with_back[:,i,j].T @ covariance_inverse @ target_spectrum)
-                down = target_spectrum.T @ covariance_inverse @ target_spectrum
-                concentration[i,j] = up / down
-        return concentration
-
-
 def profile_matched_filter(base_array, data_array: np.array, unit_absorption_spectrum: np.array) :
     background_spectrum = base_array
     target_spectrum = background_spectrum*unit_absorption_spectrum
@@ -39,35 +16,57 @@ def profile_matched_filter(base_array, data_array: np.array, unit_absorption_spe
         target_spectrum = background_spectrum*unit_absorption_spectrum
         concentration, _, _, _ = np.linalg.lstsq(target_spectrum[:, np.newaxis],(data_array - background_spectrum), rcond=None) 
         concentration += 5000
+    return concentration[0]
+
+
+def matched_filter_with_fixed_bg(base_array, data_array: np.array, unit_absorption_spectrum: np.array) :
+    bands,rows,cols = data_array.shape
+    # 对于非空列，取均值作为背景光谱，再乘以单位吸收光谱，得到目标光谱
+    background_spectrum = base_array
+    target_spectrum = background_spectrum*unit_absorption_spectrum
+    # 对当前目标光谱的每一行进行去均值操作，得到调整后的光谱，以此为基础计算协方差矩阵，并获得其逆矩阵
+    radiancediff_with_back = data_array - background_spectrum[:,np.newaxis,np.newaxis]
+    d_covariance = radiancediff_with_back
+    covariance = np.zeros((bands,bands))
+    concentration = np.zeros((rows,cols))
+    for i in range(rows):
+        for j in range(cols):
+            covariance += np.outer(d_covariance[:,i,j], d_covariance[:,i,j])
+    covariance /= rows*cols
+    covariance_inverse = np.linalg.inv(covariance)
+    
+    for i in range(rows):
+        for j in range(cols):
+            up = (radiancediff_with_back[:,i,j].T @ covariance_inverse @ target_spectrum)
+            down = target_spectrum.T @ covariance_inverse @ target_spectrum
+            concentration[i,j] = up / down
     return concentration
 
 
 def radiacne_uas_bands(filepath):
-        channels_path=r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\AHSI_channels.npz"
-        bands,radiance = nf.get_simulated_satellite_radiance(filepath,channels_path,2100,2500)
-        ahsi_unit_absorption_spectrum_path = r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\AHSI_unit_absorption_spectrum.txt"
-        _,uas = nf.open_unit_absorption_spectrum(ahsi_unit_absorption_spectrum_path,2100,2500)
-        # base_radiance, used_uas = nf.slice_data(radiance[:,np.newaxis,np.newaxis], uas, 2150, 2500)
-        return radiance,uas,bands
+    channels_path=r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\AHSI_channels.npz"
+    bands,radiance = nf.get_simulated_satellite_radiance(filepath,channels_path,2100,2500)
+    ahsi_unit_absorption_spectrum_path = r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\AHSI_unit_absorption_spectrum.txt"
+    _,uas = nf.open_unit_absorption_spectrum(ahsi_unit_absorption_spectrum_path,2100,2500)
+    # base_radiance, used_uas = nf.slice_data(radiance[:,np.newaxis,np.newaxis], uas, 2150, 2500)
+    return radiance,uas,bands
 
 
 def profilelevel_test1():
     """
-    测试不同浓度增强下的甲烷模拟影像,使用通用匹配滤波时的浓度结果分布直方图,看看不同的浓度基准是否会影像结果
+    测试不同浓度增强下的甲烷廓线直接拟合的浓度结果。
     """
     enhancements = np.arange(0,20500,500)
     ahsi_unit_absorption_spectrum_path = "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\AHSI_unit_absorption_spectrum.txt"
     # ahsi_unit_absorption_spectrum_path2 = r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\\AHSI_unit_absorption_spectrum_2500to7500.txt"
-    # ahsi_interval_unit_absorption_spectrum_path = r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\AHSI_unit_absorption_spectrum_from5000.txt"
+        
     _,uas = nf.open_unit_absorption_spectrum(ahsi_unit_absorption_spectrum_path,2100,2500)
     # uas2 = nf.open_unit_absorption_spectrum(ahsi_unit_absorption_spectrum_path2)
-    # interval_uas = nf.open_unit_absorption_spectrum(ahsi_interval_unit_absorption_spectrum_path)
-    print(uas.shape)
+    
     # initiatate variables
     base = None
     concentration = 0
-    total_concentration = 0
-    biaslists = []
+    biaslists = [0,]
     
     # 拟合甲烷浓度增强
     for enhancement in enhancements:
@@ -79,13 +78,17 @@ def profilelevel_test1():
             base = radiance
             continue
         else:
-            concentration = profile_matched_filter(base,radiance, uas)
-            total_concentration += concentration
-            biaslists.append(((concentration-enhancement)/enhancement))
+            concentration = profile_matched_filter(base,radiance,uas)
+            
             print("original concentration is " + str(enhancement))
             print("matched filter result is " + str(concentration))
             print("bias is " + str(float(concentration-enhancement)/enhancement))
-    return biaslists
+            biaslists.append(((concentration-enhancement)/enhancement))
+    
+    fig, ax = plt.subplots()
+    ax.plot(enhancements,biaslists,color="green")
+    fig.savefig("profilelevel_test1.png")     
+    return None
     # # visulization
     # plt.plot(enhancements[1:],biaslists)
     # plt.show()
@@ -316,7 +319,8 @@ if __name__ == "__main__":
     # from matplotlib import pyplot as plt
     # plt.plot(np.arange(500,20500,500),biaslist)
     # plt.show()
-    imagelevel_test1()
+    profilelevel_test1()
+    # imagelevel_test1()
     # imagelevel_test0()
 
 
