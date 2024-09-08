@@ -182,11 +182,11 @@ def rumfor_EMIT(filepath,outputfolder,mf_type):
         
         if mf_type == 0:
             # call the main function to process the radiance file
-            enhancement,_ = mf.matched_filter(radiance, uas, iterate=False,albedoadjust=False, 
-                                              sparity=False)
+            enhancement = mf.matched_filter(radiance, uas, iterate=False,albedoadjust=False, 
+                                              sparsity=False)
         elif mf_type == 1:
-            enhancement,_ = mf.modified_matched_filter(radiance, uas,interval_uas, is_iterate=False,
-                                            is_albedo=False, is_filter=False,is_columnwise=True)
+            enhancement = mf.modified_matched_filter(radiance, uas,interval_uas, is_iterate=False,
+                                            is_albedo=False, is_filter=False)
         else: 
             print("0 for original mf and 1 for modified mf")
         ed.export_array_to_nc(enhancement,filepath,outputfolder,enhancement)
@@ -194,8 +194,13 @@ def rumfor_EMIT(filepath,outputfolder,mf_type):
 
 
 if __name__ == "__main__":
-    testpaths = ["I:\\EMIT\\radiance_data\\EMIT_L1B_RAD_001_20220827T060753_2223904_013.nc",
-                 "I:\\EMIT\\radiance_data\\EMIT_L1B_RAD_001_20220826T065435_2223805_007.nc"]
+    directory = "C:\\Users\\RS\Downloads\\EMITL1BRAD_001-20240822_062006"
+    testpaths = file_paths = [
+        os.path.join(directory, file)
+        for file in os.listdir(directory)
+        if file.endswith(".nc") and file.startswith("EMIT_L1B_RAD")
+    ]
     outputfolder = "I:\\EMIT\\runfor1"
     for testpath in testpaths:
+        print(f"{testpath} is processing.")
         rumfor_EMIT(testpath,outputfolder,0)

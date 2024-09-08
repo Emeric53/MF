@@ -103,11 +103,12 @@ def export_array_to_nc(data_array: np.array, input_nc_path: str, output_folder: 
         out_xr['methane_enhancement'].attrs = {'Content': 'Methane enhancement in the atmosphere', 'Units': 'ppm·m'}
         out_xr.coords['lat'].attrs = location_ds['lat'].attrs
         out_xr.coords['lon'].attrs = location_ds['lon'].attrs
-        # 保存初始的 NextCDF 文件
+        
         out_xr.rio.write_crs(root_ds.spatial_ref, inplace=True)
         out_xr.to_netcdf(output_path)
         out_xr.close()
         
+        # 保存初始的 NextCDF 文件
         data_vars = {'methane_enhancement': (['crosstrack', 'alongtrack'], original_data)}
         out_xr = xr.Dataset(data_vars=data_vars, attrs=root_ds.attrs)
         out_xr.to_netcdf(output_path.replace("_enhanced.nc", "_original_enhanced.nc"))

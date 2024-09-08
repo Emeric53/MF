@@ -4,7 +4,8 @@ import math
 from scipy.integrate import quad
 import math
 
-""" This code is used to calculate the cross section flux of the plume.
+""" 
+This code is used to calculate the cross section flux of the plume.
 by computing the flux through one or more plume cross sections orthogonal to the plume axis.
 """
 

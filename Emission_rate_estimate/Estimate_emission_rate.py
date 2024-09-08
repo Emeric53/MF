@@ -3,8 +3,9 @@ from osgeo import gdal
 import Integrated_mass_enhancement as ime
 import os
 import geopandas as gpd
-
-
+import sys
+sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod")
+from MyFunctions import needed_function as nf
 def wind_speed(plume_name) -> float:
     """
     this function is used to calculate the wind speed of the nearest point to the plume
@@ -63,13 +64,12 @@ plume_names = [
                'EMIT_L2B_CH4PLM_001_20230327T073331_000772.tif',
                'EMIT_L2B_CH4PLM_001_20230326T081955_000771.tif',
                'EMIT_L2B_CH4PLM_001_20220820T052804_000514.tif',
-
                ]
 # 批量读取烟羽tiff文件
 for plume_name in plume_names:
     # 读取 烟羽的浓度数据
     plume_filepath = os.path.join(plume_folder, plume_name)
-    plume_data = read_tif_array(plume_filepath)
+    plume_data = nf.read_tiff(plume_filepath)
     # 获取 预估的10m风速
     windspeed = wind_speed(plume_name.replace('.tif', '.shp'))
     # 基于 IME算法进行排放量估算

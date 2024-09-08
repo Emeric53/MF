@@ -2,9 +2,13 @@ import numpy as np
 import os
 import sys
 sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod")
-from MyFunctions.needed_function import read_tiff,get_tiff_files,export_to_tiff
+from MyFunctions.needed_function import read_tiff,get_tiff_files,export_to_tiff,image_simulation
 from MatchedFilter.matched_filter import open_unit_absorption_spectrum,filter_and_slice,matched_filter
 import matplotlib.pyplot as plt
+
+def simulation():
+    image_simulation()
+
 
 def retrieval():
     # 甲烷浓度增强反演

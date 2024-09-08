@@ -94,7 +94,7 @@ def generate_transmittance_cube(plumes: np.ndarray, low_wavelength, high_wavelen
 
 
 # 基于单位吸收谱和浓度值获得透射率cube
-def generate_transmittance_cube_fromuas(plumes: np.ndarray, low_wavelength, high_wavelength):
+def generate_transmittance_cube_fromuas(plumes: np.ndarray,uas_path,low_wavelength, high_wavelength):
     """
     Generate a transmittance cube based on unit absorption spectrum and concentration values.
 
@@ -103,14 +103,13 @@ def generate_transmittance_cube_fromuas(plumes: np.ndarray, low_wavelength, high
     :param high_wavelength: Upper bound of the wavelength range
     :return: 3D NumPy array of transmittance values
     """
-    _,uas = open_unit_absorption_spectrum(r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\AHSI_unit_absorption_spectrum.txt",low_wavelength,high_wavelength)
+    _,uas = open_unit_absorption_spectrum(uas_path,low_wavelength,high_wavelength)
     transmittance_cube = np.ones((len(uas), plumes.shape[0], plumes.shape[1]))
     for i in range(plumes.shape[1]):
         for j in range(plumes.shape[0]):
             current_concentration = plumes[i, j]
             transmittance_cube[:, i, j] = 1 + uas * current_concentration
     return np.clip(transmittance_cube, 0, 1)
-
 
 
 # 打开单位吸收谱文件
@@ -309,7 +308,7 @@ def get_simulated_satellite_transmittance(radiance_path, channels_path, lower_wa
 
 
 
-def image_simulation(radiance_path, plume, scaling_factor=1, lower_wavelength=2150, upper_wavelength=2500, row_num=100, col_num=100, noise_level=0.005):
+def image_simulation(radiance_path, plume, uas_path,scaling_factor=1, lower_wavelength=2150, upper_wavelength=2500, row_num=100, col_num=100, noise_level=0.005):
     """
     Simulate a radiance image with added plume effects and Gaussian noise.
 
@@ -344,7 +343,7 @@ def image_simulation(radiance_path, plume, scaling_factor=1, lower_wavelength=21
     simulated_image = simulated_convolved_spectrum.reshape(band_num, 1, 1) * np.ones([row_num, col_num])
     
     # Add the Gaussian noise to the image
-    cube = generate_transmittance_cube_fromuas(plume*scaling_factor, lower_wavelength, upper_wavelength)
+    cube = generate_transmittance_cube_fromuas(plume*scaling_factor, uas_path,lower_wavelength, upper_wavelength)
     image_with_plume = cube * simulated_image
     simulated_noisy_image = np.zeros_like(simulated_image)
     for i in range(band_num):  # Traverse each band

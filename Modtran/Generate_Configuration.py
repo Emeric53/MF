@@ -3,8 +3,8 @@ import sys
 sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod")
 
 
-altitude = np.load('./Needed_data/altitude_profile.npy')
-methane_profile = np.load('./Needed_data/midlat_summer_1900ppm.npy')
+altitude = np.load('./MyData/altitude_profile.npy')
+methane_profile = np.load('./MyData/midlat_summer_1900ppm.npy')
 
 
 # 将一个modtran文件模板中的甲烷廓线进行缩放至想要的浓度
@@ -66,12 +66,10 @@ def add_8km_methane():
 
 # 模拟地表0-500m的甲烷浓度增强
 def add_500m_methane():
-    enhance_range = np.arange(0,20500,500)
-    # enhance_range = np.arange(0,40.1,0.1)
-    interval_range = np.array([5000,7500,10000])
+    enhance_range = np.arange(-3000,50500,500)
     # for interval in interval_range:
     for i in enhance_range:
-        file_name = f"C:\\PcModWin5\\Usr\\AHSI_Methane_0_ppmm.ltn" 
+        file_name = f"C:\\PcModWin5\\Usr\\AHSI_1900ppb\\AHSI_Methane_0_ppmm.ltn" 
         with open(file_name, 'r') as input_file:
             alllines = input_file.readlines()
             # 获取自定义大气廓线行的数据
@@ -80,16 +78,19 @@ def add_500m_methane():
             line2 = alllines[11]
             line2 = line2[:20]+f'{float(line2[20:30])+i/500:10f}'+line2[30:]              
             # 将修改后的内容写入新的文件
-            with open(f"C:\\PcModWin5\\Usr\\AHSI_Methane_{int(i)}_ppmm.ltn", 'w') as output_file:
+            with open(f"C:\\PcModWin5\\Usr\\AHSI_1900ppb\\AHSI_Methane_{int(i)}_ppmm.ltn", 'w') as output_file:
                 former_lines = alllines[:8]
                 for former_line in former_lines:
                     output_file.write(former_line)
-                
+            
                 output_file.write(line)
+                
                 middle_lines = alllines[9:11]
                 for middle_line in middle_lines:
                     output_file.write(middle_line)
+
                 output_file.write(line2)
+                
                 latter_lines = alllines[12:]
                 for latter_line in latter_lines:
                     output_file.write(latter_line)
@@ -98,14 +99,14 @@ def add_500m_methane():
 # 将配置文件路径写入modtran的批处理文件中
 def write_batchfile():
     with open(r"C:\\PcModWin5\\Bin\\pcmodwin_batch.txt",'w') as batch:
-        enhance_range = np.arange(0,20500,500)
+        enhance_range = np.arange(-3000,50500,500)
         for i in enhance_range:
-            batch.write(f"C:\\PcModWin5\\Usr\\AHSI_Methane_{int(i)}_ppmm.ltn"+"\n")
+            batch.write(f"C:\\PcModWin5\\Usr\\AHSI_1900ppb\\AHSI_Methane_{int(i)}_ppmm.ltn"+"\n")
             
                         
 if __name__ == "__main__":
     # scale_methane_profile()
     # add_8km_methane()
     add_500m_methane()
-    # write_batchfile()
+    write_batchfile()
 
