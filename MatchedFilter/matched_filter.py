@@ -1034,4 +1034,3 @@ if __name__ == '__main__':
     # plt.colorbar(contour3,label='Methane Enhancement')
     plt.show()
 
- 
