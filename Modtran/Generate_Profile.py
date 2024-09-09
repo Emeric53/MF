@@ -1,5 +1,4 @@
 import numpy as np
-
 """
    该代码用于计算 modtran默认气象模型的廓线数据
 """
@@ -13,26 +12,6 @@ import numpy as np
 #   1976 US Standard Atmosphere
 
 # parameter: alt, pressure, temp, h2o, co2, o3, n2o, co, ch4, o2, density, no, so2
-
-def get_profile(model_type, parameter):
-    data_list = []
-    with open('./Needed_data/mlatmb.f', "r") as file:
-        index = get_index(model_type, parameter)
-        lines = file.readlines()[index:index+10]
-        for line in lines:
-            # 去除每行数据中的"&"字符，然后从行中提取数据部分，并将数据分割成单个数值
-            line = line.replace("&", "")
-            line = line.replace("/", "")  # 去除斜杠
-            data_parts = line.strip().split(",")
-            values = [float(part.strip()) for part in data_parts if part.strip()]
-            for value in values:
-                data_list.append(value)
-        dataarray = np.array(data_list)
-        if parameter == "pressure":
-            dataarray = np.exp(dataarray)*100
-    return dataarray
-
-
 def get_index(model_type, parameter):
     if parameter == "alt":
         start_index = 43
@@ -62,6 +41,25 @@ def get_index(model_type, parameter):
         start_index = 749
        
     return start_index
+
+
+def get_profile(model_type, parameter):
+    data_list = []
+    with open('./Needed_data/mlatmb.f', "r") as file:
+        index = get_index(model_type, parameter)
+        lines = file.readlines()[index:index+10]
+        for line in lines:
+            # 去除每行数据中的"&"字符，然后从行中提取数据部分，并将数据分割成单个数值
+            line = line.replace("&", "")
+            line = line.replace("/", "")  # 去除斜杠
+            data_parts = line.strip().split(",")
+            values = [float(part.strip()) for part in data_parts if part.strip()]
+            for value in values:
+                data_list.append(value)
+        dataarray = np.array(data_list)
+        if parameter == "pressure":
+            dataarray = np.exp(dataarray)*100
+    return dataarray
 
 
 def trapezoidal_integration(x, y):

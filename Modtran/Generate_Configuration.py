@@ -2,10 +2,8 @@ import numpy as np
 import sys
 sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod")
 
-
 altitude = np.load('./MyData/altitude_profile.npy')
 methane_profile = np.load('./MyData/midlat_summer_1900ppm.npy')
-
 
 # 将一个modtran文件模板中的甲烷廓线进行缩放至想要的浓度
 def scale_methane_profile():
