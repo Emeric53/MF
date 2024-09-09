@@ -99,7 +99,6 @@ def matched_filter(data_cube: np.array, unit_absorption_spectrum: np.array, albe
     return concentration
  
 
-
 # modified matched filter algorithm 整幅图像进行计算
 def modified_matched_filter_copy(data_cube: np.array, unit_absorption_spectrum: np.array) -> np.array:
     """
@@ -250,7 +249,6 @@ def modified_matched_filter_copy(data_cube: np.array, unit_absorption_spectrum: 
     #         levelon = False
     #         print("the distribution of concentration is stable")
     # return originalconcentration,concentration
-
 
 
 # # modified matched filter algorithm 整幅图像进行计算
@@ -654,7 +652,6 @@ def modified_matched_filter_backup(data_cube: np.array, unit_absorption_spectrum
             levelon = False
 
     return concentration, original_concentration
-
 
 
 # convert the radiance into log space 整幅图像进行计算
