@@ -167,10 +167,7 @@ def generate_range_uas_AHSI(start_enhancement,end_enhancement,lower_wavelength,u
 #         for index,data in enumerate(slopelist):  
 #             output.write(str(bands[index])+' '+str(data)+'\n')
 
-
-
 # 可视化
-
 # fig, ax = plt.subplots(1,2)
 # uas_path = f"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\uas\\AHSI_UAS_total.txt"
 # bands,slopelist=open_unit_absorption_spectrum(uas_path,2100,2500)
@@ -189,12 +186,9 @@ def generate_range_uas_AHSI(start_enhancement,end_enhancement,lower_wavelength,u
 # bands,slopelist=open_unit_absorption_spectrum(uas_path,2100,2500)
 # ax.plot(bands,50000*slopelist,color='blue')
 
-
 # uas_path1 = f"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\uas\\AHSI_UAS_end_20000.txt"
 # uas_path2 = f"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\uas\\AHSI_UAS_end_30000.txt"
 # _,slopelist1=open_unit_absorption_spectrum(uas_path1,2100,2500)
 # _,slopelist2=open_unit_absorption_spectrum(uas_path2,2100,2500)
 # ax.plot(bands,20000*slopelist1*(((50000*slopelist2)/(20000*slopelist1))),color='red')
 # plt.show()
-
-
