@@ -8,7 +8,6 @@ all_result = np.load(
     "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Image_simulations\\pixelenhancementresult\\resultdict.npz"
 )
 
-
 # test1 = all_result["non_result"].flatten()
 # from matplotlib import pyplot as plt
 # plt.hist(test1,bins=100,color='g')
@@ -89,8 +88,7 @@ sns.lineplot(x=enhancements, y=enhancements, color="green", label="1:1 line")
 # 添加统计信息
 r2 = model.score(x.reshape(-1, 1), y)
 bias = np.mean(y_pred - y)
-rmse = 
-np.sqrt(mean_squared_error(y, y_pred))
+rmse = np.sqrt(mean_squared_error(y, y_pred))
 mae = mean_absolute_error(y, y_pred)
 
 # 添加统计信息文本
@@ -145,4 +143,3 @@ plt.legend()
 plt.savefig("test.png")
 
 ax, fig = plt.subplots(figsize=(12, 10))
-

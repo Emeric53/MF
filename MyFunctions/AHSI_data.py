@@ -6,11 +6,11 @@ from matplotlib import pyplot as plt
 import sys
 
 sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod")
-from MyFunctions.needed_functions import export_to_tiff, read_tiff
+from MyFunctions.needed_function import export_to_tiff, read_tiff
 
 
 # 数据读取相关
-def get_ahsi_array(filepath: str) -> np.ndarray:
+def get_ahsi_array(filepath: str) -> np.array:
     """
     Reads a raster file and returns a NumPy array containing all the bands.
 
@@ -170,5 +170,5 @@ def main():
 
 
 if __name__ == "__main__":
-    a = r"I:\AHSI_part4\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404_SW.tif"
+    a = r"I:\\AHSI_part4\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404_SW.tif"
     bands, radiance = get_calibrated_radiance(a, 1500, 2300)
