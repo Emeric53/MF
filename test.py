@@ -4,7 +4,10 @@ import seaborn as sns
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 
-all_result = np.load("C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Image_simulations\\pixelenhancementresult\\resultdict.npz")
+all_result = np.load(
+    "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Image_simulations\\pixelenhancementresult\\resultdict.npz"
+)
+
 
 # test1 = all_result["non_result"].flatten()
 # from matplotlib import pyplot as plt
@@ -43,8 +46,10 @@ x = []
 y = []
 albedo = []
 # 生成示例数据
-enhancements = np.arange(0,10000,10)
-result = np.load("C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Image_simulations\\pixelenhancementresult\\resultdict.npz")
+enhancements = np.arange(0, 10000, 10)
+result = np.load(
+    "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Image_simulations\\pixelenhancementresult\\resultdict.npz"
+)
 for i in range(1000):
     for a in range(200):
         x.append(enhancements[i])
@@ -55,48 +60,89 @@ for i in range(1000):
 x = np.array(x)
 y = np.array(y)
 albedo = np.array(albedo)
+
+
 def min_max_normalize(data):
     min_val = np.min(data)
     max_val = np.max(data)
     normalized_data = (data - min_val) / (max_val - min_val)
     return normalized_data
 
+
 # 创建绘图
 fig, ax = plt.subplots(figsize=(12, 10))
 
 # 绘制散点图
-scatter = ax.scatter(x, y, c=albedo, cmap='viridis', alpha=0.5)
+scatter = ax.scatter(x, y, c=albedo, cmap="viridis", alpha=0.5)
 
 # 添加颜色条
 cbar = plt.colorbar(scatter)
-cbar.set_label('Albedo factor')
+cbar.set_label("Albedo factor")
 
 # 线性回归拟合
 model = LinearRegression().fit(x.reshape(-1, 1), y)
 y_pred = model.predict(x.reshape(-1, 1))
 
 # 绘制回归线
-sns.lineplot(x=x, y=y_pred, ax=ax, color='red', label='Linear regression')
-sns.lineplot(x=enhancements,y=enhancements,  color='green', label='1:1 line')
+sns.lineplot(x=x, y=y_pred, ax=ax, color="red", label="Linear regression")
+sns.lineplot(x=enhancements, y=enhancements, color="green", label="1:1 line")
 # 添加统计信息
 r2 = model.score(x.reshape(-1, 1), y)
 bias = np.mean(y_pred - y)
-rmse = np.sqrt(mean_squared_error(y, y_pred))
+rmse = 
+np.sqrt(mean_squared_error(y, y_pred))
 mae = mean_absolute_error(y, y_pred)
 
 # 添加统计信息文本
-ax.text(0.05, 0.95, f'$y = {model.coef_[0]:.2f}x + {model.intercept_:.2f}$', transform=ax.transAxes, color='red', fontsize=12, verticalalignment='top')
-ax.text(0.05, 0.90, f'$R^2 = {r2:.3f}$', transform=ax.transAxes, fontsize=12, verticalalignment='top')
-ax.text(0.05, 0.85, f'$BIAS = {bias:.3f}$', transform=ax.transAxes, fontsize=12, verticalalignment='top')
-ax.text(0.05, 0.80, f'$RMSE = {rmse:.3f}$', transform=ax.transAxes, fontsize=12, verticalalignment='top')
-ax.text(0.05, 0.75, f'$MAE = {mae:.3f}$', transform=ax.transAxes, fontsize=12, verticalalignment='top')
+ax.text(
+    0.05,
+    0.95,
+    f"$y = {model.coef_[0]:.2f}x + {model.intercept_:.2f}$",
+    transform=ax.transAxes,
+    color="red",
+    fontsize=12,
+    verticalalignment="top",
+)
+ax.text(
+    0.05,
+    0.90,
+    f"$R^2 = {r2:.3f}$",
+    transform=ax.transAxes,
+    fontsize=12,
+    verticalalignment="top",
+)
+ax.text(
+    0.05,
+    0.85,
+    f"$BIAS = {bias:.3f}$",
+    transform=ax.transAxes,
+    fontsize=12,
+    verticalalignment="top",
+)
+ax.text(
+    0.05,
+    0.80,
+    f"$RMSE = {rmse:.3f}$",
+    transform=ax.transAxes,
+    fontsize=12,
+    verticalalignment="top",
+)
+ax.text(
+    0.05,
+    0.75,
+    f"$MAE = {mae:.3f}$",
+    transform=ax.transAxes,
+    fontsize=12,
+    verticalalignment="top",
+)
 
 # 设置标签和标题
-ax.set_xlabel('True CH$_4$ enhancement (ppb)')
-ax.set_ylabel('Retrieved CH$_4$ enhancement (ppb)')
-ax.set_title('Scatter plot with Linear Regression and Statistics')
+ax.set_xlabel("True CH$_4$ enhancement (ppb)")
+ax.set_ylabel("Retrieved CH$_4$ enhancement (ppb)")
+ax.set_title("Scatter plot with Linear Regression and Statistics")
 
 plt.legend()
 plt.savefig("test.png")
 
 ax, fig = plt.subplots(figsize=(12, 10))
+
