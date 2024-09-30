@@ -1,6 +1,6 @@
 import numpy as np
 import xarray as xr
-import h5py as he5
+import h5py
 
 
 filename = (
@@ -9,79 +9,135 @@ filename = (
 
 
 # 打开 HE5 文件
-with he5.File(filename, "r") as f:
-    # 定义一个函数来打印每个数据集的维度信息
-    def print_dataset_info(name, obj):
-        if isinstance(obj, he5.Dataset):
-            print(f"数据集名称: {name}")
-            print(f"数据维度: {obj.shape}")
-            print(f"数据类型: {obj.dtype}")
-            print("-" * 30)
+def get_prisma_hierachy(filename):
+    with h5py.File(filename, "r") as f:
+        # 定义一个函数来打印每个数据集的维度信息
+        def print_dataset_info(name, obj):
+            if isinstance(obj, h5py.Dataset):
+                print(f"数据集名称: {name}")
+                print(f"数据维度: {obj.shape}")
+                print(f"数据类型: {obj.dtype}")
+                print("-" * 30)
 
-    # 递归访问所有数据集并打印信息
-    f.visititems(print_dataset_info)
+        # 递归访问所有数据集并打印信息
+        f.visititems(print_dataset_info)
 
 
-# 读取emit的数组
-def get_prisma_array(file_path: str) -> np.array:
+def get_prisma_radiance_and_fwhm(filepath):
     """
-    Reads a nc file and returns a NumPy array containing all the bands.
+    提取 PRISMA 数据中的辐射率数据立方体、波段波长数组和 FWHM 数据。
 
-    :param file_path: the path of the nc file
-    :return: a 3D NumPy array with shape (bands, height, width)
-    """
-    try:
-        dataset = he5.read_he5(file_path)
-        dataset = xr.open_dataset(file_path)
-        # 读取EMIT radiance的数据，并将其转置为 波段 行 列 的维度形式
-        radiance_array = dataset["radiance"].values.transpose(2, 0, 1)
-
-        if dataset is None:
-            raise FileNotFoundError(f"Unable to open file: {file_path}")
-
-    except Exception as e:
-        print(f"Error: {e}")
-        return None
-    return radiance_array
-
-
-# 获取 emit的通道波长信息
-def get_emit_bands(file_path: str) -> np.array:
-    """
-    Reads a nc file and returns a NumPy array containing all the bands.
-
-    :param file_path: the path of the nc file
-    :return: a 3D NumPy array with shape (bands, height, width)
+    :param filepath: PRISMA HDF5 文件的路径
+    :return: 包含三个元素的元组 (radiance_cube, wavelength_array, fwhm_array)
+             radiance_cube 是形状为 [波段, 行, 列] 的三维数组，
+             wavelength_array 是波段对应的波长数组，
+             fwhm_array 是波段对应的 FWHM 数组。
     """
     try:
-        dataset = xr.open_dataset(file_path, group="sensor_band_parameters")
-        # 读取EMIT radiance的数据，并将其转置为 波段 行 列 的维度形式
-        bands_array = dataset["wavelengths"].values
+        with h5py.File(filepath, "r") as prisma_file:
+            # 提取辐射率数据：VNIR 和 SWIR 两个部分的立方体数据
+            vnir_cube = prisma_file["/HDFEOS/SWATHS/PRS_L1_HCO/Data Fields/VNIR_Cube"][
+                :
+            ]
+            swir_cube = prisma_file["/HDFEOS/SWATHS/PRS_L1_HCO/Data Fields/SWIR_Cube"][
+                :
+            ]
 
-        if dataset is None:
-            raise FileNotFoundError(f"Unable to open file: {file_path}")
+            # 将 VNIR 和 SWIR 立方体组合成一个完整的立方体
+            radiance_cube = np.concatenate((vnir_cube, swir_cube), axis=1)
+
+            # 提取 VNIR 和 SWIR 对应的波长信息
+            vnir_wavelengths = prisma_file[
+                "/HDFEOS/SWATHS/PRS_L1_HCO/Geolocation Fields/VNIR_Wavelength"
+            ][:]
+            swir_wavelengths = prisma_file[
+                "/HDFEOS/SWATHS/PRS_L1_HCO/Geolocation Fields/SWIR_Wavelength"
+            ][:]
+
+            # 提取 VNIR 和 SWIR 对应的 FWHM 信息
+            vnir_fwhm = prisma_file[
+                "/HDFEOS/SWATHS/PRS_L1_HCO/Geolocation Fields/VNIR_FWHM"
+            ][:]
+            swir_fwhm = prisma_file[
+                "/HDFEOS/SWATHS/PRS_L1_HCO/Geolocation Fields/SWIR_FWHM"
+            ][:]
+
+            # 将波长和 FWHM 数组分别组合成完整的数组
+            wavelength_array = np.concatenate((vnir_wavelengths, swir_wavelengths))
+            fwhm_array = np.concatenate((vnir_fwhm, swir_fwhm))
+
+        return radiance_cube, wavelength_array, fwhm_array
 
     except Exception as e:
-        print(f"Error: {e}")
-        return None
-    return bands_array
-
-
-# 获取 筛选范围后的波长数组和radiance信息
-def get_emit_bands_array(file_path, bot, top):
-    bands = get_emit_bands(file_path=file_path)
-    data = get_emit_array(file_path=file_path)
-    indices = np.where((bands >= bot) & (bands <= top))[0]
-    return bands[indices], data[indices, :, :]
+        print(f"读取 PRISMA 文件时发生错误: {e}")
+        return None, None, None
 
 
 def main():
-    filepath = (
-        "I:\\EMIT\\Radiance_data\\EMIT_L1B_RAD_001_20220810T064957_2222205_033.nc"
-    )
-    emit_bands = get_emit_bands(filepath)
-    print(emit_bands)
+    filepath = filename  # 替换为你的 PRISMA 数据文件路径
+    radiance_cube, wavelength_array, fwhm_array = get_prisma_radiance_and_fwhm(filepath)
+
+    if (
+        radiance_cube is not None
+        and wavelength_array is not None
+        and fwhm_array is not None
+    ):
+        print("辐射率数据立方体形状:", radiance_cube.shape)
+        print("波段波长数组:", wavelength_array)
+        print("波段 FWHM 数组:", fwhm_array)
+    else:
+        print("未能成功提取 PRISMA 数据。")
+
+
+def save_prisma_data_as_netcdf(bands, output_path):
+    """
+    This function saves the extracted PRISMA band data into a NetCDF format.
+
+    :param bands: Dictionary containing VNIR and SWIR band data and wavelengths.
+    :param output_path: Path to save the NetCDF file.
+    """
+    try:
+        # Create a dataset for VNIR and SWIR bands
+        vnir_data = bands["VNIR"]["data"]
+        swir_data = bands["SWIR"]["data"]
+
+        # Create coordinates for bands
+        vnir_wavelength = bands["VNIR"]["wavelength"]
+        swir_wavelength = bands["SWIR"]["wavelength"]
+
+        # Creating xarray Dataset
+        data_vars = {
+            "VNIR": (["band", "row", "col"], vnir_data),
+            "SWIR": (["band", "row", "col"], swir_data),
+        }
+        coords = {
+            "band_vnir": (["band_vnir"], vnir_wavelength),
+            "band_swir": (["band_swir"], swir_wavelength),
+            "row": np.arange(vnir_data.shape[1]),
+            "col": np.arange(vnir_data.shape[2]),
+        }
+
+        # Create an xarray Dataset
+        out_xr = xr.Dataset(data_vars=data_vars, coords=coords)
+
+        # Adding CRS (coordinate reference system) metadata
+        out_xr.rio.write_crs("EPSG:4326", inplace=True)
+
+        # Save to NetCDF file
+        out_xr.to_netcdf(output_path)
+
+    except Exception as e:
+        print(f"An error occurred while saving PRISMA data to NetCDF: {e}")
 
 
 if __name__ == "__main__":
-    main()
+    with h5py.File(filename, "r") as prisma_file:
+        # 提取辐射率数据：VNIR 和 SWIR 两个部分的立方体数据
+        vnir_cube = prisma_file["/KDP_AUX/Fwhm_Swir_Matrix"][:]
+        swir_cube = prisma_file["/KDP_AUX/Cw_Swir_Matrix"][:]
+    print(vnir_cube.shape)
+    print(vnir_cube[0, :])
+    print(vnir_cube[0, :] - vnir_cube[500, :])
+    print(swir_cube.shape)
+    print(swir_cube[0, :])
+    print(swir_cube[0, :] - swir_cube[500, :])

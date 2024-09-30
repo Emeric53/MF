@@ -1,15 +1,9 @@
 import numpy as np
 import sys
-import os
 
 sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod")
 import MyFunctions.AHSI_data as ad
-import MyFunctions.EMIT_data as ed
-from MyFunctions.needed_functions import (
-    open_unit_absorption_spectrum,
-    filter_and_slice,
-    slice_data,
-)
+from MyFunctions.needed_functions import open_unit_absorption_spectrum
 
 
 # original matched filter algorithm 整幅图像进行计算

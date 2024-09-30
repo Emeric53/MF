@@ -5,7 +5,7 @@ sys.path.append(r"C:\\Users\\RS\\VSCode\\matchedfiltermethod")
 from MyFunctions import needed_function as nf
 from scipy.interpolate import interp1d
 
-basefilepath = f"C:\\PcModWin5\\Bin\\batch\\AHSI_Methane_0_ppmm_tape7.txt"
+basefilepath = "C:\\PcModWin5\\Bin\\batch\\AHSI_Methane_0_ppmm_tape7.txt"
 
 
 channels_path = r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\AHSI_channels.npz"

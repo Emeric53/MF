@@ -5,52 +5,6 @@ from scipy.interpolate import interp1d
 from osgeo import gdal
 
 
-# 生成查找表
-def build_lookup_table(enhancements):
-    """build a lookup table for transmittance
-
-    Args:
-        enhancements (np.array): the enhancement range of methane
-
-    Returns:
-        np.array, dictionary: return the wavelengths and lookup_table
-    """
-    lookup_table = {}
-    basepath = r"C:\\PcModWin5\\Bin\\batch\\AHSI_trans_0_ppmm_tape7.txt"
-    ahsi_channels_path = (
-        "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\AHSI_channels.npz"
-    )
-    wavelengths, base_spectrum = get_simulated_satellite_transmittance(
-        basepath, ahsi_channels_path, 900, 2500
-    )
-    for enhancement in enhancements:
-        filepath = (
-            f"C:\\PcModWin5\\Bin\\batch\\AHSI_trans_{int(enhancement)}_ppmm_tape7.txt"
-        )
-        _, spectrum = get_simulated_satellite_transmittance(
-            filepath, ahsi_channels_path, 900, 2500
-        )
-        lookup_table[enhancement] = np.array(spectrum) / np.array(base_spectrum)
-    return wavelengths, lookup_table
-
-
-# 保存查找表
-def save_lookup_table(filename, wavelengths, lookup_table):
-    """
-    Save the lookup table to a file.
-
-    :param filename: Path to the file where the lookup table will be saved
-    :param wavelengths: List or array of wavelengths
-    :param lookup_table: Dictionary where keys are enhancements and values are spectra
-    """
-    np.savez(
-        filename,
-        wavelengths=wavelengths,
-        enhancements=list(lookup_table.keys()),
-        spectra=list(lookup_table.values()),
-    )
-
-
 # 从文件加载查找表
 def load_lookup_table(filename):
     """
@@ -149,6 +103,7 @@ def generate_transmittance_cube_fromuas(
     return np.clip(transmittance_cube, 0, 1)
 
 
+# 从文件中打开单位吸收谱并返回指定范围内的数据
 def open_unit_absorption_spectrum(
     uaspath: str, bot: float, top: float
 ) -> tuple[np.ndarray, np.ndarray]:
@@ -384,6 +339,7 @@ def get_simulated_satellite_transmittance(
     return central_wavelengths, convoluved_transmittance
 
 
+# 模拟带甲烷烟羽的卫星遥感影像
 def satellite_images_with_plumes_simulation(
     radiance_path: str,
     satellite_name: str,
@@ -445,7 +401,7 @@ def satellite_images_with_plumes_simulation(
     for i in range(band_num):  # Traverse each band
         current = simulated_convolved_spectrum[i]
         noise = np.random.normal(
-            0, current * noise_level, (row_num, col_num)
+            0, current * noise_level, (plume.shape[0], plume.shape[1])
         )  # Generate Gaussian noise
         simulated_noisy_image[i, :, :] = (
             image_with_plume[i, :, :] + noise
