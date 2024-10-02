@@ -1,4 +1,5 @@
 {
-    "editor.fontFamily": "Fira Code"
-    
+    "editor.fontFamily": "Fira Code",
+    "python.terminal.executeInFileDir": false,
+    "python.envFile": "${workspaceFolder}/.env"
 }
