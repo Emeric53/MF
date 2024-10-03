@@ -25,7 +25,7 @@ def get_emit_array(file_path: str) -> np.ndarray:
     return radiance_array
 
 
-# 获取 emit的通道波长信息
+# 从数据文件中 获取 emit的通道波长信息
 def get_emit_bands(file_path: str) -> np.ndarray:
     """
     Reads a nc file and returns a NumPy array containing all the bands.
@@ -47,16 +47,32 @@ def get_emit_bands(file_path: str) -> np.ndarray:
     return bands_array
 
 
+# 直接读取先前保存的波长信息
+def read_emit_bands():
+    """
+    get bands list of ahsi
+    :param band_file:  filepath containing bands wavelength
+    :return: bands list
+    """
+    # 读取校准文件
+    wavelengths = np.load(
+        "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\satellites_channels\\EMIT_channels.npz"
+    )["central_wvls"]
+    return wavelengths
+
+
 # 获取 筛选范围后的波长数组和radiance信息
-def get_emit_bands_array(file_path: str, bot: float, top: float):
-    bands = get_emit_bands(file_path=file_path)
+def get_emit_bands_array(
+    file_path: str, bot: float, top: float
+) -> tuple[np.ndarray, np.ndarray]:
+    bands = read_emit_bands()
     data = get_emit_array(file_path=file_path)
     indices = np.where((bands >= bot) & (bands <= top))[0]
     return bands[indices], data[indices, :, :]
 
 
 # 将结果导出为nc文件
-def export_array_to_nc(
+def export_emit_array_to_nc(
     data_array: np.ndarray,
     input_nc_path: str,
     output_folder: str,

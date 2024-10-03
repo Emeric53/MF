@@ -2,7 +2,6 @@ import numpy as np
 import sys
 
 sys.path.append("C://Users//RS//VSCode//matchedfiltermethod")
-import needed_functions as nf
 from scipy.interpolate import griddata
 
 # built a lookup table for radiance spectrum at different circumstances

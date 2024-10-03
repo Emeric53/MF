@@ -7,7 +7,10 @@ import os
 import sys
 
 sys.path.append("c:\\Users\\RS\\VSCode\\matchedfiltermethod\src")
-from utils.needed_functions import export_to_tiff, read_tiff
+from utils.satellites_data.general_functions import (
+    save_ndarray_to_tiff,
+    read_tiff_in_numpy,
+)
 
 
 # 数据读取相关
@@ -18,11 +21,24 @@ def get_ahsi_array(filepath: str) -> np.array:
     :param filepath: the path of the raster file
     :return: a 3D NumPy array with shape (bands, height, width)
     """
-    return read_tiff(filepath)
+    return read_tiff_in_numpy(filepath)
+
+
+def get_ahsi_bands():
+    """
+    get bands list of ahsi
+    :param band_file:  filepath containing bands wavelength
+    :return: bands list
+    """
+    # 读取校准文件
+    wavelengths = np.load(
+        "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\satellites_channels\\AHSI_channels.npz"
+    )["central_wvls"]
+    return wavelengths
 
 
 # 对ahsi数据进行光谱校正
-def get_calibration(cal_file: str) -> list:
+def get_radiometric_calibration_coefficients(cal_file: str) -> np.ndarray:
     """
     Perform radiation calibration on the AHSI L1 data using calibration coefficients.
 
@@ -46,20 +62,7 @@ def get_calibration(cal_file: str) -> list:
         return None
 
 
-def get_bands():
-    """
-    get bands list of ahsi
-    :param band_file:  filepath containing bands wavelength
-    :return: bands list
-    """
-    # 读取校准文件
-    wavelengths = np.load(
-        "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\AHSI_channels.npz"
-    )["central_wvls"]
-    return wavelengths
-
-
-def rad_calibration(dataset, coeffs):
+def radiance_calibration(dataset: np.ndarray, coeffs: np.ndarray) -> np.ndarray:
     # 检查数据集的波段数是否与校准系数的数量匹配
     if len(coeffs) != dataset.shape[0]:
         raise ValueError(
@@ -75,7 +78,7 @@ def rad_calibration(dataset, coeffs):
 
 
 # 获得光谱校正后的辐射亮度
-def get_calibrated_radiance(filepath, bot, top) -> np.array:
+def get_calibrated_radiance(filepath: str, bot: float, top: float) -> np.array:
     """
     Perform radiation calibration on the AHSI L1 data using calibration coefficients and return the output.
 
@@ -84,15 +87,17 @@ def get_calibrated_radiance(filepath, bot, top) -> np.array:
     """
     calibration_filepath = os.path.dirname(filepath) + "//GF5B_AHSI_RadCal_SWIR.raw"
     ahsi_array = get_ahsi_array(filepath)
-    coeffs = get_calibration(calibration_filepath)
-    bands = get_bands()
+    coeffs = get_radiometric_calibration_coefficients(calibration_filepath)
+    bands = get_ahsi_bands()
     indices = np.where((bands >= bot) & (bands <= top))[0]
-    calibrated_radiance = rad_calibration(ahsi_array[indices, :, :], coeffs[indices])
+    calibrated_radiance = radiance_calibration(
+        ahsi_array[indices, :, :], coeffs[indices]
+    )
     return bands[indices], calibrated_radiance
 
 
 # 将反演结果的数组导出为GeoTIFF文件,并使用与输入文件相同的地理参考
-def export_array_to_tiff(result: np.array, filepath: str, output_folder: str):
+def export_ahsi_array_to_tiff(result: np.ndarray, filepath: str, output_folder: str):
     """
     Export a NumPy array to a GeoTIFF file with the same geo-referencing as the input file.
 
@@ -108,7 +113,7 @@ def export_array_to_tiff(result: np.array, filepath: str, output_folder: str):
         output_path = os.path.join(output_folder, filename)
 
         # Export with geo-referencing
-        export_to_tiff(result, output_path, reference_filepath=filepath)
+        save_ndarray_to_tiff(result, output_path, reference_filepath=filepath)
 
     except FileNotFoundError as fnf_error:
         print(fnf_error)
