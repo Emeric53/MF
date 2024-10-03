@@ -1,7 +1,5 @@
 import numpy as np
 
-from ..utils.MyFunctions import EMIT_data as ed
-
 
 # original matched filter algorithm 整幅图像进行计算
 def matched_filter(

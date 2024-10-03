@@ -1,11 +1,13 @@
 import numpy as np
+
+import os
 import sys
 
-sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod")
-from needed_functions import get_simulated_satellite_radiance
+sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src")
+from utils.satellites_data.general_functions import get_simulated_satellite_radiance
 
 
-def generate_uas(
+def generate_satellit_uas(
     satellite: str,
     enhancement_range: np.ndarray,
     lower_wavelength: float,
@@ -22,25 +24,11 @@ def generate_uas(
     Returns:
         np.ndarray, np.ndarray: return the bands and slopelist
     """
-    if satellite == "AHSI":
-        channels_path = (
-            "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\AHSI_channels.npz"
-        )
-    elif satellite == "EMIT":
-        channels_path = (
-            "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\EMIT_channels.npz"
-        )
-    elif satellite == "PRISMA":
-        channels_path = (
-            "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\PRISMA_channels.npz"
-        )
-    elif satellite == "EnMAP":
-        channels_path = (
-            "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\EnMAP_channels.npz"
-        )
+    satellite_channels_path = f"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\satellites_channels\\{satellite}_channels.npz"
+    if os.path.exists(satellite_channels_path):
+        channels_path = satellite_channels_path
     else:
-        print("Satellite name error!")
-        return
+        print("The channels path does not exist.")
 
     total_radiance = []
     slopelist = []
@@ -52,9 +40,7 @@ def generate_uas(
         bands, convoluved_radiance = get_simulated_satellite_radiance(
             filepath, channels_path, lower_wavelength, upper_wavelength
         )
-        current_convoluved_radiance = [i for i in convoluved_radiance]
-        current_convoluved_radiance = np.array(current_convoluved_radiance)
-        total_radiance.append(current_convoluved_radiance)
+        total_radiance.append(convoluved_radiance)
     total_radiance = np.log(np.transpose(np.array(total_radiance)))
 
     # 拟合斜率作为单位吸收谱的结果
@@ -65,7 +51,7 @@ def generate_uas(
     return bands, slopelist
 
 
-def build_lookup_table():
+def build_radiance_lut(enhancements: np.ndarray, satellite: str):
     """build a lookup table for transmittance
 
     Args:
@@ -75,20 +61,18 @@ def build_lookup_table():
         np.array, dictionary: return the wavelengths and lookup_table
     """
     lookup_table = {}
-    enhancements = np.arange(-2000, 50500, 500)
-    ahsi_channels_path = (
-        "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\AHSI_channels.npz"
-    )
+
+    channels_path = f"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\satellites_channels\\{satellite}_channels.npz"
+
     for enhancement in enhancements:
         filepath = (
             f"C:\\PcModWin5\\Bin\\batch\\AHSI_Methane_{int(enhancement)}_ppmm_tape7.txt"
         )
         bands, convoluved_radiance = get_simulated_satellite_radiance(
-            filepath, ahsi_channels_path, 900, 2500
+            filepath, channels_path, 900, 2500
         )
-        current_convoluved_radiance = [i for i in convoluved_radiance]
-        current_convoluved_radiance = np.array(current_convoluved_radiance)
-        lookup_table[enhancement] = np.log(current_convoluved_radiance)
+
+        lookup_table[enhancement] = np.log(convoluved_radiance)
     return bands, lookup_table
 
 
@@ -163,7 +147,7 @@ def load_needed_spectrum(
     return filtered_wavelengths, np.transpose(filtered_spectra)
 
 
-def generate_range_uas_for_specific_satellite(
+def generate_satellite_uas_from_lut(
     satellite_name: str,
     start_enhancement: float,
     end_enhancement: float,
