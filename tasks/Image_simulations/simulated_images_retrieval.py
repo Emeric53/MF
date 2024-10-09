@@ -14,7 +14,6 @@ from MatchedFilter.matched_filter import (
     filter_and_slice,
     matched_filter,
 )
-import matplotlib.pyplot as plt
 
 
 def simulation():

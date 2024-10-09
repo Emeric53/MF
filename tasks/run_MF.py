@@ -1,6 +1,10 @@
-import os
 import pathlib as pl
-from src.algorithms import matched_filter as mf
+import os
+import sys
+
+sys.path.append("C://Users//RS//VSCode//matchedfiltermethod//src")
+from algorithms import matchedfilter_methods as mf
+from utils import satellites_data as sd
 
 
 # 获取文件夹中的所有子文件夹
@@ -66,7 +70,7 @@ def rumfor_AHSI(filepath, outputfolder, mf_type):
     outputfile = os.path.join(outputfolder, filename)
     if os.path.exists(outputfile):
         return
-    bands, radiance = ad.get_calibrated_radiance(filepath, 2100, 2500)
+    bands, radiance = sd.AHSI_data.get_calibrated_radiance(filepath, 2100, 2500)
     uas_path = r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\\AHSI_unit_absorption_spectrum.txt"
     interval_uas_path = r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\\AHSI_unit_absorption_spectrum_interval5000.txt"
     process_radiance(
@@ -88,7 +92,7 @@ def rumfor_EMIT(filepath, outputfolder, mf_type):
     )
 
 
-# 通用的辐射率处理函数
+# 通用的radiance处理函数
 def process_radiance(
     radiance, uas_path, interval_uas_path, filepath, outputfolder, mf_type
 ):

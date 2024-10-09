@@ -796,6 +796,44 @@ def lognormal_matched_filter(
     return concentration
 
 
+# convert the radiance into log space 整幅图像进行计算
+def columnwise_lognormal_matched_filter(
+    data_cube: np.ndrray, unit_absorption_spectrum: np.ndarray
+):
+    # 获取 以 波段 行数 列数 为顺序的数据
+    bands, rows, cols = data_cube.shape
+    # 初始化 concentration 数组，大小与卫星数据尺寸一致
+    concentration = np.zeros((rows, cols))
+    # 对于非空列，取均值作为背景光谱，再乘以单位吸收光谱，得到目标光谱
+    log_background_spectrum = np.nanmean(np.log(data_cube), axis=(1, 2))
+    background_spectrum = np.exp(log_background_spectrum)
+
+    # 对当前目标光谱的每一行进行去均值操作，得到调整后的光谱，以此为基础计算协方差矩阵，并获得其逆矩阵
+    radiancediff_with_bg = np.log(data_cube) - log_background_spectrum[:, None, None]
+    d_covariance = np.log(data_cube) - background_spectrum[:, None, None]
+    covariance = np.zeros((bands, bands))
+    for row in range(rows):
+        for col in range(cols):
+            covariance += np.outer(d_covariance[:, row, col], d_covariance[:, row, col])
+    covariance = covariance / (rows * cols)
+    covariance_inverse = np.linalg.inv(covariance)
+
+    general_denominator = (
+        unit_absorption_spectrum.T @ covariance_inverse @ unit_absorption_spectrum
+    )
+
+    for row in range(rows):
+        for col in range(cols):
+            # 基于最优化公式计算每个像素的甲烷浓度增强值
+            numerator = (
+                radiancediff_with_bg[:, row, col].T
+                @ covariance_inverse
+                @ unit_absorption_spectrum
+            )
+            concentration[row, col] = numerator / general_denominator
+    return concentration
+
+
 # Kalman filter and matched filter 整幅图像进行计算
 def Kalman_filterr_matched_filter(
     data_cube: np.ndarray,

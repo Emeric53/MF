@@ -1,11 +1,13 @@
 import numpy as np
+
 import os
-import sys
 
-sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod")
-
-altitude = np.load("./MyData/altitude_profile.npy")
-methane_profile = np.load("./MyData/midlat_summer_1900ppm.npy")
+altitude = np.load(
+    "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\modtran_related\\altitude_profile.npy"
+)
+methane_profile = np.load(
+    "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\modtran_related\\altitude_profile.npy"
+)
 
 
 # 将一个modtran文件模板中的甲烷廓线进行缩放至想要的浓度
@@ -271,9 +273,4 @@ def generate_batch_file(
 
 
 if __name__ == "__main__":
-    # generate_ltn_files_write_into_batchfile()
     generate_batch_file()
-    # scale_methane_profile()
-    # add_8km_methane()
-    # add_500m_methane()
-    # write_batchfile()

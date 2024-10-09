@@ -5,6 +5,10 @@ import sys
 
 sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src")
 from utils.satellites_data.general_functions import get_simulated_satellite_radiance
+from utils.generate_radiance_lut import (
+    load_radiance_lookup_table,
+    get_radiance_spectrum_from_lut,
+)
 
 
 def generate_satellit_uas(
@@ -51,6 +55,84 @@ def generate_satellit_uas(
     return bands, slopelist
 
 
+def generate_series_with_multiples_of_500(start_value: float, end_value: float):
+    """
+    Generate a series starting with start_value, ending with end_value, and inserting multiples of 500 between them.
+
+    :param start_value: The starting value of the series
+    :param end_value: The ending value of the series
+    :return: A list containing the series with multiples of 500 inserted between start_value and end_value
+    """
+    # Ensure start_value is less than or equal to end_value
+    if start_value > end_value:
+        start_value, end_value = end_value, start_value
+
+    # Get the first multiple of 500 greater than or equal to start_value
+    first_500_multiple = np.ceil(start_value / 500) * 500
+    # Get the last multiple of 500 less than or equal to end_value
+    last_500_multiple = np.floor(end_value / 500) * 500
+
+    # Generate the series of 500 multiples between first_500_multiple and last_500_multiple
+    multiples_of_500 = np.arange(first_500_multiple, last_500_multiple + 1, 500)
+
+    # Combine start_value, multiples_of_500, and end_value, avoiding duplicates
+    series = (
+        [start_value] + multiples_of_500.tolist() + [end_value]
+        if start_value != end_value
+        else [start_value]
+    )
+
+    # Remove duplicate multiples of 500 that may have been added from start_value or end_value
+    series = list(dict.fromkeys(series))
+
+    return series
+
+
+def generate_range_uas_for_specific_satellite_lut(
+    satellite_name: str,
+    start_enhancement: float,
+    end_enhancement: float,
+    lower_wavelength: float,
+    upper_wavelength: float,
+    altitude: float,
+    sza: float,
+):
+    wavelengths, lookup_table = load_radiance_lookup_table(
+        f"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\lookuptables\\{satellite_name}_radiance_lookup_table.npz"
+    )
+
+    slopelist = []
+    total_radiance = []
+
+    # 构建enhancement的范围
+    enhancement_range = np.array(
+        generate_series_with_multiples_of_500(start_enhancement, end_enhancement)
+    )
+    condition = np.logical_and(
+        wavelengths >= lower_wavelength, wavelengths <= upper_wavelength
+    )
+    used_wavelengths = wavelengths[condition]
+    for enhancement in enhancement_range:
+        current_radiance = get_radiance_spectrum_from_lut(
+            enhancement, altitude, sza, lookup_table
+        )
+        total_radiance.append(np.log(current_radiance[condition]))
+    total_radiance = np.transpose(total_radiance)
+    for data in total_radiance:
+        slope, _ = np.polyfit(enhancement_range, data, 1)
+        slopelist.append(slope)
+
+    return used_wavelengths, slopelist
+
+
+def export_uas_to_file(
+    wavelengths: np.ndarray, slopelist: np.ndarray, output_file: str
+):
+    with open(output_file, "w") as output:
+        for index, data in enumerate(slopelist):
+            output.write(str(wavelengths[index]) + " " + str(data) + "\n")
+
+
 def build_radiance_lut(enhancements: np.ndarray, satellite: str):
     """build a lookup table for transmittance
 
@@ -62,7 +144,7 @@ def build_radiance_lut(enhancements: np.ndarray, satellite: str):
     """
     lookup_table = {}
 
-    channels_path = f"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\satellites_channels\\{satellite}_channels.npz"
+    channels_path = f"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\satellite_channels\\{satellite}_channels.npz"
 
     for enhancement in enhancements:
         filepath = (
