@@ -13,7 +13,7 @@ from utils.satellites_data.general_functions import (
 )
 
 
-# 数据读取相关
+# 读取ahsi的数组
 def get_ahsi_array(filepath: str) -> np.array:
     """
     Reads a raster file and returns a NumPy array containing all the bands.
@@ -24,6 +24,7 @@ def get_ahsi_array(filepath: str) -> np.array:
     return read_tiff_in_numpy(filepath)
 
 
+# 获取ahsi的波段信息
 def get_ahsi_bands():
     """
     get bands list of ahsi
@@ -32,7 +33,7 @@ def get_ahsi_bands():
     """
     # 读取校准文件
     wavelengths = np.load(
-        "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\satellites_channels\\AHSI_channels.npz"
+        "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\satellite_channels\\AHSI_channels.npz"
     )["central_wvls"]
     return wavelengths
 
@@ -62,6 +63,7 @@ def get_radiometric_calibration_coefficients(cal_file: str) -> np.ndarray:
         return None
 
 
+# 对ahsi数据进行光谱校正
 def radiance_calibration(dataset: np.ndarray, coeffs: np.ndarray) -> np.ndarray:
     # 检查数据集的波段数是否与校准系数的数量匹配
     if len(coeffs) != dataset.shape[0]:
@@ -78,12 +80,14 @@ def radiance_calibration(dataset: np.ndarray, coeffs: np.ndarray) -> np.ndarray:
 
 
 # 获得光谱校正后的辐射亮度
-def get_calibrated_radiance(filepath: str, bot: float, top: float) -> np.array:
+def get_calibrated_radiance(
+    filepath: str, bot: float, top: float
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Perform radiation calibration on the AHSI L1 data using calibration coefficients and return the output.
 
     :param filepath: AHSI filepath
-    :return: Calibrated dataset as a 3D NumPy array
+    :return: wavelength array, Calibrated dataset as a 3D NumPy array
     """
     calibration_filepath = os.path.dirname(filepath) + "//GF5B_AHSI_RadCal_SWIR.raw"
     ahsi_array = get_ahsi_array(filepath)
@@ -97,7 +101,9 @@ def get_calibrated_radiance(filepath: str, bot: float, top: float) -> np.array:
 
 
 # 将反演结果的数组导出为GeoTIFF文件,并使用与输入文件相同的地理参考
-def export_ahsi_array_to_tiff(result: np.ndarray, filepath: str, output_folder: str):
+def export_ahsi_array_to_tiff(
+    result: np.ndarray, filepath: str, output_folder: str, output_filename: str = None
+):
     """
     Export a NumPy array to a GeoTIFF file with the same geo-referencing as the input file.
 
@@ -107,11 +113,11 @@ def export_ahsi_array_to_tiff(result: np.ndarray, filepath: str, output_folder: 
     """
     try:
         # get the file name
-        filename = pl.Path(filepath).name
-
+        input_filename = pl.Path(filepath).name
+        # Use the provided output filename if specified, otherwise use the input file name
+        filename = output_filename if output_filename else input_filename
         # generate the whole output_folder_file path
         output_path = os.path.join(output_folder, filename)
-
         # Export with geo-referencing
         save_ndarray_to_tiff(result, output_path, reference_filepath=filepath)
 
@@ -165,6 +171,7 @@ def image_coordinate(image_path: str):
         print(f"An error occurred: {e}")
 
 
+# main 函数
 def main():
     ahsi_file = (
         "F:\\GF5-02_李飞论文所用数据\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222\\"

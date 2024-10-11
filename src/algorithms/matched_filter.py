@@ -1,686 +1,351 @@
 import numpy as np
+from concurrent.futures import ThreadPoolExecutor
 
 
-# original matched filter algorithm 整幅图像进行计算
-def matched_filter(
-    data_cube: np.array,
-    unit_absorption_spectrum: np.array,
-    albedoadjust,
-    iterate,
-    sparsity,
+def compute_background_and_target_spectrum_and_radiance_diff_and_d_covariance(
+    data_cube: np.ndarray,
+    unit_absorption_spectrum: np.ndarray,
+    polluted: np.ndarray = None,
 ):
     """
-    Calculate the methane enhancement of the image data based on the original matched filter
+    Compute the background spectrum and target spectrum.
+    """
+    if polluted:
+        if data_cube.ndim == 3:
+            background_spectrum = np.nanmean(data_cube - polluted, axis=(1, 2))
+        elif data_cube.ndim == 2:
+            background_spectrum = np.nanmean(data_cube - polluted, axis=1)
+        else:
+            raise ValueError("Data cube must be 2D or 3D")
+        target_spectrum = background_spectrum * unit_absorption_spectrum
+        data_cube_diff = data_cube - background_spectrum[:, None, None]
+        d_covariance = data_cube_diff - polluted
+    else:
+        if data_cube.ndim == 3:
+            background_spectrum = np.nanmean(data_cube, axis=(1, 2))
+        elif data_cube.ndim == 2:
+            background_spectrum = np.nanmean(data_cube, axis=1)
+        else:
+            raise ValueError("Data cube must be 2D or 3D")
+        target_spectrum = background_spectrum * unit_absorption_spectrum
+        data_cube_diff = data_cube - polluted - background_spectrum[:, None, None]
+        d_covariance = data_cube_diff
+    return background_spectrum, target_spectrum, data_cube_diff, d_covariance
+
+
+def compute_covariance_inverse(
+    radiancediff_with_background: np.ndarray,
+    counts: int,
+):
+    """
+    Compute the covariance matrix and its inverse.
+    """
+    covariance = (
+        np.tensordot(
+            radiancediff_with_background,
+            radiancediff_with_background,
+            axes=((1, 2), (1, 2)),
+        )
+        / counts
+    )
+    return np.linalg.pinv(covariance)
+
+
+def compute_albedo(
+    data_cube: np.ndarray, background_spectrum: np.ndarray
+) -> np.ndarray:
+    """
+    Compute the albedo correction factor for either a 3D (full image) or 2D (single column) data cube.
+
+    Args:
+        data_cube (np.ndarray): The image data cube, either 3D (bands, rows, cols) or 2D (bands, rows).
+        background_spectrum (np.ndarray): The background spectrum array for the image data.
+
+    Returns:
+        np.ndarray: The albedo correction factor.
+    """
+    # Check if the data_cube is 3D (full image) or 2D (single column)
+    if data_cube.ndim == 3:  # 3D case: (bands, rows, cols)
+        albedo = np.einsum("ijk,i->jk", data_cube, background_spectrum) / np.dot(
+            background_spectrum, background_spectrum
+        )
+    elif data_cube.ndim == 2:  # 2D case: (bands, rows)
+        albedo = np.einsum("ij,i->j", data_cube, background_spectrum) / np.dot(
+            background_spectrum, background_spectrum
+        )
+    else:
+        raise ValueError("Input data_cube must be either 2D or 3D.")
+
+    return albedo
+
+
+def compute_concentration_pixel(
+    radiancediff_with_background: np.ndarray,
+    covariance_inverse: np.ndarray,
+    target_spectrum: np.ndarray,
+    albedo: float,
+    l1filter: float,
+    common_denominator: float,
+):
+    """
+    Compute concentration for a single pixel.
+    """
+    numerator = radiancediff_with_background.T @ covariance_inverse @ target_spectrum
+    return numerator - l1filter / (albedo * common_denominator)
+
+
+def compute_concentration_column(
+    column_radiancediff_with_bg: np.ndarray,
+    covariance_inverse: np.ndarray,
+    target_spectrum: np.ndarray,
+    column_albedo: np.ndarray,
+    common_denominator: float,
+):
+    # Initial concentration calculation
+    numerator = column_radiancediff_with_bg.T @ covariance_inverse @ target_spectrum
+    denominator = column_albedo * common_denominator
+    column_concentration = numerator / denominator
+    return column_concentration
+
+
+def matched_filter(
+    data_cube: np.ndarray,
+    unit_absorption_spectrum: np.ndarray,
+    iterate: bool,
+    albedoadjust: bool,
+    sparsity: bool,
+) -> np.ndarray:
+    """
+    Calculate methane enhancement based on the original matched filter method.
+    """
+    _, rows, cols = data_cube.shape
+    concentration = np.zeros((rows, cols))
+    albedo = np.ones((rows, cols))
+    l1filter = np.zeros((rows, cols))
+    # Compute initial background and target spectrum, radiance difference with background, and covariance inverse
+    background_spectrum, target_spectrum, radiancediff_with_background, d_covariance = (
+        compute_background_and_target_spectrum_and_radiance_diff_and_d_covariance(
+            data_cube, unit_absorption_spectrum
+        )
+    )
+    covariance_inverse = compute_covariance_inverse(d_covariance, rows * cols)
+
+    # Compute albedo adjustment if required
+    if albedoadjust:
+        albedo = compute_albedo(data_cube, background_spectrum)
+
+    # Compute common denominator
+    common_denominator = target_spectrum.T @ covariance_inverse @ target_spectrum
+
+    # Compute concentration for each pixel
+    for row in range(rows):
+        for col in range(cols):
+            concentration[row, col] = compute_concentration_pixel(
+                radiancediff_with_background[:, row, col],
+                covariance_inverse,
+                target_spectrum,
+                albedo[row, col],
+                l1filter[row, col],
+                common_denominator,
+            )
+
+    # Perform iterative updates if requested
+    if iterate:
+        for _ in range(5):
+            if sparsity:
+                l1filter = 1 / (concentration + np.finfo(np.float64).tiny)
+
+            # Update background, target spectrum, radiance difference with background, and covariance inverse
+            (
+                background_spectrum,
+                target_spectrum,
+                radiancediff_with_background,
+                d_covariance,
+            ) = compute_background_and_target_spectrum_and_radiance_diff_and_d_covariance(
+                data_cube,
+                unit_absorption_spectrum,
+                albedo[:, :, None] * concentration[:, :, None] * target_spectrum,
+            )
+
+            covariance_inverse = compute_covariance_inverse(d_covariance, rows, cols)
+
+            common_denominator = (
+                target_spectrum.T @ covariance_inverse @ target_spectrum
+            )
+
+            for row in range(rows):
+                for col in range(cols):
+                    concentration[row, col] = np.max(
+                        compute_concentration_pixel(
+                            radiancediff_with_background[:, row, col],
+                            covariance_inverse,
+                            target_spectrum,
+                            albedo[row, col],
+                            l1filter[row, col],
+                            common_denominator,
+                        ),
+                        0,
+                    )
+
+    return concentration
+
+
+def columnwise_matched_filter(
+    data_cube: np.ndarray,
+    unit_absorption_spectrum: np.ndarray,
+    iterate: bool = False,
+    albedoadjust: bool = False,
+    sparsity: bool = False,
+) -> np.ndarray:
+    """
+    Perform matched filter calculation column by column using multithreading.
+    """
+
+    def process_column(
+        data_cube: np.ndarray,
+        unit_absorption_spectrum: np.ndarray,
+        col_index: int,
+        iterate: bool,
+        albedoadjust: bool,
+        sparsity: bool,
+    ):
+        """
+        Process a single column of the data cube.
+        """
+        _, rows, _ = data_cube.shape
+        current_column = data_cube[:, :, col_index]
+        valid_rows = ~np.isnan(current_column[0, :])
+        count_not_nan = np.count_nonzero(valid_rows)
+
+        if count_not_nan == 0:
+            return np.nan * np.zeros(rows)
+
+        # Compute background and target spectrum and radiance difference with background and covariance inverse
+        background_spectrum, target_spectrum, radiancediff_with_bg, d_covariance = (
+            compute_background_and_target_spectrum_and_radiance_diff_and_d_covariance(
+                current_column, unit_absorption_spectrum
+            )
+        )
+        covariance_inverse = compute_covariance_inverse(d_covariance, count_not_nan)
+
+        if albedoadjust:
+            albedo = compute_albedo(current_column, background_spectrum)
+
+        common_denominator = target_spectrum.T @ covariance_inverse @ target_spectrum
+        concentration = compute_concentration_column(
+            radiancediff_with_bg,
+            covariance_inverse,
+            target_spectrum,
+            albedo,
+            common_denominator,
+        )
+        # Iterative updates
+        if iterate:
+            l1filter = np.zeros(rows)
+            epsilon = np.finfo(np.float64).tiny
+            for _ in range(5):
+                if sparsity:
+                    l1filter[valid_rows] = 1 / (concentration[valid_rows] + epsilon)
+
+                (
+                    background_spectrum,
+                    target_spectrum,
+                    radiancediff_with_bg,
+                    d_covariance,
+                ) = compute_background_and_target_spectrum_and_radiance_diff_and_d_covariance(
+                    current_column[:, valid_rows]
+                    - albedo[valid_rows]
+                    * concentration[valid_rows]
+                    * target_spectrum[:, None],
+                    unit_absorption_spectrum,
+                )
+
+                covariance_inverse = compute_covariance_inverse(
+                    d_covariance, count_not_nan
+                )
+
+                common_denominator = (
+                    target_spectrum.T @ covariance_inverse @ target_spectrum
+                )
+
+                concentration[valid_rows] = compute_concentration_column(
+                    radiancediff_with_bg,
+                    covariance_inverse,
+                    target_spectrum,
+                    albedo,
+                    common_denominator,
+                )
+
+        return concentration
+
+    _, _, cols = data_cube.shape
+
+    # Parallel column processing
+    with ThreadPoolExecutor() as executor:
+        results = list(
+            executor.map(
+                lambda col_index: process_column(
+                    data_cube,
+                    unit_absorption_spectrum,
+                    col_index,
+                    iterate,
+                    albedoadjust,
+                    sparsity,
+                ),
+                range(cols),
+            )
+        )
+
+    concentration = np.stack(results, axis=1)
+    return concentration
+
+
+def ml_matched_filter(
+    data_cube: np.ndarray,
+    unit_absorption_spectrum_array: np.ndarray,
+    albedoadjust: bool,
+) -> np.ndarray:
+    """
+    Calculate the methane enhancement of the image data based on the modified matched filter
     and the unit absorption spectrum.
 
-    :param data_array: numpy array of the image data
-    :param unit_absorption_spectrum: list of the unit absorption spectrum
+    :param data_cube: numpy array of the image data
+    :param unit_absorption_spectrum: list of the unit absorption spectrum numpy array from differenet range
+    :param albedoadjust: bool, whether to adjust the albedo
+
+    :return: numpy array of methane enhancement result
     """
-    # 获取波段 行数 列数 初始化 concentration 数组，大小与卫星数据尺寸一直
-    bands, rows, cols = data_cube.shape
+    # 获取波段 行数 列数 初始化 concentration 数组，大小与卫星数据尺寸一致
+    _, rows, cols = data_cube.shape
     concentration = np.zeros((rows, cols))
 
     # 对于非空列，取均值作为背景光谱，再乘以单位吸收光谱，得到目标光谱
-    background_spectrum = np.nanmean(data_cube, axis=(1, 2))
-    target_spectrum = background_spectrum * unit_absorption_spectrum
-    radiancediff_with_bg = data_cube - background_spectrum[:, None, None]
+    background_spectrum, target_spectrum, radiance_diff_with_background = (
+        compute_background_and_target_spectrum_and_radiance_diff(
+            data_cube, unit_absorption_spectrum_array[0]
+        )
+    )
 
     # 计算协方差矩阵，并获得其逆矩阵
-    d_covariance = radiancediff_with_bg
-    covariance = np.zeros((bands, bands))
-    for row in range(rows):
-        for col in range(cols):
-            covariance += np.outer(d_covariance[:, row, col], d_covariance[:, row, col])
-    covariance = covariance / (rows * cols)
-    covariance_inverse = np.linalg.inv(covariance)
+    d_covariance = radiance_diff_with_background
+    covariance_inverse = compute_covariance_inverse(d_covariance, rows * cols)
 
     # 判断是否进行反照率校正，若是，则通过背景光谱和实际光谱计算反照率校正因子
     albedo = np.ones((rows, cols))
     if albedoadjust:
-        for row in range(rows):
-            for col in range(cols):
-                albedo[row, col] = (data_cube[:, row, col].T @ background_spectrum) / (
-                    background_spectrum.T @ background_spectrum
-                )
+        compute_albedo(data_cube, background_spectrum)
 
-    # 基于最优化公式计算每个像素的甲烷浓度增强值
+    # Compute concentration for each pixel
+    common_denominator = target_spectrum.T @ covariance_inverse @ target_spectrum
     for row in range(rows):
         for col in range(cols):
-            numerator = (
-                radiancediff_with_bg[:, row, col].T
-                @ covariance_inverse
-                @ target_spectrum
+            concentration[row, col] = compute_concentration_pixel(
+                radiance_diff_with_background[:, row, col],
+                covariance_inverse,
+                target_spectrum,
+                albedo[row, col],
+                common_denominator,
             )
-            denominator = albedo[row, col] * (
-                target_spectrum.T @ covariance_inverse @ target_spectrum
-            )
-            concentration[row, col] = numerator / denominator
-
-    # for row in range(rows):
-    #     for col in range(cols):
-    #         numerator = (radiancediff_with_bg[:,row,col].T @ target_spectrum)
-    #         denominator = albedo[row,col]*(target_spectrum.T @ target_spectrum)
-    #         concentration[row,col] = numerator/denominator
-
-    # 判断是否进行迭代，若是，则进行如下迭代计算
-    if iterate:
-        # 初始化 l1filter 数组
-        l1filter = np.zeros((rows, cols))
-        for iter_num in range(5):
-            print("iteration: No.", iter_num + 1)
-            # 判断是否进行 l1filter 校正，若是则给予前一步的浓度值计算 l1filter
-            if sparsity:
-                for row in rows:
-                    for col in cols:
-                        l1filter = 1 / (
-                            concentration[row, col] + np.finfo(np.float64).tiny
-                        )
-
-            # 更新背景光谱和目标光谱,并计算进行观测光谱和背景光谱差值
-            updated_array = (
-                data_cube
-                - (albedo * concentration)[None, :, :] * target_spectrum[:, None, None]
-            )
-            background_spectrum = np.mean(updated_array, axis=(1, 2))
-            target_spectrum = np.multiply(background_spectrum, unit_absorption_spectrum)
-            radiancediff_with_bg = data_cube - background_spectrum[:, None, None]
-
-            # 基于新的目标谱和背景光谱 计算协方差矩阵
-            d_covariance = (
-                data_cube
-                - (albedo * concentration)[None, :, :] * target_spectrum[:, None, None]
-                - background_spectrum[:, None, None]
-            )
-            covariance = np.zeros((bands, bands))
-            for row in range(rows):
-                for col in range(cols):
-                    covariance += np.outer(
-                        d_covariance[:, row, col], d_covariance[:, row, col]
-                    )
-            covariance = covariance / (rows * cols)
-            covariance_inverse = np.linalg.inv(covariance)
-
-            # 基于最优化估计公式 计算新的甲烷浓度增强值
-            for row in range(rows):
-                for col in range(cols):
-                    numerator = (
-                        radiancediff_with_bg[:, row, col].T
-                        @ covariance_inverse
-                        @ target_spectrum
-                    ) - l1filter[row, col]
-                    denominator = albedo[row, col] * (
-                        target_spectrum.T @ covariance_inverse @ target_spectrum
-                    )
-                    concentration[row, col] = np.maximum(numerator / denominator, 0.0)
-
-            # for row in range(rows):
-            #     for col in range(cols):
-            #         numerator = (radiancediff_with_bg[:,row,col].T @ target_spectrum) - l1filter[row,col]
-            #         denominator = albedo[row,col] * (target_spectrum.T @ target_spectrum)
-            #         concentration[row,col] = np.maximum(numerator / denominator, 0.0)
-    return concentration
-
-
-# modified matched filter algorithm 整幅图像进行计算
-def modified_matched_filter_copy(
-    data_cube: np.array, unit_absorption_spectrum: np.array
-) -> np.array:
-    """
-    Calculate the methane enhancement of the image data based on the original matched filter
-    and the unit absorption spectrum.
-
-    :param data_cube: numpy array of the image data
-    :param unit_absorption_spectrum: list of the unit absorption spectrum
-    :param is_iterate: flag to decide whether to iterate the matched filter
-    :param is_albedo: flag to decide whether to do the albedo correction
-    :param is_filter: flag to decide whether to add the l1-filter correction
-    :return: numpy array of methane enhancement result
-    """
-    # 获取 以 波段 行数 列数 为顺序的数据
-    bands, rows, cols = data_cube.shape
-    # 初始化 concentration 数组，大小与卫星数据尺寸一直
-    concentration = np.zeros((rows, cols))
-    # 对于非空列，取均值作为背景光谱，再乘以单位吸收光谱，得到目标光谱
-    background_spectrum = np.nanmean(data_cube, axis=(1, 2))
-    target_spectrum = background_spectrum * unit_absorption_spectrum[0]
-    radiancediff_with_bg = data_cube - background_spectrum[:, None, None]
-
-    d_covariance = data_cube - background_spectrum[:, None, None]
-    covariance = np.zeros((bands, bands))
-    for row in range(rows):
-        for col in range(cols):
-            covariance += np.outer(d_covariance[:, row, col], d_covariance[:, row, col])
-    covariance = covariance / (rows * cols)
-    covariance_inverse = np.linalg.inv(covariance)
-
-    for row in range(rows):
-        for col in range(cols):
-            # 基于最优化公式计算每个像素的甲烷浓度增强值
-            numerator = (
-                radiancediff_with_bg[:, row, col].T
-                @ covariance_inverse
-                @ target_spectrum
-            )
-            denominator = target_spectrum.T @ covariance_inverse @ target_spectrum
-            concentration[row, col] = numerator / denominator
-
-    original_concentration = concentration.copy()
-    levelon = True
-    while levelon:
-        adaptive_threshold = 4000
-        i = 1
-        # _, new_unit_absorption_spectrum = lookup_uas_interpolated(adaptive_threshold)
-        new_unit_absorption_spectrum = unit_absorption_spectrum[i]
-        high_concentration_mask = concentration > adaptive_threshold
-        low_concentration_mask = concentration <= adaptive_threshold
-        if np.sum(high_concentration_mask) > 0:
-            # 注意：target_spectrum 的更新应该基于更准确的估计值
-            background_spectrum = np.nanmean(
-                data_cube - concentration * target_spectrum[:, None, None], axis=(1, 2)
-            )
-            target_spectrum = background_spectrum * unit_absorption_spectrum
-            new_background_spectrum = (
-                background_spectrum + adaptive_threshold * new_unit_absorption_spectrum
-            )
-            high_target_spectrum = (
-                new_background_spectrum * new_unit_absorption_spectrum
-            )
-
-            radiancediff_with_bg[:, low_concentration_mask] = (
-                data_cube[:, low_concentration_mask] - background_spectrum[:, None]
-            )
-            radiancediff_with_bg[:, high_concentration_mask] = (
-                data_cube[:, high_concentration_mask] - new_background_spectrum[:, None]
-            )
-
-            d_covariance[:, high_concentration_mask] = data_cube[
-                :, high_concentration_mask
-            ] - (
-                (concentration[high_concentration_mask] - adaptive_threshold)
-                * high_target_spectrum[:, None]
-                + new_background_spectrum[:, None]
-            )
-            d_covariance[:, low_concentration_mask] = data_cube[
-                :, low_concentration_mask
-            ] - (
-                concentration[low_concentration_mask] * target_spectrum[:, None]
-                + background_spectrum[:, None]
-            )
-
-            covariance = np.zeros((bands, bands))
-            for row in range(rows):
-                for col in range(cols):
-                    covariance += np.outer(
-                        d_covariance[:, row, col], d_covariance[:, row, col]
-                    )
-            covariance /= rows * cols
-            covariance_inverse = np.linalg.inv(covariance)
-
-            concentration[high_concentration_mask] = (
-                (
-                    radiancediff_with_bg[:, high_concentration_mask].T
-                    @ covariance_inverse
-                    @ high_target_spectrum
-                )
-                / (high_target_spectrum.T @ covariance_inverse @ high_target_spectrum)
-            ) + adaptive_threshold
-
-            concentration[low_concentration_mask] = (
-                radiancediff_with_bg[:, low_concentration_mask].T
-                @ covariance_inverse
-                @ target_spectrum
-            ) / (target_spectrum.T @ covariance_inverse @ target_spectrum)
-
-        new_mean_concentration = np.nanmean(concentration)
-        new_std_concentration = np.nanstd(concentration)
-        new_adaptive_threshold = new_mean_concentration + new_std_concentration
-
-        if (
-            np.abs((new_adaptive_threshold - adaptive_threshold) / adaptive_threshold)
-            > 0.5
-        ):
-            adaptive_threshold = new_adaptive_threshold
-            print("threshold is unstable, keep on iterating")
-        else:
-            levelon = False
-            print("threshold is stable")
-    return concentration
-    # mean_concentration = np.nanmean(concentration)
-    # std_concentration = np.nanstd(concentration)
-    # adaptive_threshold = mean_concentration + std_concentration
-    # print("adaptive_threshold:",adaptive_threshold)
-    # originalconcentration = concentration.copy()
-    # levelon = True
-    # while levelon:
-    #     _,new_unit_absorption_spectrum = lookup_uas_interpolated(adaptive_threshold)
-    #     high_concentration_mask = concentration > adaptive_threshold
-    #     low_concentration_mask = concentration <= adaptive_threshold
-
-    #     background_spectrum = np.nanmean(data_cube - concentration * target_spectrum[:, None, None], axis=(1, 2))
-    #     target_spectrum = background_spectrum * unit_absorption_spectrum
-    #     new_background_spectrum = background_spectrum + adaptive_threshold * unit_absorption_spectrum
-    #     high_target_spectrum = new_background_spectrum * new_unit_absorption_spectrum
-
-    #     radiancediff_with_bg[:, high_concentration_mask] = (
-    #         data_cube[:, high_concentration_mask]  - (concentration[high_concentration_mask]) *target_spectrum[:, None]
-    #         - new_background_spectrum[:, None]
-    #     )
-
-    #     radiancediff_with_bg[:, low_concentration_mask] = (
-    #         data_cube[:, low_concentration_mask] - concentration[low_concentration_mask] * target_spectrum[:, None]
-    #          - background_spectrum[:, None]
-    #     )
-
-    #     covariance = np.zeros((bands, bands))
-    #     for row in range(rows):
-    #         for col in range(cols):
-    #             covariance += np.outer(radiancediff_with_bg[:, row, col], radiancediff_with_bg[:, row, col])
-    #     covariance /= rows*cols
-    #     covariance_inverse = np.linalg.inv(covariance)
-
-    #     concentration[high_concentration_mask] = (
-    #         (radiancediff_with_bg[:, high_concentration_mask].T @ covariance_inverse @ high_target_spectrum) /
-    #         (high_target_spectrum.T @ covariance_inverse @ high_target_spectrum)
-    #     ) + adaptive_threshold
-
-    #     concentration[low_concentration_mask] = (
-    #         (radiancediff_with_bg[:, low_concentration_mask].T @ covariance_inverse @ target_spectrum) /
-    #         (target_spectrum.T @ covariance_inverse @ target_spectrum)
-    #     )
-
-    #     new_mean_concentration = np.nanmean(concentration)
-    #     new_std_concentration = np.nanstd(concentration)
-    #     new_adaptive_threshold = new_mean_concentration + new_std_concentration
-
-    #     if np.abs((new_adaptive_threshold - adaptive_threshold) / adaptive_threshold) < 0.01:
-    #         adaptive_threshold = new_adaptive_threshold
-    #         print("the distribution of concentration is not stable, keep iterating")
-    #     else:
-    #         levelon = False
-    #         print("the distribution of concentration is stable")
-    # return originalconcentration,concentration
-
-
-# # modified matched filter algorithm 整幅图像进行计算
-# def modified_matched_filter(data_cube: np.array, unit_absorption_spectrum: np.array) -> np.array:
-#     """
-#     Calculate the methane enhancement of the image data based on the original matched filter
-#     and the unit absorption spectrum.
-
-#     :param data_cube: numpy array of the image data
-#     :param unit_absorption_spectrum: list of the unit absorption spectrum
-#     :return: numpy array of methane enhancement result
-#     """
-#     # 获取 以 波段 行数 列数 为顺序的数据
-#     bands, rows, cols = data_cube.shape
-#     # 初始化 concentration 数组，大小与卫星数据尺寸一致
-#     concentration = np.zeros((rows, cols))
-#     # 对于非空列，取均值作为背景光谱，再乘以单位吸收光谱，得到目标光谱
-#     background_spectrum = np.nanmean(data_cube, axis=(1,2))
-#     target_spectrum = background_spectrum*unit_absorption_spectrum[0]
-#     radiancediff_with_bg = data_cube - background_spectrum[:, None,None]
-
-#     # 计算协方差矩阵，并获得其逆矩阵
-#     covariance = np.zeros((bands, bands))
-#     d_covariance = radiancediff_with_bg
-#     for row in range(rows):
-#         for col in range(cols):
-#             covariance += np.outer(d_covariance[:, row, col], d_covariance[:, row, col])
-#     covariance = covariance/(rows*cols)
-#     covariance_inverse = np.linalg.inv(covariance)
-
-#     # 逐像素计算甲烷浓度增强值
-#     for row in range(rows):
-#         for col in range(cols):
-#             # 基于最优化公式计算每个像素的甲烷浓度增强值
-#             numerator = (radiancediff_with_bg[:,row,col].T @ covariance_inverse @ target_spectrum)
-#             denominator = (target_spectrum.T @ covariance_inverse @ target_spectrum)
-#             concentration[row,col] = numerator/denominator
-
-#     # 备份原始浓度值
-#     original_concentration = concentration.copy()
-
-#     # 对于每个像素进行二次分析与计算
-#     levelon = True
-#     adaptive_threshold = 4000
-#     i = 1
-#     high_concentration_mask = concentration > adaptive_threshold*0.99
-#     low_concentration_mask = concentration <= adaptive_threshold*0.99
-#     while levelon:
-#         # 若存在高于阈值的像素
-#         if np.sum(high_concentration_mask) > 0:
-#             print("current threshold:",adaptive_threshold)
-#             # 更新背景光谱和目标光谱
-#             background_spectrum = np.nanmean(data_cube - concentration * target_spectrum[:, None, None], axis=(1, 2))
-#             target_spectrum = background_spectrum * unit_absorption_spectrum[0]
-
-#             # 构建当前阈值下的背景谱和目标谱
-#             current_background_spectrum = background_spectrum
-#             for n in range(i):
-#                 print("加上第",n+1,"个吸收谱带来的影响")
-#                 current_background_spectrum += 4000*current_background_spectrum*unit_absorption_spectrum[n]
-#             current_target_spectrum = current_background_spectrum * unit_absorption_spectrum[i]
-
-#             # 更新观测光谱和背景光谱差值
-#             radiancediff_with_bg[:,high_concentration_mask] = (
-#                 data_cube[:,high_concentration_mask] - current_background_spectrum[:,None]
-#             )
-#             radiancediff_with_bg[:,low_concentration_mask] = (
-#                 data_cube[:,low_concentration_mask] - background_spectrum[:,None]
-#             )
-
-#             # d_covariance[:,high_concentration_mask] = data_cube[:,high_concentration_mask] - (
-#             #     current_background_spectrum[:,None] +
-#             #     (concentration[high_concentration_mask] - adaptive_threshold)*current_target_spectrum[:,None]
-#             #  )
-
-#             d_covariance[:,high_concentration_mask] = data_cube[:,high_concentration_mask] - (
-#                 background_spectrum[:,None] +
-#                 concentration[high_concentration_mask]*target_spectrum[:,None]
-#              )
-
-#             d_covariance[:,low_concentration_mask] = data_cube[:,low_concentration_mask] - (
-#                 background_spectrum[:,None] +
-#                 concentration[low_concentration_mask]*target_spectrum[:,None]
-#             )
-
-#             covariance = np.zeros((bands, bands))
-#             for row in range(rows):
-#                 for col in range(cols):
-#                     covariance += np.outer(d_covariance[:, row, col], d_covariance[:, row, col])
-#             covariance /= rows*cols
-#             covariance_inverse = np.linalg.inv(covariance)
-
-#             # concentration_calculated = (
-#             #     (radiancediff_with_bg[:, high_concentration_mask].T @ covariance_inverse @ current_target_spectrum) /
-#             #     (current_target_spectrum.T @ covariance_inverse @ current_target_spectrum)
-#             # )
-#             # concentration[high_concentration_mask] = np.maximum(concentration_calculated + adaptive_threshold,adaptive_threshold)
-
-#             concentration[high_concentration_mask] = (
-#                 (radiancediff_with_bg[:, high_concentration_mask].T @ covariance_inverse @ current_target_spectrum) /
-#                 (current_target_spectrum.T @ covariance_inverse @ current_target_spectrum)
-#             )
-
-#             # concentration[low_concentration_mask] =(
-#             #     (radiancediff_with_bg[:, low_concentration_mask].T @ covariance_inverse @ target_spectrum) /
-#             #     (target_spectrum.T @ covariance_inverse @ target_spectrum)
-#             # )
-
-#             i += 1
-#             if adaptive_threshold < 24000:
-#                 adaptive_threshold += 4000
-#             else:
-#                 levelon = False
-#             high_concentration_mask = original_concentration > adaptive_threshold*0.99
-#             low_concentration_mask = original_concentration <= adaptive_threshold*0.99
-
-#         else:
-#             levelon = False
-
-#     return concentration, original_concentration
-
-#     # mean_concentration = np.nanmean(concentration)
-#     # std_concentration = np.nanstd(concentration)
-#     # adaptive_threshold = mean_concentration + std_concentration
-#     # print("adaptive_threshold:",adaptive_threshold)
-#     # originalconcentration = concentration.copy()
-#     # levelon = True
-#     # while levelon:
-#     #     _,new_unit_absorption_spectrum = lookup_uas_interpolated(adaptive_threshold)
-#     #     high_concentration_mask = concentration > adaptive_threshold
-#     #     low_concentration_mask = concentration <= adaptive_threshold
-
-#     #     background_spectrum = np.nanmean(data_cube - concentration * target_spectrum[:, None, None], axis=(1, 2))
-#     #     target_spectrum = background_spectrum * unit_absorption_spectrum
-#     #     new_background_spectrum = background_spectrum + adaptive_threshold * unit_absorption_spectrum
-#     #     high_target_spectrum = new_background_spectrum * new_unit_absorption_spectrum
-
-#     #     radiancediff_with_bg[:, high_concentration_mask] = (
-#     #         data_cube[:, high_concentration_mask]  - (concentration[high_concentration_mask]) *target_spectrum[:, None]
-#     #         - new_background_spectrum[:, None]
-#     #     )
-
-#     #     radiancediff_with_bg[:, low_concentration_mask] = (
-#     #         data_cube[:, low_concentration_mask] - concentration[low_concentration_mask] * target_spectrum[:, None]
-#     #          - background_spectrum[:, None]
-#     #     )
-
-#     #     covariance = np.zeros((bands, bands))
-#     #     for row in range(rows):
-#     #         for col in range(cols):
-#     #             covariance += np.outer(radiancediff_with_bg[:, row, col], radiancediff_with_bg[:, row, col])
-#     #     covariance /= rows*cols
-#     #     covariance_inverse = np.linalg.inv(covariance)
-
-#     #     concentration[high_concentration_mask] = (
-#     #         (radiancediff_with_bg[:, high_concentration_mask].T @ covariance_inverse @ high_target_spectrum) /
-#     #         (high_target_spectrum.T @ covariance_inverse @ high_target_spectrum)
-#     #     ) + adaptive_threshold
-
-#     #     concentration[low_concentration_mask] = (
-#     #         (radiancediff_with_bg[:, low_concentration_mask].T @ covariance_inverse @ target_spectrum) /
-#     #         (target_spectrum.T @ covariance_inverse @ target_spectrum)
-#     #     )
-
-#     #     new_mean_concentration = np.nanmean(concentration)
-#     #     new_std_concentration = np.nanstd(concentration)
-#     #     new_adaptive_threshold = new_mean_concentration + new_std_concentration
-
-#     #     if np.abs((new_adaptive_threshold - adaptive_threshold) / adaptive_threshold) < 0.01:
-#     #         adaptive_threshold = new_adaptive_threshold
-#     #         print("the distribution of concentration is not stable, keep iterating")
-#     #     else:
-#     #         levelon = False
-#     #         print("the distribution of concentration is stable")
-#     # return originalconcentration,concentration
-
-
-# modified matched filter algorithm 整幅图像进行计算
-def modified_matched_filter(
-    data_cube: np.array, unit_absorption_spectrum: np.array
-) -> np.array:
-    """
-    Calculate the methane enhancement of the image data based on the modified matched filter
-    and the unit absorption spectrum.
-
-    :param data_cube: numpy array of the image data
-    :param unit_absorption_spectrum: list of the unit absorption spectrum
-    :return: numpy array of methane enhancement result
-    """
-    # 获取 以 波段 行数 列数 为顺序的数据
-    bands, rows, cols = data_cube.shape
-    # 初始化 concentration 数组，大小与卫星数据尺寸一直
-    concentration = np.zeros((rows, cols))
-    # 对于非空列，取均值作为背景光谱，再乘以单位吸收光谱，得到目标光谱,并计算背景光谱与目标光谱的差值用于后续浓度计算
-    background_spectrum = np.nanmean(data_cube, axis=(1, 2))
-    target_spectrum = background_spectrum * unit_absorption_spectrum[0]
-    radiancediff_with_bg = data_cube - background_spectrum[:, None, None]
-
-    # 计算协方差矩阵，并获得其逆矩阵
-    d_covariance = data_cube - background_spectrum[:, None, None]
-    covariance = np.zeros((bands, bands))
-    for row in range(rows):
-        for col in range(cols):
-            covariance += np.outer(d_covariance[:, row, col], d_covariance[:, row, col])
-    covariance_inverse = np.linalg.pinv(covariance)
-
-    # 逐像素计算甲烷浓度增强值
-    for row in range(rows):
-        for col in range(cols):
-            # 基于最优化公式计算每个像素的甲烷浓度增强值
-            numerator = (
-                radiancediff_with_bg[:, row, col].T
-                @ covariance_inverse
-                @ target_spectrum
-            )
-            denominator = target_spectrum.T @ covariance_inverse @ target_spectrum
-            concentration[row, col] = numerator / denominator
-
-    # 备份原始浓度值
-    original_concentration = concentration.copy()
-
-    # 多层单位吸收光谱计算
-    base_threshold = 6000
-    adaptive_threshold = base_threshold
-    i = 1
-
-    for iter_num in range(5):
-        # 更新背景光谱和目标光谱
-        background_spectrum = np.nanmean(
-            data_cube - concentration[None, :, :] * target_spectrum[:, None, None],
-            axis=(1, 2),
-        )
-        target_spectrum = background_spectrum * unit_absorption_spectrum[0]
-        radiancediff_with_bg = data_cube - background_spectrum[:, None, None]
-
-        # 基于新的目标谱和背景光谱 计算协方差矩阵
-        d_covariance = (
-            data_cube
-            - (concentration)[None, :, :] * target_spectrum[:, None, None]
-            - background_spectrum[:, None, None]
-        )
-        covariance = np.zeros((bands, bands))
-        for row in range(rows):
-            for col in range(cols):
-                covariance += np.outer(
-                    d_covariance[:, row, col], d_covariance[:, row, col]
-                )
-        covariance = covariance / (rows * cols)
-        covariance_inverse = np.linalg.inv(covariance)
-
-        # 基于最优化估计公式 计算新的甲烷浓度增强值
-        for row in range(rows):
-            for col in range(cols):
-                numerator = (
-                    radiancediff_with_bg[:, row, col].T
-                    @ covariance_inverse
-                    @ target_spectrum
-                )
-                denominator = target_spectrum.T @ covariance_inverse @ target_spectrum
-                concentration[row, col] = np.maximum(numerator / denominator, 0.0)
-    high_concentration_mask = concentration > adaptive_threshold * 0.98
-
-    while np.sum(high_concentration_mask) > 0 and adaptive_threshold < 32000:
-        for iter_num in range(5):
-            background_spectrum = np.nanmean(
-                data_cube - concentration[None, :, :] * target_spectrum[:, None, None],
-                axis=(1, 2),
-            )
-            target_spectrum = background_spectrum * unit_absorption_spectrum[0]
-
-            # 构建当前阈值下的背景谱和目标谱
-            new_background_spectrum = background_spectrum
-            for n in range(i):
-                new_background_spectrum += (
-                    6000 * new_background_spectrum * unit_absorption_spectrum[n]
-                )
-            high_target_spectrum = new_background_spectrum * unit_absorption_spectrum[i]
-
-            radiancediff_with_bg[:, high_concentration_mask] = (
-                data_cube[:, high_concentration_mask] - new_background_spectrum[:, None]
-            )
-
-            radiancediff_with_bg[:, ~high_concentration_mask] = (
-                data_cube[:, ~high_concentration_mask] - background_spectrum[:, None]
-            )
-
-            d_covariance[:, high_concentration_mask] = data_cube[
-                :, high_concentration_mask
-            ] - (
-                new_background_spectrum[:, None]
-                + (concentration[high_concentration_mask] - adaptive_threshold)
-                * high_target_spectrum[:, None]
-            )
-
-            d_covariance[:, ~high_concentration_mask] = data_cube[
-                :, ~high_concentration_mask
-            ] - (
-                background_spectrum[:, None]
-                + concentration[~high_concentration_mask] * target_spectrum[:, None]
-            )
-
-            covariance = np.zeros((bands, bands))
-            for row in range(rows):
-                for col in range(cols):
-                    covariance += np.outer(
-                        d_covariance[:, row, col], d_covariance[:, row, col]
-                    )
-            covariance /= rows * cols
-            covariance_inverse = np.linalg.pinv(covariance)
-
-            concentration[high_concentration_mask] = (
-                (
-                    radiancediff_with_bg[:, high_concentration_mask].T
-                    @ covariance_inverse
-                    @ high_target_spectrum
-                )
-                / (high_target_spectrum.T @ covariance_inverse @ high_target_spectrum)
-            ) + adaptive_threshold
-
-            concentration[high_concentration_mask] = (
-                (
-                    radiancediff_with_bg[:, high_concentration_mask].T
-                    @ high_target_spectrum
-                )
-                / (high_target_spectrum.T @ high_target_spectrum)
-            ) + adaptive_threshold
-
-            concentration[~high_concentration_mask] = (
-                (
-                    radiancediff_with_bg[:, ~high_concentration_mask].T
-                    @ covariance_inverse
-                    @ target_spectrum
-                )
-                / (target_spectrum.T @ covariance_inverse @ target_spectrum)
-            ) + adaptive_threshold
-
-            high_concentration_mask = original_concentration > adaptive_threshold * 0.99
-        adaptive_threshold += 6000
-        high_concentration_mask = concentration > adaptive_threshold * 0.99
-    return concentration, original_concentration
-
-
-def modified_matched_filter_backup(
-    data_cube: np.array, unit_absorption_spectrum: np.array
-) -> np.array:
-    """
-    Calculate the methane enhancement of the image data based on the modified matched filter
-    and the unit absorption spectrum.
-
-    :param data_cube: numpy array of the image data
-    :param unit_absorption_spectrum: list of the unit absorption spectrum
-    :return: numpy array of methane enhancement result
-    """
-    # 获取 以 波段 行数 列数 为顺序的数据
-    bands, rows, cols = data_cube.shape
-    # 初始化 concentration 数组，大小与卫星数据尺寸一直
-    concentration = np.zeros((rows, cols))
-    # 对于非空列，取均值作为背景光谱，再乘以单位吸收光谱，得到目标光谱,并计算背景光谱与目标光谱的差值用于后续浓度计算
-    background_spectrum = np.nanmean(data_cube, axis=(1, 2))
-    target_spectrum = background_spectrum * unit_absorption_spectrum[0]
-    radiancediff_with_bg = data_cube - background_spectrum[:, None, None]
-
-    # 计算协方差矩阵，并获得其逆矩阵
-    d_covariance = data_cube - background_spectrum[:, None, None]
-    covariance = np.zeros((bands, bands))
-    for row in range(rows):
-        for col in range(cols):
-            covariance += np.outer(d_covariance[:, row, col], d_covariance[:, row, col])
-    covariance = covariance / (rows * cols)
-    covariance_inverse = np.linalg.inv(covariance)
-
-    # 逐像素计算甲烷浓度增强值
-    for row in range(rows):
-        for col in range(cols):
-            # 基于最优化公式计算每个像素的甲烷浓度增强值
-            numerator = (
-                radiancediff_with_bg[:, row, col].T
-                @ covariance_inverse
-                @ target_spectrum
-            )
-            denominator = target_spectrum.T @ covariance_inverse @ target_spectrum
-            concentration[row, col] = numerator / denominator
 
     # 备份原始浓度值
     original_concentration = concentration.copy()
@@ -689,56 +354,48 @@ def modified_matched_filter_backup(
     levelon = True
     adaptive_threshold = 6000
     i = 1
-    high_concentration_mask = original_concentration > adaptive_threshold * 0.99
-    low_concentration_mask = original_concentration <= adaptive_threshold * 0.99
+    high_concentration_mask = original_concentration > adaptive_threshold * (0.99**i)
+    low_concentration_mask = original_concentration <= adaptive_threshold * (0.99**i)
 
     while levelon:
-        if np.sum(high_concentration_mask) > 0:
-            print("current threshold:", adaptive_threshold)
-
+        if np.sum(high_concentration_mask) > 0 and adaptive_threshold < 32000:
             background_spectrum = np.nanmean(
                 data_cube - concentration * target_spectrum[:, None, None], axis=(1, 2)
             )
-            target_spectrum = background_spectrum * unit_absorption_spectrum[0]
+            target_spectrum = background_spectrum * unit_absorption_spectrum_array[0]
 
             new_background_spectrum = background_spectrum
             for n in range(i):
                 new_background_spectrum += (
-                    6000 * new_background_spectrum * unit_absorption_spectrum[n]
+                    6000 * new_background_spectrum * unit_absorption_spectrum_array[n]
                 )
-            high_target_spectrum = new_background_spectrum * unit_absorption_spectrum[i]
+            high_target_spectrum = (
+                new_background_spectrum * unit_absorption_spectrum_array[i]
+            )
 
-            radiancediff_with_bg[:, high_concentration_mask] = (
+            radiancediff_with_background[:, high_concentration_mask] = (
                 data_cube[:, high_concentration_mask] - new_background_spectrum[:, None]
             )
-            radiancediff_with_bg[:, low_concentration_mask] = (
+            radiancediff_with_background[:, low_concentration_mask] = (
                 data_cube[:, low_concentration_mask] - background_spectrum[:, None]
             )
 
             # d_covariance[:,high_concentration_mask] = data_cube[:,high_concentration_mask] - (
             #     (concentration[high_concentration_mask]-adaptive_threshold)*high_target_spectrum[:,None] + new_background_spectrum[:,None]
             # )
-            d_covariance[:, high_concentration_mask] = data_cube[
-                :, high_concentration_mask
-            ] - (
-                background_spectrum[:, None]
-                + concentration[high_concentration_mask] * target_spectrum[:, None]
-            )
+            # d_covariance[:,high_concentration_mask] = data_cube[:,high_concentration_mask] - (
+            #     background_spectrum[:,None] + concentration[high_concentration_mask]*target_spectrum[:,None]
+            # )
 
-            d_covariance[:, low_concentration_mask] = data_cube[
-                :, low_concentration_mask
-            ] - (
-                background_spectrum[:, None]
-                + concentration[low_concentration_mask] * target_spectrum[:, None]
-            )
-            covariance = np.zeros((bands, bands))
-            for row in range(rows):
-                for col in range(cols):
-                    covariance += np.outer(
-                        d_covariance[:, row, col], d_covariance[:, row, col]
-                    )
-            covariance /= rows * cols
-            covariance_inverse = np.linalg.inv(covariance)
+            # d_covariance[:,low_concentration_mask] = data_cube[:,low_concentration_mask] - (
+            #     background_spectrum[:,None] + concentration[low_concentration_mask]*target_spectrum[:,None]
+            # )
+            # covariance = np.zeros((bands, bands))
+            # for row in range(rows):
+            #     for col in range(cols):
+            #         covariance += np.outer(d_covariance[:, row, col], d_covariance[:, row, col])
+            # covariance /= rows*cols
+            # covariance_inverse = np.linalg.pinv(covariance)
 
             # concentration[high_concentration_mask] = (
             #     (radiancediff_with_bg[:, high_concentration_mask].T @ covariance_inverse @high_target_spectrum) /
@@ -747,7 +404,7 @@ def modified_matched_filter_backup(
 
             concentration[high_concentration_mask] = (
                 (
-                    radiancediff_with_bg[:, high_concentration_mask].T
+                    radiancediff_with_background[:, high_concentration_mask].T
                     @ high_target_spectrum
                 )
                 / (high_target_spectrum.T @ high_target_spectrum)
@@ -756,575 +413,126 @@ def modified_matched_filter_backup(
             high_concentration_mask = original_concentration > adaptive_threshold * 0.99
             low_concentration_mask = original_concentration <= adaptive_threshold * 0.99
 
-            if adaptive_threshold < 32000:
-                adaptive_threshold += 6000
-                i += 1
-            else:
-                levelon = False
+            adaptive_threshold += 6000
+            i += 1
 
         else:
             levelon = False
 
-    return concentration, original_concentration
+    return original_concentration, concentration
 
 
-# convert the radiance into log space 整幅图像进行计算
-def lognormal_matched_filter(data_cube: np.array, unit_absorption_spectrum: np.array):
-    # 获取 以 波段 行数 列数 为顺序的数据
-    bands, rows, cols = data_cube.shape
-    # 初始化 concentration 数组，大小与卫星数据尺寸一直
-    concentration = np.zeros((rows, cols))
-    # 对于非空列，取均值作为背景光谱，再乘以单位吸收光谱，得到目标光谱
-    log_background_spectrum = np.nanmean(np.log(data_cube), axis=(1, 2))
-    background_spectrum = np.exp(log_background_spectrum)
-
-    # 对当前目标光谱的每一行进行去均值操作，得到调整后的光谱，以此为基础计算协方差矩阵，并获得其逆矩阵
-    radiancediff_with_bg = np.log(data_cube) - log_background_spectrum[:, None, None]
-    d_covariance = np.log(data_cube) - background_spectrum[:, None, None]
-    covariance = np.zeros((bands, bands))
-    for row in range(rows):
-        for col in range(cols):
-            covariance += np.outer(d_covariance[:, row, col], d_covariance[:, row, col])
-    covariance = covariance / (rows * cols)
-    covariance_inverse = np.linalg.inv(covariance)
-
-    for row in range(rows):
-        for col in range(cols):
-            # 基于最优化公式计算每个像素的甲烷浓度增强值
-            numerator = (
-                radiancediff_with_bg[:, row, col].T
-                @ covariance_inverse
-                @ unit_absorption_spectrum
-            )
-            denominator = (
-                unit_absorption_spectrum.T
-                @ covariance_inverse
-                @ unit_absorption_spectrum
-            )
-            concentration[row, col] = numerator / denominator
-    return concentration
-
-
-# orginal matched filter algorithm 逐列计算
-def columnwise_matched_filter(
-    data_cube: np.array,
-    unit_absorption_spectrum: np.array,
-    iterate=False,
-    albedoadjust=False,
-    sparsity=False,
-):
+def columnwise_ml_matched_filter(
+    data_cube: np.ndarray,
+    unit_absorption_spectrum: np.ndarray,
+    iterate: bool = False,
+    albedoadjust: bool = False,
+    sparsity: bool = False,
+) -> np.ndarray:
     """
-    Calculate the methane enhancement of the image data based on the original matched filter
-    and the unit absorption spectrum.
-
-    :param data_cube: numpy array of the image data
-    :param unit_absorption_spectrum: list of the unit absorption spectrum
-    :param iterate: flag to decide whether to iterate the matched filter
-    :param albedoadjust: flag to decide whether to do the albedo correction
-    :param sparsity: flag to decide whether to add the l1-filter correction
-    :return: numpy array of methane enhancement result
+    Perform matched filter calculation column by column using multithreading.
     """
-    # 获取波段 行数 列数 ,并初始化 concentration 数组
-    bands, rows, cols = data_cube.shape
-    concentration = np.zeros((rows, cols))
 
-    # 遍历不同列数，目的是为了消除 不同传感器之间带来的误差
-    for col_index in range(cols):
-        # 获取当前列的数据 获取当前列的非空行的 索引 以及 数目
+    def process_column(
+        data_cube: np.ndarray,
+        unit_absorption_spectrum_array: np.ndarray,
+        col_index: int,
+        albedoadjust: bool,
+    ):
+        """
+        Process a single column of the data cube.
+        """
+        _, rows, _ = data_cube.shape
         current_column = data_cube[:, :, col_index]
         valid_rows = ~np.isnan(current_column[0, :])
         count_not_nan = np.count_nonzero(valid_rows)
 
-        # 对于全为空的列，直接将浓度值设为 nan
         if count_not_nan == 0:
-            concentration[:, col_index] = np.nan
-            continue
+            return np.nan * np.zeros(rows)
 
-        # 对于非空列，取均值作为背景光谱，再乘以单位吸收光谱，得到目标光谱,并计算观测光谱和背景光谱的差值
-        background_spectrum = np.nanmean(current_column, axis=1)
-        target_spectrum = background_spectrum * unit_absorption_spectrum
-        radiancediff_with_bg = (
-            current_column[:, valid_rows] - background_spectrum[:, None]
+        # Compute background and target spectrum
+        background_spectrum, target_spectrum, radiancediff_with_bg = (
+            compute_background_and_target_spectrum_and_radiance_diff(
+                current_column, unit_absorption_spectrum
+            )
         )
 
-        # 计算协方差矩阵，并获得其逆矩阵
+        # Compute covariance inverse
         d_covariance = radiancediff_with_bg
-        covariance = np.zeros((bands, bands))
-        for i in range(count_not_nan):
-            covariance += np.outer(d_covariance[:, i], d_covariance[:, i])
-        covariance = covariance / count_not_nan
-        covariance_inverse = np.linalg.inv(covariance)
+        covariance_inverse = compute_covariance_inverse(d_covariance, count_not_nan)
 
-        # 判断是否进行反照率校正，若是，则通过背景光谱和实际光谱计算反照率校正因子
-        albedo = np.ones((rows, cols))
+        # Compute albedo adjustment if required
+        albedo = np.ones(rows)
+
         if albedoadjust:
-            albedo[valid_rows, col_index] = (
-                current_column[:, valid_rows].T @ background_spectrum
-            ) / (background_spectrum.T @ background_spectrum)
+            albedo = compute_albedo(current_column, background_spectrum)
 
-        # 基于最优化公式计算每个像素的甲烷浓度增强值
-        numerator = radiancediff_with_bg.T @ covariance_inverse @ target_spectrum
-        denominator = albedo[valid_rows, col_index] * (
-            target_spectrum.T @ covariance_inverse @ target_spectrum
+        common_denominator = target_spectrum.T @ covariance_inverse @ target_spectrum
+        concentration = compute_concentration_column(
+            radiancediff_with_bg,
+            covariance_inverse,
+            target_spectrum,
+            albedo,
+            common_denominator,
         )
-        concentration[valid_rows, col_index] = numerator / denominator
-
-        # 判断是否进行迭代，若是，则进行如下迭代计算
+        # Iterative updates
         if iterate:
-            # 初始化 l1filter 数组
-            l1filter = np.zeros((rows, cols))
+            l1filter = np.zeros(rows)
             epsilon = np.finfo(np.float64).tiny
-            # 迭代计算
-            for iter_num in range(5):
-                print("iteration: No.", iter_num + 1)
-                # 判断是否进行 l1filter 校正，若是则给予前一步的浓度值计算 l1filter
+            for _ in range(5):
                 if sparsity:
-                    l1filter[valid_rows, col_index] = 1 / (
-                        concentration[valid_rows, col_index] + epsilon
+                    l1filter[valid_rows] = 1 / (concentration[valid_rows] + epsilon)
+
+                background_spectrum, target_spectrum, radiancediff_with_bg = (
+                    compute_background_and_target_spectrum_and_radiance_diff(
+                        current_column[:, valid_rows]
+                        - albedo[valid_rows]
+                        * concentration[valid_rows]
+                        * target_spectrum[:, None],
+                        unit_absorption_spectrum,
                     )
+                )
 
-                # 更新背景光谱和目标光谱，计算进行观测光谱和背景光谱差值
-                column_replacement = (
-                    current_column[:, valid_rows]
-                    - (
-                        albedo[valid_rows, col_index]
-                        * concentration[valid_rows, col_index]
-                    )[None, :]
-                    * target_spectrum[:, None]
-                )
-                background_spectrum = np.nanmean(column_replacement, axis=1)
-                target_spectrum = np.multiply(
-                    background_spectrum, unit_absorption_spectrum
-                )
                 radiancediff_with_bg = (
-                    current_column[:, valid_rows] - background_spectrum
+                    current_column[:, valid_rows] - background_spectrum[:, None]
                 )
 
-                # 是否要更新反照率校正因子？
-                # if albedoadjust:
-                #     albedo[valid_rows, col_index] = (
-                #             (current_column[:, valid_rows].T @ background_spectrum) /
-                #             (background_spectrum.T @ background_spectrum)
-                #     )
-
-                # 基于新的目标谱 和 背景光谱 计算协方差矩阵
                 d_covariance = (
-                    current_column[:, valid_rows]
-                    - (
-                        albedo[valid_rows, col_index]
-                        * concentration[valid_rows, col_index]
-                    )[None, :]
+                    radiancediff_with_bg
+                    - albedo[valid_rows]
+                    * concentration[valid_rows]
                     * target_spectrum[:, None]
-                    - background_spectrum[:, None]
                 )
-                covariance = np.zeros((bands, bands))
-                for i in range(valid_rows.shape[0]):
-                    covariance += np.outer(d_covariance[:, i], d_covariance[:, i])
-                covariance = covariance / count_not_nan
-                covariance_inverse = np.linalg.inv(covariance)
+                covariance_inverse = compute_covariance_inverse(
+                    d_covariance, count_not_nan
+                )
 
-                # 计算新的甲烷浓度增强值
                 numerator = (
                     radiancediff_with_bg.T @ covariance_inverse @ target_spectrum
-                ) - l1filter[valid_rows, col_index]
-                denominator = albedo[valid_rows, col_index] * (
+                    - l1filter[valid_rows]
+                )
+                denominator = albedo[valid_rows] * (
                     target_spectrum.T @ covariance_inverse @ target_spectrum
                 )
-                concentration[valid_rows, col_index] = np.maximum(
-                    numerator / denominator, 0.0
-                )
+                concentration[valid_rows] = np.maximum(numerator / denominator, 0.0)
 
-    # 返回甲烷浓度增强和反照率校正
-    return concentration
+        return concentration
 
+    _, _, cols = data_cube.shape
 
-# modified matched filter algorithm 逐列计算
-def columnwise_modified_matched_filter(
-    data_array: np.array,
-    stacked_unit_absorption_spectrum: np.array,
-    is_iterate=False,
-    is_albedo=False,
-    is_filter=False,
-    is_columnwise=False,
-) -> np.array:
-    """
-    Calculate the methane enhancement of the image data based on the original matched filter
-    and the unit absorption spectrum.
-
-    :param data_array: numpy array of the image data
-    :param unit_absorption_spectrum: list of the unit absorption spectrum
-    :param is_iterate: flag to decide whether to iterate the matched filter
-    :param is_albedo: flag to decide whether to do the albedo correction
-    :param is_filter: flag to decide whether to add the l1-filter correction
-    :return: numpy array of methane enhancement result
-    """
-    # 获取 以 波段 行数 列数 为顺序的数据
-    bands, rows, cols = data_array.shape
-    # 初始化 concentration 数组，大小与卫星数据尺寸一直
-    concentration = np.zeros((rows, cols))
-    # 遍历不同列数，目的是为了消除 不同传感器之间带来的误差
-    if is_columnwise:
-        for col_index in range(cols):
-            # 获取当前列的数据
-            current_column = data_array[:, :, col_index]
-            # 获取当前列的非空行的 索引 以及 数目
-            valid_rows = ~np.isnan(current_column[0, :])
-            count_not_nan = np.count_nonzero(valid_rows)
-            # 对于全为空的列，直接将浓度值设为 nan
-            if count_not_nan == 0:
-                concentration[:, col_index] = np.nan
-                continue
-
-            # 对于非空列，取均值作为背景光谱，再乘以单位吸收光谱，得到目标光谱
-            background_spectrum = np.nanmean(current_column, axis=1)
-            target_spectrum = (
-                background_spectrum * stacked_unit_absorption_spectrum[0, :]
+    # Parallel column processing
+    with ThreadPoolExecutor() as executor:
+        results = list(
+            executor.map(
+                lambda col_index: process_column(
+                    data_cube,
+                    unit_absorption_spectrum,
+                    col_index,
+                    albedoadjust,
+                ),
+                range(cols),
             )
-
-            # 对当前目标光谱的每一行进行去均值操作，得到调整后的光谱，以此为基础计算协方差矩阵，并获得其逆矩阵
-            radiancediff_with_bg = (
-                current_column[:, valid_rows] - background_spectrum[:, None]
-            )
-            covariance = np.zeros((bands, bands))
-            for i in range(count_not_nan):
-                covariance += np.outer(
-                    radiancediff_with_bg[:, i], radiancediff_with_bg[:, i]
-                )
-            covariance = covariance / count_not_nan
-            covariance_inverse = np.linalg.inv(covariance)
-
-            # 判断是否进行反照率校正，若是，则通过背景光谱和实际光谱计算反照率校正因子
-            albedo = np.ones((rows, cols))
-            if is_albedo:
-                albedo[valid_rows, col_index] = (
-                    current_column[:, valid_rows].T @ background_spectrum
-                ) / (background_spectrum.T @ background_spectrum)
-
-            # 基于最优化公式计算每个像素的甲烷浓度增强值
-            up = radiancediff_with_bg.T @ covariance_inverse @ target_spectrum
-            down = albedo[valid_rows, col_index] * (
-                target_spectrum.T @ covariance_inverse @ target_spectrum
-            )
-            concentration[valid_rows, col_index] = up / down
-
-            levelon = True
-            # 计算浓度增强值的均值和标准差
-            mean_concentration = np.nanmean(
-                concentration[valid_rows, col_index]
-            )  # 忽略 NaN 值
-            std_concentration = np.nanstd(
-                concentration[valid_rows, col_index]
-            )  # 忽略 NaN 值
-            # 使用均值加一个标准差作为自适应阈值
-            adaptive_threshold = mean_concentration + std_concentration
-            while levelon:
-                high_concentration_mask = (
-                    concentration[valid_rows, col_index] > adaptive_threshold
-                )
-                # 获取这个阈值的单位吸收谱，可以通过插值查找表获得
-                # 使用新的单位吸收谱重新计算目标光谱
-                background_spectrum = np.nanmean(
-                    current_column[:, valid_rows]
-                    + albedo[valid_rows, col_index]
-                    * concentration[valid_rows, col_index]
-                    * target_spectrum[:, np.newaxis],
-                    axis=1,
-                )
-                background_spectrum = (
-                    background_spectrum
-                    + adaptive_threshold * stacked_unit_absorption_spectrum[1, :]
-                )
-                target_spectrum = np.multiply(
-                    background_spectrum, stacked_unit_absorption_spectrum[1, :]
-                )
-                radiancediff_with_bg = (
-                    current_column[:, valid_rows]
-                    - background_spectrum[:, None]
-                    - albedo[valid_rows, col_index]
-                    * (concentration[valid_rows, col_index] - adaptive_threshold)
-                    * target_spectrum[:, np.newaxis]
-                )
-                covariance = np.zeros((bands, bands))
-                for i in range(valid_rows.shape[0]):
-                    covariance += np.outer(
-                        radiancediff_with_bg[:, i], radiancediff_with_bg[:, i]
-                    )
-                covariance = covariance / count_not_nan
-                covariance_inverse = np.linalg.inv(covariance)
-                # 基于新的目标光谱重新计算高浓度像素的甲烷浓度增强值
-                up = (
-                    radiancediff_with_bg[:, high_concentration_mask].T
-                    @ covariance_inverse
-                    @ target_spectrum
-                )
-                down = albedo[valid_rows, col_index][high_concentration_mask] * (
-                    target_spectrum.T @ covariance_inverse @ target_spectrum
-                )
-                # 直接更新原数组
-                valid_indices = np.where(valid_rows)[0]
-                high_concentration_indices = valid_indices[high_concentration_mask]
-                concentration[high_concentration_indices, col_index] = (
-                    up / down + adaptive_threshold
-                )
-                # 计算浓度增强值的均值和标准差
-                mean_concentration = np.nanmean(
-                    concentration[valid_rows, col_index]
-                )  # 忽略 NaN 值
-                std_concentration = np.nanstd(
-                    concentration[valid_rows, col_index]
-                )  # 忽略 NaN 值
-                # 使用均值加一个标准差作为自适应阈值
-                new_adaptive_threshold = mean_concentration + std_concentration
-                if (
-                    np.abs(
-                        (new_adaptive_threshold - adaptive_threshold)
-                        / adaptive_threshold
-                    )
-                    < 0.1
-                ):
-                    adaptive_threshold = new_adaptive_threshold
-                else:
-                    levelon = False
-
-            # 判断是否进行迭代，若是，则进行如下迭代计算
-            if is_iterate:
-                l1filter = np.zeros((rows, cols))
-                epsilon = np.finfo(np.float32).tiny
-                for iter_num in range(5):
-                    if is_filter:
-                        l1filter[valid_rows, col_index] = 1 / (
-                            concentration[valid_rows, col_index] + epsilon
-                        )
-                    else:
-                        l1filter[valid_rows, col_index] = 0
-
-                    # 更新背景光谱和目标光谱
-                    column_replacement = (
-                        current_column[:, valid_rows]
-                        - (
-                            albedo[valid_rows, col_index]
-                            * concentration[valid_rows, col_index]
-                        )[None, :]
-                        * target_spectrum[:, None]
-                    )
-                    # 计算更新后的 背景光谱 和 目标谱
-                    background_spectrum = np.mean(column_replacement, axis=1)
-                    target_spectrum = np.multiply(
-                        background_spectrum, stacked_unit_absorption_spectrum[0, :]
-                    )
-                    # 基于新的目标谱 和 背景光谱 计算协方差矩阵
-                    radiancediff_with_bg = (
-                        current_column[:, valid_rows]
-                        - (
-                            albedo[valid_rows, col_index]
-                            * concentration[valid_rows, col_index]
-                        )[None, :]
-                        * target_spectrum[:, None]
-                        - background_spectrum[:, None]
-                    )
-                    covariance = np.zeros((bands, bands))
-                    for i in range(valid_rows.shape[0]):
-                        covariance += np.outer(
-                            radiancediff_with_bg[:, i], radiancediff_with_bg[:, i]
-                        )
-                    covariance = covariance / count_not_nan
-                    covariance_inverse = np.linalg.inv(covariance)
-
-                    # 计算新的甲烷浓度增强值
-                    up = (
-                        radiancediff_with_bg.T @ covariance_inverse @ target_spectrum
-                    ) - l1filter[valid_rows, col_index]
-                    down = albedo[valid_rows, col_index] * (
-                        target_spectrum.T @ covariance_inverse @ target_spectrum
-                    )
-                    concentration[valid_rows, col_index] = np.maximum(up / down, 0.0)
-                    high_concentration_mask = (
-                        concentration[valid_rows, col_index] > 5000
-                    )
-
-                    if np.any(high_concentration_mask):
-                        # 使用新的单位吸收谱重新计算目标光谱
-                        con = concentration[valid_rows, col_index].copy()
-                        background_spectrum = np.nanmean(
-                            current_column[:, valid_rows]
-                            - albedo[valid_rows, col_index]
-                            * con
-                            * target_spectrum[:, np.newaxis],
-                            axis=1,
-                        )
-                        target_spectrum = np.multiply(
-                            background_spectrum, stacked_unit_absorption_spectrum
-                        )
-                        radiancediff_with_bg = (
-                            current_column[:, valid_rows]
-                            - albedo[valid_rows, col_index]
-                            * con
-                            * target_spectrum[:, np.newaxis]
-                            - background_spectrum[:, None]
-                        )
-                        covariance = np.zeros((bands, bands))
-                        for i in range(valid_rows.shape[0]):
-                            covariance += np.outer(
-                                radiancediff_with_bg[:, i], radiancediff_with_bg[:, i]
-                            )
-                        covariance = covariance / count_not_nan
-                        covariance_inverse = np.linalg.inv(covariance)
-                        # 基于新的目标光谱重新计算高浓度像素的甲烷浓度增强值
-                        up = (
-                            radiancediff_with_bg[:, high_concentration_mask].T
-                            @ covariance_inverse
-                            @ target_spectrum
-                        )
-                        down = albedo[valid_rows, col_index][
-                            high_concentration_mask
-                        ] * (target_spectrum.T @ covariance_inverse @ target_spectrum)
-                        # 直接更新原数组
-                        valid_indices = np.where(valid_rows)[0]
-                        high_concentration_indices = valid_indices[
-                            high_concentration_mask
-                        ]
-                        concentration[high_concentration_indices, col_index] = (
-                            up / down + 2500
-                        )
-
-    if not is_columnwise:
-        count_not_nan = np.count_nonzero(~np.isnan(data_array[0, :, :]))
-        background_spectrum = np.nanmean(data_array, axis=(1, 2))
-        target_spectrum = np.multiply(
-            background_spectrum, stacked_unit_absorption_spectrum[0, :]
         )
-        radiancediff_with_bg = data_array - background_spectrum[:, None, None]
-        covariance = np.zeros((bands, bands))
-        for i in range(rows):
-            for j in range(cols):
-                covariance = covariance + np.outer(
-                    radiancediff_with_bg[:, i, j], radiancediff_with_bg[:, i, j]
-                )
-        covariance = covariance / count_not_nan
-        covariance_inverse = np.linalg.inv(covariance)
-        albedo = np.ones((rows, cols))
-        for row_index in range(rows):
-            for col_index in range(cols):
-                if is_albedo:
-                    albedo[row_index, col_index] = (
-                        data_array[:, row_index, col_index].T @ background_spectrum
-                    ) / (background_spectrum.T @ background_spectrum)
-                up = (
-                    radiancediff_with_bg[:, row_index, col_index].T
-                    @ covariance_inverse
-                    @ target_spectrum
-                )
-                down = albedo[row_index, col_index] * (
-                    target_spectrum.T @ covariance_inverse @ target_spectrum
-                )
-                concentration[row_index, col_index] = up / down
 
-        if is_iterate:
-            l1filter = np.zeros((rows, cols))
-            epsilon = np.finfo(np.float32).tiny
-            iter_data = data_array.copy()
-
-            for iter_num in range(5):
-                if is_filter:
-                    l1filter = 1 / (concentration + epsilon)
-                iter_data = data_array - (
-                    target_spectrum[:, None, None]
-                    * albedo[None, :, :]
-                    * concentration[None, :, :]
-                )
-                background_spectrum = np.nanmean(iter_data, axis=(1, 2))
-                target_spectrum = np.multiply(
-                    background_spectrum, stacked_unit_absorption_spectrum[0, :]
-                )
-                radiancediff_with_bg = data_array - background_spectrum[:, None, None]
-                covariance = np.zeros((bands, bands))
-                for i in range(rows):
-                    for j in range(cols):
-                        covariance += np.outer(
-                            radiancediff_with_bg[:, i, j], radiancediff_with_bg[:, i, j]
-                        )
-                covariance = covariance / count_not_nan
-                covariance_inverse = np.linalg.inv(covariance)
-
-                for row_index in range(rows):
-                    for col_index in range(cols):
-                        up = (
-                            radiancediff_with_bg[:, row_index, col_index].T
-                            @ covariance_inverse
-                            @ target_spectrum
-                        )
-                        down = albedo[row_index, col_index] * (
-                            target_spectrum.T @ covariance_inverse @ target_spectrum
-                        )
-                        concentration[row_index, col_index] = np.maximum(up / down, 0)
-
-    # 返回 甲烷浓度增强的结果
+    concentration = np.stack(results, axis=1)
     return concentration
-
-
-# convert the radiance into log space 逐列计算
-def columnwise_lognormal_matched_filter(
-    data_cube: np.array, unit_absorption_spectrum: np.array
-):
-    # 获取 以 波段 行数 列数 为顺序的数据
-    bands, rows, cols = data_cube.shape
-    # 初始化 concentration 数组，大小与卫星数据尺寸一直
-    concentration = np.zeros((rows, cols))
-    # 对于非空列，取均值作为背景光谱，再乘以单位吸收光谱，得到目标光谱
-    background_spectrum = np.nanmean(data_cube, axis=(1, 2))
-    target_spectrum = background_spectrum * unit_absorption_spectrum
-
-    # 对当前目标光谱的每一行进行去均值操作，得到调整后的光谱，以此为基础计算协方差矩阵，并获得其逆矩阵
-    radiancediff_with_bg = data_cube - background_spectrum[:, None, None]
-    covariance = np.zeros((bands, bands))
-    for row in range(rows):
-        for col in range(cols):
-            covariance += np.outer(
-                radiancediff_with_bg[:, row, col], radiancediff_with_bg[:, row, col]
-            )
-    covariance = covariance / (rows * cols)
-    covariance_inverse = np.linalg.inv(covariance)
-
-    for row in range(rows):
-        for col in range(cols):
-            # 基于最优化公式计算每个像素的甲烷浓度增强值
-            numerator = (
-                radiancediff_with_bg[:, row, col].T
-                @ covariance_inverse
-                @ target_spectrum
-            )
-            denominator = target_spectrum.T @ covariance_inverse @ target_spectrum
-            concentration[row, col] = numerator / denominator
-    return concentration
-
-
-if __name__ == "__main__":
-    tif_file_path = r"F:\\AHSI_part1\\GF5B_AHSI_E100.0_N26.4_20231004_011029_L10000400374\\GF5B_AHSI_E100.0_N26.4_20231004_011029_L10000400374_SW.tif"
-    bands, radiance = ad.get_calibrated_radiance(tif_file_path, 2100, 2500)
-    # define the path of the unit absorption spectrum file
-    ahsi_unit_absorption_spectrum_path = r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\AHSI_unit_absorption_spectrum.txt"
-    bands, uas = open_unit_absorption_spectrum(
-        ahsi_unit_absorption_spectrum_path, 2100, 2500
-    )
-    # # call the main function to process the radiance file
-    from matplotlib import pyplot as plt
-
-    c1 = matched_filter(radiance, uas, False, False, False)
-    c2 = modified_matched_filter(radiance, uas)
-    # c3 = lognormal_matched_filter(radiance,uas)
-    fig, ax = plt.subplots(1, 3)
-    ax1 = ax[0]
-    ax2 = ax[1]
-    # ax3 = ax[2]
-
-    # 创建网格
-    x = np.arange(c1.shape[1])  # 列索引
-    y = np.arange(c1.shape[0])  # 行索引
-    X, Y = np.meshgrid(x, y)
-    contour1 = ax1.contourf(X, Y, c1, 20, cmap="RdGy")
-    contour2 = ax2.contourf(X, Y, c2, 20, cmap="RdGy")
-    # contour3 = ax3.contourf(X,Y,c3, 20, cmap="RdGy")
-    plt.colorbar(contour1, label="Methane Enhancement")
-    plt.colorbar(contour2, label="Methane Enhancement")
-    # plt.colorbar(contour3,label='Methane Enhancement')
-    plt.show()

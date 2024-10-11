@@ -8,8 +8,8 @@ from concurrent.futures import ThreadPoolExecutor
 def matched_filter(
     data_cube: np.ndarray,
     unit_absorption_spectrum: np.ndarray,
-    albedoadjust: bool,
     iterate: bool,
+    albedoadjust: bool,
     sparsity: bool,
 ) -> np.ndarray:
     """Calculate the methane enhancement of the image data based on the original matched filter method.
@@ -17,8 +17,8 @@ def matched_filter(
     Args:
         data_cube (np.ndarray): 3D array representing the image data cube.
         unit_absorption_spectrum (np.ndarray): 1D array representing the unit absorption spectrum.
-        albedoadjust (bool): Flag indicating whether to adjust for albedo.
         iterate (bool): Flag indicating whether to perform iterative computation.
+        albedoadjust (bool): Flag indicating whether to adjust for albedo.
         sparsity (bool): Flag indicating whether to consider sparsity.
 
     Returns:
@@ -26,7 +26,7 @@ def matched_filter(
 
     """
     # 获取波段 行数 列数，初始化 concentration 数组，大小与卫星数据尺寸一致
-    bands, rows, cols = data_cube.shape
+    _, rows, cols = data_cube.shape
     concentration = np.zeros((rows, cols))
 
     # 计算背景光谱和目标光谱
@@ -42,7 +42,7 @@ def matched_filter(
     ) / (rows * cols)
     covariance_inverse = np.linalg.pinv(covariance)
 
-    # 计算反照率
+    # 计算反照率校正项
     albedo = np.ones((rows, cols))
     if albedoadjust:
         albedo = np.einsum("ijk,i->jk", data_cube, background_spectrum) / np.dot(
@@ -50,7 +50,7 @@ def matched_filter(
         )
 
     # 计算目标谱的通用分母项
-    denominator_common = target_spectrum.T @ covariance_inverse @ target_spectrum
+    common_denominator = target_spectrum.T @ covariance_inverse @ target_spectrum
 
     # 使用并行计算浓度
     def compute_concentration(row, col):
@@ -59,21 +59,21 @@ def matched_filter(
             @ covariance_inverse
             @ target_spectrum
         )
-        denominator = albedo[row, col] * denominator_common
+        denominator = albedo[row, col] * common_denominator
         return numerator / denominator
 
-    concentration = Parallel(n_jobs=-1)(
-        delayed(compute_concentration)(row, col)
-        for row in range(rows)
-        for col in range(cols)
-    )
+    for row in range(rows):
+        for col in range(cols):
+            concentration[row, col] = compute_concentration(row, col)
 
     # 如果需要迭代
     if iterate:
-        tol = 1e-6
-        prev_concentration = np.copy(concentration)
+        # tol = 1e-6
+        # prev_concentration = np.copy(concentration)
+        # 初始化 l1filter
         l1filter = np.zeros((rows, cols))
-        for iter_num in range(5):
+        for _ in range(5):
+            # 计算稀疏性矫正项
             if sparsity:
                 l1filter = 1 / (concentration + np.finfo(np.float64).tiny)
 
@@ -96,18 +96,24 @@ def matched_filter(
             ) / (rows * cols)
             covariance_inverse = np.linalg.pinv(covariance)
 
-            # 并行计算新的浓度值
-            concentration = Parallel(n_jobs=-1)(
-                delayed(compute_concentration)(row, col) - l1filter[row, col]
-                for row in range(rows)
-                for col in range(cols)
+            # 更新 common_denominator
+            common_denominator = (
+                target_spectrum.T @ covariance_inverse @ target_spectrum
             )
 
-            # 检查迭代是否可以提前终止
-            diff = np.abs(concentration - prev_concentration).max()
-            if diff < tol:
-                break
-            prev_concentration = np.copy(concentration)
+            for row in range(rows):
+                for col in range(cols):
+                    concentration[row, col] = np.max(
+                        compute_concentration(row, col)
+                        - l1filter[row, col] / common_denominator,
+                        0,
+                    )
+
+            # # 检查迭代是否可以提前终止
+            # diff = np.abs(concentration - prev_concentration).max()
+            # if diff < tol:
+            #     break
+            # prev_concentration = np.copy(concentration)
 
     return concentration
 
@@ -120,7 +126,7 @@ def columnwise_matched_filter(
     albedoadjust: bool = False,
     sparsity: bool = False,
 ) -> np.ndarray:
-    bands, rows, cols = data_cube.shape
+    _, rows, cols = data_cube.shape
     concentration = np.zeros((rows, cols))
 
     # 使用多线程并行化处理列
@@ -132,6 +138,7 @@ def columnwise_matched_filter(
         if count_not_nan == 0:
             return np.nan * np.zeros(rows)
 
+        # 计算背景光谱和目标光谱 以及 与背景光谱的差值
         background_spectrum = np.nanmean(current_column, axis=1)
         target_spectrum = background_spectrum * unit_absorption_spectrum
         radiancediff_with_bg = (
@@ -140,7 +147,7 @@ def columnwise_matched_filter(
 
         # 计算协方差矩阵
         d_covariance = radiancediff_with_bg
-        covariance = np.einsum("ij,ik->jk", d_covariance, d_covariance) / count_not_nan
+        covariance = np.einsum("ij,kj->ik", d_covariance, d_covariance) / count_not_nan
         covariance_inverse = np.linalg.pinv(covariance)
 
         albedo = np.ones(rows)
@@ -204,7 +211,9 @@ def columnwise_matched_filter(
 
 # multi-layer matched filter algorithm 整幅影像进行计算
 def ml_matched_filter(
-    data_cube: np.ndarray, unit_absorption_spectrum: np.ndarray, albedoadjust: bool
+    data_cube: np.ndarray,
+    unit_absorption_spectrum_array: np.ndarray,
+    albedoadjust: bool,
 ) -> np.ndarray:
     """
     Calculate the methane enhancement of the image data based on the modified matched filter
@@ -222,16 +231,18 @@ def ml_matched_filter(
 
     # 对于非空列，取均值作为背景光谱，再乘以单位吸收光谱，得到目标光谱
     background_spectrum = np.nanmean(data_cube, axis=(1, 2))
-    target_spectrum = background_spectrum * unit_absorption_spectrum[0]
-    radiancediff_with_bg = data_cube - background_spectrum[:, None, None]
+    target_spectrum = background_spectrum * unit_absorption_spectrum_array[0]
+    radiancediff_with_background = data_cube - background_spectrum[:, None, None]
 
     # 计算协方差矩阵，并获得其逆矩阵
-    d_covariance = radiancediff_with_bg
-    covariance = np.zeros((bands, bands))
-    for row in range(rows):
-        for col in range(cols):
-            covariance += np.outer(d_covariance[:, row, col], d_covariance[:, row, col])
-    covariance = covariance / (rows * cols)
+    d_covariance = radiancediff_with_background
+
+    # 使用矩阵计算协方差矩阵
+    covariance = np.tensordot(
+        d_covariance,
+        d_covariance,
+        axes=((1, 2), (1, 2)),
+    ) / (rows * cols)
     covariance_inverse = np.linalg.pinv(covariance)
 
     # 判断是否进行反照率校正，若是，则通过背景光谱和实际光谱计算反照率校正因子
@@ -244,16 +255,15 @@ def ml_matched_filter(
                 )
 
     # 基于最优化公式计算每个像素的甲烷浓度增强值
+    common_denominator = target_spectrum.T @ covariance_inverse @ target_spectrum
     for row in range(rows):
         for col in range(cols):
             numerator = (
-                radiancediff_with_bg[:, row, col].T
+                radiancediff_with_background[:, row, col].T
                 @ covariance_inverse
                 @ target_spectrum
             )
-            denominator = albedo[row, col] * (
-                target_spectrum.T @ covariance_inverse @ target_spectrum
-            )
+            denominator = albedo[row, col] * common_denominator
             concentration[row, col] = numerator / denominator
 
     # 备份原始浓度值
@@ -271,19 +281,21 @@ def ml_matched_filter(
             background_spectrum = np.nanmean(
                 data_cube - concentration * target_spectrum[:, None, None], axis=(1, 2)
             )
-            target_spectrum = background_spectrum * unit_absorption_spectrum[0]
+            target_spectrum = background_spectrum * unit_absorption_spectrum_array[0]
 
             new_background_spectrum = background_spectrum
             for n in range(i):
                 new_background_spectrum += (
-                    6000 * new_background_spectrum * unit_absorption_spectrum[n]
+                    6000 * new_background_spectrum * unit_absorption_spectrum_array[n]
                 )
-            high_target_spectrum = new_background_spectrum * unit_absorption_spectrum[i]
+            high_target_spectrum = (
+                new_background_spectrum * unit_absorption_spectrum_array[i]
+            )
 
-            radiancediff_with_bg[:, high_concentration_mask] = (
+            radiancediff_with_background[:, high_concentration_mask] = (
                 data_cube[:, high_concentration_mask] - new_background_spectrum[:, None]
             )
-            radiancediff_with_bg[:, low_concentration_mask] = (
+            radiancediff_with_background[:, low_concentration_mask] = (
                 data_cube[:, low_concentration_mask] - background_spectrum[:, None]
             )
 
@@ -311,7 +323,7 @@ def ml_matched_filter(
 
             concentration[high_concentration_mask] = (
                 (
-                    radiancediff_with_bg[:, high_concentration_mask].T
+                    radiancediff_with_background[:, high_concentration_mask].T
                     @ high_target_spectrum
                 )
                 / (high_target_spectrum.T @ high_target_spectrum)
@@ -331,7 +343,7 @@ def ml_matched_filter(
 
 # multi-layer matched filter algorithm 整幅影像进行计算
 def ml_matched_filter2(
-    data_cube: np.ndarray, unit_absorption_spectra: list, albedoadjust: bool
+    data_cube: np.ndarray, unit_absorption_spectrum_list: list, albedoadjust: bool
 ) -> np.ndarray:
     """
     Calculate the methane enhancement of the image data based on the modified multi-layer matched filter
@@ -760,7 +772,7 @@ def columnwise_ml_matched_filter(
 
 # convert the radiance into log space 整幅图像进行计算
 def lognormal_matched_filter(
-    data_cube: np.ndrray, unit_absorption_spectrum: np.ndarray
+    data_cube: np.ndarray, unit_absorption_spectrum: np.ndarray
 ):
     # 获取 以 波段 行数 列数 为顺序的数据
     bands, rows, cols = data_cube.shape
@@ -798,7 +810,7 @@ def lognormal_matched_filter(
 
 # convert the radiance into log space 整幅图像进行计算
 def columnwise_lognormal_matched_filter(
-    data_cube: np.ndrray, unit_absorption_spectrum: np.ndarray
+    data_cube: np.ndarray, unit_absorption_spectrum: np.ndarray
 ):
     # 获取 以 波段 行数 列数 为顺序的数据
     bands, rows, cols = data_cube.shape
@@ -836,6 +848,16 @@ def columnwise_lognormal_matched_filter(
 
 # Kalman filter and matched filter 整幅图像进行计算
 def Kalman_filterr_matched_filter(
+    data_cube: np.ndarray,
+    unit_absorption_spectrum: np.ndarray,
+    albedoadjust: bool,
+    iterate: bool,
+    sparsity: bool,
+):
+    return None
+
+
+def columnwise_Kalman_filterr_matched_filter(
     data_cube: np.ndarray,
     unit_absorption_spectrum: np.ndarray,
     albedoadjust: bool,

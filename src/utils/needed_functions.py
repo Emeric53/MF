@@ -4,7 +4,7 @@ from scipy.interpolate import interp1d
 import sys
 
 sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src")
-from utils.satellites_data.general_functions import open_unit_absorption_spectrum
+from utils.satellites_data import general_functions as gf
 
 
 # 从文件加载查找表
@@ -96,7 +96,7 @@ def generate_transmittance_cube_fromuas(
     :param high_wavelength: Upper bound of the wavelength range
     :return: 3D NumPy array of transmittance values
     """
-    _, uas = open_unit_absorption_spectrum(uas_path, low_wavelength, high_wavelength)
+    _, uas = gf.open_unit_absorption_spectrum(uas_path, low_wavelength, high_wavelength)
     transmittance_cube = np.ones((len(uas), plumes.shape[0], plumes.shape[1]))
     for i in range(plumes.shape[1]):
         for j in range(plumes.shape[0]):
@@ -188,7 +188,7 @@ def satellite_images_with_plumes_simulation(
         print("The satellite name is not supported.")
         return None
 
-    bands, simulated_convolved_spectrum = get_simulated_satellite_radiance(
+    bands, simulated_convolved_spectrum = gf.get_simulated_satellite_radiance(
         radiance_path, channels_path, lower_wavelength, upper_wavelength
     )
 
@@ -217,9 +217,10 @@ def satellite_images_with_plumes_simulation(
 if __name__ == "__main__":
     ahsi_unit_absorption_spectrum_path = r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\AHSI_unit_absorption_spectrum.txt"
     # 读取单位吸收谱
-    _, uas = open_unit_absorption_spectrum(
+    _, uas = gf.open_unit_absorption_spectrum(
         ahsi_unit_absorption_spectrum_path, 2100, 2500
     )
+
     # path = "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\\AHSI_trans_lookup_table"
     # low_wavelength = 1500
     # high_wavelength = 2500

@@ -56,7 +56,7 @@ def read_emit_bands():
     """
     # 读取校准文件
     wavelengths = np.load(
-        "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\satellites_channels\\EMIT_channels.npz"
+        "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\satellite_channels\\EMIT_channels.npz"
     )["central_wvls"]
     return wavelengths
 

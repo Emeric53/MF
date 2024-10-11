@@ -7,7 +7,7 @@ from utils.satellites_data.general_functions import (
     open_unit_absorption_spectrum,
     get_simulated_satellite_radiance,
 )
-from utils.lookup_table import load_lookup_table, lookup_spectrum
+from utils.lookup_table import load_lut, lookup_from_lut
 
 
 # 基于查找表和浓度值获得透射率cube
@@ -22,10 +22,10 @@ def generate_transmittance_cube(
     :param high_wavelength: Upper bound of the wavelength range
     :return: 3D NumPy array of transmittance values
     """
-    loaded_wavelengths, loaded_lookup_table = load_lookup_table(
+    loaded_wavelengths, loaded_lookup_table = load_lut(
         "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\AHSI_trans_lookup_table.npz"
     )
-    used_wavelengths, _ = lookup_spectrum(
+    used_wavelengths, _ = lookup_from_lut(
         0, loaded_wavelengths, loaded_lookup_table, low_wavelength, high_wavelength
     )
     transmittance_cube = np.ones(
@@ -34,7 +34,7 @@ def generate_transmittance_cube(
     for i in range(plumes.shape[1]):
         for j in range(plumes.shape[0]):
             current_concentration = plumes[i, j]
-            _, transmittance_cube[:, i, j] = lookup_spectrum(
+            _, transmittance_cube[:, i, j] = lookup_from_lut(
                 current_concentration,
                 loaded_wavelengths,
                 loaded_lookup_table,
@@ -45,7 +45,7 @@ def generate_transmittance_cube(
 
 
 # 基于单位吸收谱和浓度值获得透射率cube
-def generate_transmittance_cube_fromuas(
+def generate_transmittance_cube_from_uas(
     plumes: np.ndarray, uas_path, low_wavelength, high_wavelength
 ):
     """

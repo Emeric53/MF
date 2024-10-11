@@ -3,7 +3,7 @@ from scipy.interpolate import interp1d
 
 
 # 从文件加载查找表
-def load_lookup_table(filename):
+def load_lut(filename):
     """
     Load the lookup table from a file.
 
@@ -21,7 +21,7 @@ def load_lookup_table(filename):
 
 
 # 插值查找
-def lookup_spectrum(
+def lookup_from_lut(
     enhancement, wavelengths, lookup_table, low_wavelength, high_wavelength
 ):
     """
