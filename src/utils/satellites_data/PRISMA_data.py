@@ -31,41 +31,57 @@ def get_prisma_radiance_and_fwhm(filepath):
     try:
         with h5py.File(filepath, "r") as prisma_file:
             # 提取辐射率数据：VNIR 和 SWIR 两个部分的立方体数据
-            vnir_cube = prisma_file["/HDFEOS/SWATHS/PRS_L1_HCO/Data Fields/VNIR_Cube"][
-                :
-            ]
             swir_cube = prisma_file["/HDFEOS/SWATHS/PRS_L1_HCO/Data Fields/SWIR_Cube"][
                 :
             ]
-
-            # 将 VNIR 和 SWIR 立方体组合成一个完整的立方体
-            radiance_cube = np.concatenate((vnir_cube, swir_cube), axis=1)
-
-            # 提取 VNIR 和 SWIR 对应的波长信息
-            vnir_wavelengths = prisma_file[
-                "/HDFEOS/SWATHS/PRS_L1_HCO/Geolocation Fields/VNIR_Wavelength"
-            ][:]
-            swir_wavelengths = prisma_file[
-                "/HDFEOS/SWATHS/PRS_L1_HCO/Geolocation Fields/SWIR_Wavelength"
-            ][:]
-
-            # 提取 VNIR 和 SWIR 对应的 FWHM 信息
-            vnir_fwhm = prisma_file[
-                "/HDFEOS/SWATHS/PRS_L1_HCO/Geolocation Fields/VNIR_FWHM"
-            ][:]
-            swir_fwhm = prisma_file[
-                "/HDFEOS/SWATHS/PRS_L1_HCO/Geolocation Fields/SWIR_FWHM"
-            ][:]
-
-            # 将波长和 FWHM 数组分别组合成完整的数组
-            wavelength_array = np.concatenate((vnir_wavelengths, swir_wavelengths))
-            fwhm_array = np.concatenate((vnir_fwhm, swir_fwhm))
-
-        return radiance_cube, wavelength_array, fwhm_array
+            swir_cube = np.transpose(swir_cube, (1, 2, 0))
+            swir_cube = np.flip(swir_cube, axis=0)
+            swir_wavelengths = np.array(prisma_file.attrs["List_Cw_Swir"])[:-2]
+            swir_fwhm = np.array(prisma_file.attrs["List_Fwhm_Swir"])[:-2]
+            # Reverse the wavelengths and FWHM
+            wavelengths = np.flip(swir_wavelengths)
+            fwhm = np.flip(swir_fwhm)
+        return swir_cube, wavelengths, fwhm
 
     except Exception as e:
         print(f"读取 PRISMA 文件时发生错误: {e}")
         return None, None, None
+
+
+def get_prisma_array(filepath):
+    try:
+        with h5py.File(filepath, "r") as prisma_file:
+            # 提取辐射率数据：VNIR 和 SWIR 两个部分的立方体数据
+            swir_cube = prisma_file["/HDFEOS/SWATHS/PRS_L1_HCO/Data Fields/SWIR_Cube"][
+                :
+            ]
+            swir_cube = np.transpose(swir_cube, (1, 2, 0))
+            swir_cube = np.flip(swir_cube, axis=0)
+            factor = prisma_file.attrs["ScaleFactor_Swir"]
+            offset = prisma_file.attrs["Offset_Swir"]
+            swir_cube = swir_cube / factor - offset
+
+        return swir_cube
+
+    except Exception as e:
+        print(f"读取 PRISMA 文件时发生错误: {e}")
+        return None, None, None
+
+
+def get_prisma_channels():
+    wavelengths = np.load(
+        "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\satellite_channels\\Prisma_channels.npz"
+    )["central_wvls"]
+    return wavelengths
+
+
+def get_prisma_bands_array(
+    file_path: str, bot: float, top: float
+) -> tuple[np.ndarray, np.ndarray]:
+    bands = get_prisma_channels()
+    data = get_prisma_array(file_path)
+    indices = np.where((bands >= bot) & (bands <= top))[0]
+    return bands[indices], data[indices, :, :]
 
 
 def main():
@@ -126,15 +142,10 @@ def save_prisma_data_as_netcdf(bands, output_path):
 
 
 if __name__ == "__main__":
-    filename = "I:\\PRISMA_控制释放实验\\PRS_L1_STD_OFFL_20221015181614_20221015181618_0001.he5"
+    filename = "I:\stanford_campaign\PRISMA\PRS_L1_STD_OFFL_20211016183624_20211016183629_0001.he5"
 
-    with h5py.File(filename, "r") as prisma_file:
-        # 提取辐射率数据：VNIR 和 SWIR 两个部分的立方体数据
-        vnir_cube = prisma_file["/KDP_AUX/Fwhm_Swir_Matrix"][:]
-        swir_cube = prisma_file["/KDP_AUX/Cw_Swir_Matrix"][:]
-    print(vnir_cube.shape)
-    print(vnir_cube[0, :])
-    print(vnir_cube[0, :] - vnir_cube[500, :])
-    print(swir_cube.shape)
-    print(swir_cube[0, :])
-    print(swir_cube[0, :] - swir_cube[500, :])
+    wavelength_array, radiance_cube = get_prisma_bands_array(filename, 1500, 2100)
+    print(radiance_cube.shape)
+    print(radiance_cube[0, :, :])
+    print(wavelength_array)
+    # main()

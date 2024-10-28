@@ -178,8 +178,46 @@ def load_satellite_channels(
     return used_central_wavelengths, used_fwhms
 
 
+# 从 NumPy 数组中筛选数据并获取切片
+def filter_and_slice(array: np.ndarray, min_val: float, max_val: float):
+    """
+    根据最大最小值阈值，筛选数组并获取原数组的切片。
+
+    :param arr: 输入的 NumPy 数组
+    :param min_val: 最小值阈值
+    :param max_val: 最大值阈值
+    :return: 筛选后的数组和原数组中的切片
+    """
+    condition = (array >= min_val) & (array <= max_val)
+    filtered_arr = array[condition]
+    nonzero_indices = np.nonzero(condition)[0]
+    if len(nonzero_indices) == 0:
+        return filtered_arr, None
+    slice_start = nonzero_indices[0]
+    slice_end = nonzero_indices[-1] + 1
+    arr_slice = slice(slice_start, slice_end)
+    return filtered_arr, arr_slice
+
+
+# 基于波长最低值和最高值对radiance和uas进行切片
+def slice_data(wvls: np.ndarray, dataarray: np.ndarray, low, high):
+    """
+    Slice radiance and unit absorption spectrum data based on the lowest and highest wavelengths.
+
+    :param radiance_array: NumPy array of radiance data
+    :param uas: NumPy array of unit absorption spectrum data
+    :param low: Lower bound of the wavelength range
+    :param high: Upper bound of the wavelength range
+    :return: Tuple of sliced radiance array and used unit absorption spectrum
+    """
+    used_wvls, slice = filter_and_slice(wvls, low, high)
+    if slice is None:
+        return None, None
+    return used_wvls, dataarray[slice]
+
+
 # 从modtran输出文件读取模拟辐亮度数据，返回波长和辐亮度
-def read_simulated_radiance(path: str):
+def read_simulated_radiance(path: str) -> tuple[np.ndarray, np.ndarray]:
     """
     Read the simulated radiance data from the modtran output file and return the wavelengths and radiance.
 
@@ -191,14 +229,23 @@ def read_simulated_radiance(path: str):
         radiance_list = []
         # read the lines containing the radiance data
         datalines = f.readlines()[11:-2]
+
+        # wavenumber = np.array(datalines[:, :9], dtype=float)
+        # radiance = np.array(datalines[:, 97:108], dtype=float)
+        # wavelength = 10000000 / wavenumber
+        # radiance = radiance * 10e7 / wavelength**2 * 10000
+
         for data in datalines:
             # convert the wavenumber to wavelength
             wvl = 10000000 / float(data[0:9])
             radiance_wvl.append(wvl)
             # convert the radiance in W/cm^2/sr/cm^-1 to W/m^2/sr/nm
-            radiance = float(data[97:108]) * 10e7 / wvl**2 * 10000
+            # radiance = float(data[97:108]) * 10e7 / wvl**2 * 10000
+            radiance = float(data[97:108])
             radiance_list.append(radiance)
     # reverse the order of the lists since the original order is according to the wavenumber
+    # simulated_rad_wavelengths = wavelength[::-1]
+    # simulated_radiance = radiance[::-1]
     simulated_rad_wavelengths = np.array(radiance_wvl)[::-1]
     simulated_radiance = np.array(radiance_list)[::-1]
     return simulated_rad_wavelengths, simulated_radiance

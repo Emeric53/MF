@@ -180,27 +180,35 @@ def generate_ltn_files_write_into_batchfile(
         for methane in methane_range:
             for sza in sza_range:
                 for altitude in altitude_range:
-                    # 修改对应的行
-                    methane_value = methane / 500
-                    sza_value = sza
-                    altitude_value = altitude
+                    # # 修改对应的行
+                    # methane_value = methane / 500
+                    # sza_value = sza
+                    # altitude_value = altitude
 
-                    # 调用modify_line函数来修改相关行
-                    line8 = modify_line(
-                        alllines[8], 20, methane_value, 30, precision=6
-                    )  # 修改第8行甲烷增强值
-                    line11 = modify_line(
-                        alllines[11], 20, methane_value, 30, precision=6
-                    )  # 修改第11行甲烷增强值
-                    line166 = modify_line(
-                        alllines[165], 10, sza_value, 20
-                    )  # 修改第166行 SZA
-                    line6 = modify_line(
-                        alllines[5], 70, altitude_value, 80
-                    )  # 修改第6行地表高度
-                    line164 = modify_line(
-                        alllines[163], 10, altitude_value, 20, precision=6
-                    )  # 修改第164行
+                    # # 调用modify_line函数来修改相关行
+                    # line8 = modify_line(
+                    #     alllines[8],
+                    #     20,
+                    #     methane_value + float(alllines[8][20:30]),
+                    #     30,
+                    #     precision=6,
+                    # )  # 修改第8行甲烷增强值
+                    # line11 = modify_line(
+                    #     alllines[11],
+                    #     20,
+                    #     methane_value + float(alllines[11][20:30]),
+                    #     30,
+                    #     precision=6,
+                    # )  # 修改第11行甲烷增强值
+                    # line166 = modify_line(
+                    #     alllines[153], 10, sza_value, 20
+                    # )  # 修改第166行 SZA
+                    # line6 = modify_line(
+                    #     alllines[5], 70, altitude_value, 80
+                    # )  # 修改第6行地表高度
+                    # line164 = modify_line(
+                    #     alllines[151], 10, altitude_value, 20, precision=6
+                    # )  # 修改第151行
 
                     # 生成输出文件名
                     output_file_name = os.path.join(
@@ -210,25 +218,25 @@ def generate_ltn_files_write_into_batchfile(
                     # 将路径写入批处理文件
                     batch_file.write(output_file_name + "\n")
 
-                    # 写入新的内容到输出文件
-                    with open(output_file_name, "w") as output_file:
-                        # 写入未修改的前5行
-                        output_file.writelines(alllines[:5])
-                        # 写入修改后的第6行（地表高度）
-                        output_file.write(line6)
-                        output_file.writelines(alllines[6:8])
-                        # 写入修改后的第8行（甲烷增强值）
-                        output_file.write(line8)
-                        output_file.writelines(alllines[9:11])
-                        # 写入修改后的第11行（甲烷增强值）
-                        output_file.write(line11)
-                        output_file.writelines(alllines[12:163])
-                        # 写入修改后的第164行（地表高度）
-                        output_file.write(line164)
-                        output_file.writelines(alllines[164:165])
-                        # 写入修改后的第166行（SZA）
-                        output_file.write(line166)
-                        output_file.writelines(alllines[166:])
+                    # # 写入新的内容到输出文件
+                    # with open(output_file_name, "w") as output_file:
+                    #     # 写入未修改的前5行
+                    #     output_file.writelines(alllines[:5])
+                    #     # 写入修改后的第6行（地表高度）
+                    #     output_file.write(line6)
+                    #     output_file.writelines(alllines[6:8])
+                    #     # 写入修改后的第8行（甲烷增强值）
+                    #     output_file.write(line8)
+                    #     output_file.writelines(alllines[9:11])
+                    #     # 写入修改后的第11行（甲烷增强值）
+                    #     output_file.write(line11)
+                    #     output_file.writelines(alllines[12:151])
+                    #     # 写入修改后的第164行（地表高度）
+                    #     output_file.write(line164)
+                    #     output_file.writelines(alllines[152:153])
+                    #     # 写入修改后的第166行（SZA）
+                    #     output_file.write(line166)
+                    #     output_file.writelines(alllines[154:])
 
 
 def generate_batch_file(
@@ -236,7 +244,7 @@ def generate_batch_file(
     input_dir="C:\\PcModWin5\\Usr\\LUT\\",  # 原始 .ltn 文件所在目录
     batch_file_path="C:\\PcModWin5\\Bin\\pcmodwin_batch.txt",  # 新生成的批处理文件名
     result_file_suffix="_tape7.txt",  # 结果文件的后缀
-    size_threshold=700
+    size_threshold=400
     * 1024,  # 文件大小不足的阈值（700KB 转换为字节），如果文件小于此值，视为运行异常
 ):
     """
@@ -274,4 +282,5 @@ def generate_batch_file(
 
 
 if __name__ == "__main__":
+    # generate_ltn_files_write_into_batchfile()
     generate_batch_file()

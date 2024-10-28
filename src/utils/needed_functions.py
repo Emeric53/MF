@@ -105,44 +105,6 @@ def generate_transmittance_cube_fromuas(
     return np.clip(transmittance_cube, 0, 1)
 
 
-# 从 NumPy 数组中筛选数据并获取切片
-def filter_and_slice(array: np.ndarray, min_val: float, max_val: float):
-    """
-    根据最大最小值阈值，筛选数组并获取原数组的切片。
-
-    :param arr: 输入的 NumPy 数组
-    :param min_val: 最小值阈值
-    :param max_val: 最大值阈值
-    :return: 筛选后的数组和原数组中的切片
-    """
-    condition = (array >= min_val) & (array <= max_val)
-    filtered_arr = array[condition]
-    nonzero_indices = np.nonzero(condition)[0]
-    if len(nonzero_indices) == 0:
-        return filtered_arr, None
-    slice_start = nonzero_indices[0]
-    slice_end = nonzero_indices[-1] + 1
-    arr_slice = slice(slice_start, slice_end)
-    return filtered_arr, arr_slice
-
-
-# 基于波长最低值和最高值对radiance和uas进行切片
-def slice_data(radiance_array, uas, low, high):
-    """
-    Slice radiance and unit absorption spectrum data based on the lowest and highest wavelengths.
-
-    :param radiance_array: NumPy array of radiance data
-    :param uas: NumPy array of unit absorption spectrum data
-    :param low: Lower bound of the wavelength range
-    :param high: Upper bound of the wavelength range
-    :return: Tuple of sliced radiance array and used unit absorption spectrum
-    """
-    _, slice_uas = filter_and_slice(uas[:, 0], low, high)
-    used_radiance = radiance_array[slice_uas, :, :]
-    used_uas = uas[slice_uas, 1]
-    return used_radiance, used_uas
-
-
 # 模拟带甲烷烟羽的卫星遥感影像
 def satellite_images_with_plumes_simulation(
     radiance_path: str,

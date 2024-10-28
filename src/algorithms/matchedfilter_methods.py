@@ -1,8 +1,5 @@
 import numpy as np
 
-from joblib import Parallel, delayed
-from concurrent.futures import ThreadPoolExecutor
-
 
 # matched filter algorithm 整幅影像进行计算
 def matched_filter(
@@ -72,7 +69,7 @@ def matched_filter(
         # prev_concentration = np.copy(concentration)
         # 初始化 l1filter
         l1filter = np.zeros((rows, cols))
-        for _ in range(5):
+        for _ in range(2):
             # 计算稀疏性矫正项
             if sparsity:
                 l1filter = 1 / (concentration + np.finfo(np.float64).tiny)
@@ -129,34 +126,36 @@ def columnwise_matched_filter(
     _, rows, cols = data_cube.shape
     concentration = np.zeros((rows, cols))
 
-    # 使用多线程并行化处理列
-    def process_column(col_index):
+    # Precompute parts that are independent of iteration and columns
+    for col_index in range(cols):
         current_column = data_cube[:, :, col_index]
         valid_rows = ~np.isnan(current_column[0, :])
         count_not_nan = np.count_nonzero(valid_rows)
 
         if count_not_nan == 0:
-            return np.nan * np.zeros(rows)
+            concentration[:, col_index] = np.nan
+            continue
 
-        # 计算背景光谱和目标光谱 以及 与背景光谱的差值
+        # Calculate the background and target spectra
         background_spectrum = np.nanmean(current_column, axis=1)
         target_spectrum = background_spectrum * unit_absorption_spectrum
         radiancediff_with_bg = (
             current_column[:, valid_rows] - background_spectrum[:, None]
         )
 
-        # 计算协方差矩阵
+        # Compute covariance matrix and its pseudo-inverse
         d_covariance = radiancediff_with_bg
         covariance = np.einsum("ij,kj->ik", d_covariance, d_covariance) / count_not_nan
         covariance_inverse = np.linalg.pinv(covariance)
 
+        # Adjust albedo if necessary
         albedo = np.ones(rows)
         if albedoadjust:
             albedo[valid_rows] = (
                 current_column[:, valid_rows].T @ background_spectrum
             ) / (background_spectrum.T @ background_spectrum)
 
-        # 初始浓度计算
+        # Initial concentration calculation
         numerator = radiancediff_with_bg.T @ covariance_inverse @ target_spectrum
         denominator = albedo[valid_rows] * (
             target_spectrum.T @ covariance_inverse @ target_spectrum
@@ -164,14 +163,15 @@ def columnwise_matched_filter(
         conc = np.zeros(rows)
         conc[valid_rows] = numerator / denominator
 
-        # 迭代更新
+        # Iterative update (if needed)
         if iterate:
             l1filter = np.zeros(rows)
-            epsilon = np.finfo(np.float64).tiny
-            for _ in range(5):
+            epsilon = np.finfo(np.float64).tiny  # To avoid division by zero
+            for _ in range(1):
                 if sparsity:
                     l1filter[valid_rows] = 1 / (conc[valid_rows] + epsilon)
 
+                # Update the background and target spectra
                 background_spectrum = np.nanmean(
                     current_column[:, valid_rows]
                     - albedo[valid_rows] * conc[valid_rows] * target_spectrum[:, None],
@@ -182,6 +182,7 @@ def columnwise_matched_filter(
                     current_column[:, valid_rows] - background_spectrum[:, None]
                 )
 
+                # Update covariance and concentration
                 d_covariance = current_column[:, valid_rows] - (
                     albedo[valid_rows] * conc[valid_rows] * target_spectrum[:, None]
                     + background_spectrum[:, None]
@@ -199,13 +200,8 @@ def columnwise_matched_filter(
                 )
                 conc[valid_rows] = np.maximum(numerator / denominator, 0.0)
 
-        return conc
+        concentration[:, col_index] = conc
 
-    # 并行执行列处理
-    with ThreadPoolExecutor() as executor:
-        results = list(executor.map(process_column, range(cols)))
-
-    concentration = np.stack(results, axis=1)
     return concentration
 
 
