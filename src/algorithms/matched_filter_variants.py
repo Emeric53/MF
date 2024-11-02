@@ -431,6 +431,137 @@ def ml_matched_filter(
     return concentration
 
 
+def columnwise_ml_matched_filter(
+    data_cube: np.ndarray,
+    unit_absorption_spectrum_array: np.ndarray,
+    albedoadjust: bool = False,
+) -> np.ndarray:
+    """
+    Perform multi-layer matched filter calculation column by column.
+    """
+    # 获取数据维度，初始化浓度和反照率数组
+    _, rows, cols = data_cube.shape
+    concentration = np.zeros((rows, cols))
+    albedo = np.ones((rows, cols))
+
+    for col_index in range(cols):
+        # 处理每一列
+        current_column = data_cube[:, :, col_index]
+
+        # 计算背景光谱、目标光谱和辐射差异
+        background_spectrum, target_spectrum, radiancediff_with_bg = (
+            compute_important_parameters(
+                current_column, unit_absorption_spectrum_array[0]
+            )
+        )
+        d_covariance = radiancediff_with_bg
+
+        # 计算协方差逆矩阵和公分母
+        covariance_inverse, common_denominator = (
+            compute_covariance_inverse_and_common_denominator(
+                d_covariance, target_spectrum, rows
+            )
+        )
+
+        # 判断是否进行反照率调整
+        if albedoadjust:
+            albedo[:, col_index] = compute_albedo(current_column, background_spectrum)
+
+        # 计算每个像素的初始浓度
+        for row in range(rows):
+            concentration[row, col_index] = compute_concentration_pixel(
+                radiancediff_with_bg[:, row],
+                covariance_inverse,
+                target_spectrum,
+                albedo[row, col_index],
+                common_denominator,
+            )
+
+        # 备份初始浓度值
+        original_concentration = concentration[:, col_index].copy()
+
+        # 多层次吸收光谱计算
+        levelon = True
+        adaptive_threshold = 6000
+        i = 1
+        high_concentration_mask = original_concentration > adaptive_threshold * (
+            0.99**i
+        )
+        low_concentration_mask = original_concentration <= adaptive_threshold * (
+            0.99**i
+        )
+
+        while levelon:
+            if np.sum(high_concentration_mask) > 0 and adaptive_threshold < 32000:
+                # 更新背景和目标光谱
+                (background_spectrum, target_spectrum, radiancediff_with_bg) = (
+                    compute_important_parameters(
+                        current_column,
+                        unit_absorption_spectrum_array[0],
+                        albedo[:, None]
+                        * concentration[:, None]
+                        * target_spectrum[:, None],
+                    )
+                )
+                d_covariance = radiancediff_with_bg - (
+                    albedo[:, None] * concentration[:, None] * target_spectrum[:, None]
+                )
+                covariance_inverse, common_denominator = (
+                    compute_covariance_inverse_and_common_denominator(
+                        d_covariance, target_spectrum, rows
+                    )
+                )
+
+                # 计算新的背景光谱并更新高浓度的目标光谱
+                new_background_spectrum = background_spectrum
+                for n in range(i):
+                    new_background_spectrum += (
+                        6000
+                        * new_background_spectrum
+                        * unit_absorption_spectrum_array[n]
+                    )
+
+                high_target_spectrum = (
+                    new_background_spectrum * unit_absorption_spectrum_array[i]
+                )
+
+                # 更新辐射差异
+                radiancediff_with_bg[:, high_concentration_mask] = (
+                    current_column[:, high_concentration_mask]
+                    - new_background_spectrum[:, None]
+                )
+                radiancediff_with_bg[:, low_concentration_mask] = (
+                    current_column[:, low_concentration_mask]
+                    - background_spectrum[:, None]
+                )
+
+                # 更新高浓度像素的浓度
+                concentration[high_concentration_mask, col_index] = (
+                    compute_concentration_column(
+                        radiancediff_with_bg[:, high_concentration_mask],
+                        covariance_inverse,
+                        high_target_spectrum,
+                        albedo[high_concentration_mask, col_index],
+                        common_denominator,
+                    )
+                    + adaptive_threshold
+                )
+
+                # 更新掩码和阈值
+                high_concentration_mask = (
+                    original_concentration > adaptive_threshold * 0.99
+                )
+                low_concentration_mask = (
+                    original_concentration <= adaptive_threshold * 0.99
+                )
+                adaptive_threshold += 6000
+                i += 1
+            else:
+                levelon = False
+
+    return concentration
+
+
 def ml_matched_filter_new(
     satellite_name,
     data_cube: np.ndarray,
@@ -595,6 +726,159 @@ def ml_matched_filter_new(
             adaptive_threshold = std_mean
 
     return concentration
+
+
+# def adaptive_matched_filter(
+#     satellite_name,
+#     data_cube: np.ndarray,
+#     unit_absorption_spectrum_array: np.ndarray,
+#     albedoadjust: bool,
+# ) -> np.ndarray:
+#     """
+#     Calculate the methane enhancement of the image data based on the modified matched filter
+#     and the unit absorption spectrum.
+
+#     :param data_cube: numpy array of the image data
+#     :param unit_absorption_spectrum: list of the unit absorption spectrum numpy array from differenet range
+#     :param albedoadjust: bool, whether to adjust the albedo
+
+#     :return: numpy array of methane enhancement result
+#     """
+#     # 获取波段 行数 列数 初始化 concentration 数组，大小与卫星数据尺寸一致
+#     _, rows, cols = data_cube.shape
+#     concentration = np.zeros((rows, cols))
+#     albedo = np.ones((rows, cols))
+
+#     # 对于非空列，取均值作为背景光谱，再乘以单位吸收光谱，得到目标光谱
+#     (
+#         background_spectrum,
+#         target_spectrum,
+#         radiance_diff_with_background,
+#     ) = compute_important_parameters(data_cube, unit_absorption_spectrum_array[0])
+#     d_covariance = radiance_diff_with_background
+
+#     covariance_inverse, common_denominator = (
+#         compute_covariance_inverse_and_common_denominator(
+#             d_covariance, target_spectrum, rows * cols
+#         )
+#     )
+
+#     # 判断是否进行反照率校正，若是，则通过背景光谱和实际光谱计算反照率校正因子
+#     if albedoadjust:
+#         compute_albedo(data_cube, background_spectrum)
+
+#     for row in range(rows):
+#         for col in range(cols):
+#             concentration[row, col] = compute_concentration_pixel(
+#                 radiance_diff_with_background[:, row, col],
+#                 covariance_inverse,
+#                 target_spectrum,
+#                 albedo[row, col],
+#                 common_denominator,
+#             )
+#     # 到这里为止 和 默认算法一致
+
+#     # 备份原始浓度值
+
+#     std = np.std(concentration)
+#     mean = np.mean(concentration)
+
+#     # 设置阈值为一个标准差和两个标准差
+#     threshold_1_std = mean + std
+#     threshold_2_std = mean + 2 * std
+
+#     # 计算大于阈值的元素的数量和比例
+#     num_above_threshold_1_std = np.sum(concentration > threshold_1_std)
+#     proportion_above_threshold_1_std = num_above_threshold_1_std / concentration.size
+
+#     num_above_threshold_2_std = np.sum(concentration > threshold_2_std)
+#     proportion_above_threshold_2_std = num_above_threshold_2_std / concentration.size
+
+#     # 打印结果
+#     print(
+#         f"一个标准差阈值: {threshold_1_std:.4f}, 大于阈值的比例: {proportion_above_threshold_1_std:.4f}"
+#     )
+#     print(
+#         f"两个标准差阈值: {threshold_2_std:.4f}, 大于阈值的比例: {proportion_above_threshold_2_std:.4f}"
+#     )
+#     go_on = True
+
+#     # 判断是否存在甲烷烟羽
+#     if proportion_above_threshold_2_std < 0.05:
+#         while go_on:
+#             new_uas = glut.generate_satellite_uas_for_specific_range_from_lut(
+#                 satellite_name, 0, threshold_2_std, 2150, 2500, 25, 0
+#             )
+
+#             (
+#                 background_spectrum,
+#                 target_spectrum,
+#                 radiance_diff_with_background,
+#             ) = compute_important_parameters(
+#                 data_cube,
+#                 new_uas,
+#                 albedo[None, :, :]
+#                 * concentration[None, :, :]
+#                 * target_spectrum[:, None, None],
+#             )
+
+#             covariance_inverse, common_denominator = (
+#                 compute_covariance_inverse_and_common_denominator(
+#                     radiance_diff_with_background, target_spectrum, rows * cols
+#                 )
+#             )
+
+#             for row in range(rows):
+#                 for col in range(cols):
+#                     concentration[row, col] = compute_concentration_pixel(
+#                         radiance_diff_with_background[:, row, col],
+#                         covariance_inverse,
+#                         target_spectrum,
+#                         albedo[row, col],
+#                         common_denominator,
+#                     )
+#             std = np.std(concentration)
+#             mean = np.mean(concentration)
+
+#             # 设置阈值为一个标准差和两个标准差
+#             current_threshold_1_std = mean + std
+#             current_threshold_2_std = mean + 2 * std
+#             if (current_threshold_2_std - threshold_2_std) / threshold_2_std < 0.1:
+#                 go_on = False
+#             else:
+#                 threshold_2_std = current_threshold_2_std
+#                 threshold_1_std = current_threshold_1_std
+
+#     else:
+#         normal_pixels_mask = np.where(concentration <= threshold_2_std)
+#         abnormal_pixels_mask = np.where(concentration > threshold_2_std)
+#         max = np.maximum(50000,np.max(concentration))
+#         uas_for_normal_pixels = glut.generate_satellite_uas_for_specific_range_from_lut(
+#             satellite_name, 0, threshold_2_std, 2150, 2500, 25, 0
+#         )
+#         uas_for_abnormal_pixels = (
+#             glut.generate_satellite_uas_for_specific_range_from_lut(
+#                 satellite_name, threshold_2_std, max, 2150, 2500, 25, 0
+#             )
+#         )
+
+#         (
+#             background_spectrum,
+#             target_spectrum,
+#             radiance_diff_with_background,
+#         ) = compute_important_parameters(
+#             data_cube[:,normal_pixels_mask],
+#             uas_for_normal_pixels,
+#             albedo[None, :, :]
+#             * concentration[None, :, :]
+#             * target_spectrum[:, None, None],
+#         )
+
+#         covariance_inverse, common_denominator  =
+#         {}
+
+
+#     return concentration
 
 
 # convert the radiance into log space 整幅图像进行计算

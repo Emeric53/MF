@@ -291,9 +291,9 @@ def ml_matched_filter(
             radiancediff_with_background[:, high_concentration_mask] = (
                 data_cube[:, high_concentration_mask] - new_background_spectrum[:, None]
             )
-            radiancediff_with_background[:, low_concentration_mask] = (
-                data_cube[:, low_concentration_mask] - background_spectrum[:, None]
-            )
+            # radiancediff_with_background[:, low_concentration_mask] = (
+            #     data_cube[:, low_concentration_mask] - background_spectrum[:, None]
+            # )
 
             # d_covariance[:,high_concentration_mask] = data_cube[:,high_concentration_mask] - (
             #     (concentration[high_concentration_mask]-adaptive_threshold)*high_target_spectrum[:,None] + new_background_spectrum[:,None]
@@ -326,7 +326,7 @@ def ml_matched_filter(
             ) + adaptive_threshold
 
             high_concentration_mask = original_concentration > adaptive_threshold * 0.99
-            low_concentration_mask = original_concentration <= adaptive_threshold * 0.99
+            # low_concentration_mask = original_concentration <= adaptive_threshold * 0.99
 
             adaptive_threshold += 6000
             i += 1

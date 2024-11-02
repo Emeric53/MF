@@ -1,6 +1,7 @@
 import numpy as np
 import pathlib as pl
 
+import xml.etree.ElementTree as ET
 import os
 import sys
 
@@ -23,7 +24,7 @@ def get_enmap_array(file_path: str) -> np.ndarray:
 
 
 # 从数据文件中 获取 emit的通道波长信息
-def read_enmap_bands(file_path: str) -> np.ndarray:
+def read_enmap_bands() -> np.ndarray:
     """
     get bands list of ahsi
     :param band_file:  filepath containing bands wavelength
@@ -44,6 +45,27 @@ def get_enmap_bands_array(
     data = get_enmap_array(file_path=file_path)
     indices = np.where((bands >= bot) & (bands <= top))[0]
     return bands[indices], data[indices, :, :]
+
+
+def get_center_sun_elevation(xml_file_path):
+    # 解析XML文件
+    tree = ET.parse(xml_file_path)
+    root = tree.getroot()
+
+    # 查找center标签的太阳高度角 (在sunElevationAngle标签下)
+    sun_elevation = None
+    for elem in root.iter("sunElevationAngle"):
+        center_elem = elem.find("center")
+        if center_elem is not None:
+            sun_elevation = float(center_elem.text)
+            break
+
+    if sun_elevation is not None:
+        print(f"中心点太阳高度角: {sun_elevation} 度")
+        return sun_elevation
+    else:
+        print("未找到中心点太阳高度角信息")
+        return None
 
 
 # 将结果导出为nc文件
@@ -75,5 +97,12 @@ def export_enmap_array_to_tiff(
         print(f"An error occurred: {e}")
 
 
-# if __name__ == "__main__":
-#     # main()
+if __name__ == "__main__":
+    filepath = r"I:\stanford_campaign\EnMAP\dims_op_oc_oc-en_701862725_1\ENMAP.HSI.L1B\ENMAP01-____L1B-DT0000005368_20221116T184046Z_004_V010501_20241017T040758Z\ENMAP01-____L1B-DT0000005368_20221116T184046Z_004_V010501_20241017T040758Z-SPECTRAL_IMAGE_SWIR.TIF"
+    bands, radiance = get_enmap_bands_array(filepath, 2150, 2500)
+    sza = get_center_sun_elevation(
+        filepath.replace("SPECTRAL_IMAGE_SWIR.TIF", "METADATA.XML")
+    )
+    print(sza)
+    print(radiance.shape)
+    print(bands)

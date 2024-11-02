@@ -248,8 +248,7 @@ if __name__ == "__main__":
     hdr_file = "I:\stanford_campaign\Stanford_Campaign_GF5-02-AHSI\GF5B_AHSI_W112.1_N32.8_20221115_006332_L10000239663_VNSW_Rad.hdr"
     # metadata = read_hdr_file(hdr_file)
     dat_file = "I:\stanford_campaign\Stanford_Campaign_GF5-02-AHSI\GF5B_AHSI_W112.1_N32.8_20221115_006332_L10000239663_VNSW_Rad.dat"
-    radiance = read_dat_file(dat_file, 2150, 2500)
-    print(radiance.shape)
+
     # wvls = extract_wavelengths_from_hdr(hdr_file)
     # print(wvls)
     # wavelength = get_ahsi_bands()

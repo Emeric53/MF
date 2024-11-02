@@ -167,6 +167,10 @@ def generate_satellite_uas_for_specific_range_from_lut(
     altitude: float,
 ):
     # 1. 构建enhancement的范围
+    if start_enhancement < 0:
+        start_enhancement = 0
+    if end_enhancement > 50000:
+        end_enhancement == 50000
     enhancement_range = generate_series_with_multiples_of_500(
         start_enhancement, end_enhancement
     )
@@ -191,10 +195,11 @@ def generate_satellite_uas_for_specific_range_from_lut(
 
 if __name__ == "__main__":
     # print("Start generating radiance lookup table")
-    generate_radiance_lut_for_satellite("AHSI")
-    generate_radiance_lut_for_satellite("EnMAP")
-    generate_radiance_lut_for_satellite("EMIT")
-    generate_radiance_lut_for_satellite("PRISMA")
+    # generate_radiance_lut_for_satellite("AHSI")
+    # generate_radiance_lut_for_satellite("EnMAP")
+    # generate_radiance_lut_for_satellite("EMIT")
+    # generate_radiance_lut_for_satellite("PRISMA")
+    generate_radiance_lut_for_satellite("ZY1")
     # start = time.time()
     # generate_satellite_uas_for_specific_range_from_lut(
     #     "AHSI", 0, 50000, 2150, 2500, 60, 0

@@ -1,6 +1,15 @@
 import numpy as np
 import xarray as xr
 import h5py
+from osgeo import gdal, osr
+import os
+import rasterio
+from rasterio.control import GroundControlPoint
+
+from rasterio.transform import from_origin
+from rasterio.warp import reproject, Resampling
+from rasterio.mask import mask
+from shapely.geometry import Polygon
 
 
 # 打开 HE5 文件
@@ -141,11 +150,51 @@ def save_prisma_data_as_netcdf(bands, output_path):
         print(f"An error occurred while saving PRISMA data to NetCDF: {e}")
 
 
-if __name__ == "__main__":
-    filename = "I:\stanford_campaign\PRISMA\PRS_L1_STD_OFFL_20211016183624_20211016183629_0001.he5"
+def get_prisma_SZA_altitude(filepath):
+    with h5py.File(filepath, "r") as prisma_file:
+        sza = prisma_file.attrs["Sun_zenith_angle"]
+        altitude = 0
+        return sza, altitude
 
-    wavelength_array, radiance_cube = get_prisma_bands_array(filename, 1500, 2100)
-    print(radiance_cube.shape)
-    print(radiance_cube[0, :, :])
-    print(wavelength_array)
+
+def location_calibration(data, original_filepath, output_tiff_path):
+    # 打开原始 HDF5 文件并提取纬度和经度数组
+    with h5py.File(original_filepath, "r") as prisma_file:
+        latitude = prisma_file[
+            "/HDFEOS/SWATHS/PRS_L1_HCO/Geolocation Fields/Latitude_SWIR"
+        ][:]
+        longitude = prisma_file[
+            "/HDFEOS/SWATHS/PRS_L1_HCO/Geolocation Fields/Longitude_SWIR"
+        ][:]
+
+        # 创建地面控制点列表
+        gcps = [
+            GroundControlPoint(row=i, col=j, x=longitude[i, j], y=latitude[i, j])
+            for i in range(data.shape[0])
+            for j in range(data.shape[1])
+        ]
+
+        # 创建GeoTIFF文件
+        with rasterio.open(
+            output_tiff_path,
+            "w",
+            driver="GTiff",
+            height=data.shape[0],
+            width=data.shape[1],
+            count=1,
+            dtype=data.dtype,
+            crs="EPSG:4326",  # 使用WGS84坐标系
+        ) as dst:
+            dst.write(data, 1)
+            dst.update_tags(ns="rio_gcps", gcp_crs=dst.crs, gcps=gcps)
+
+
+if __name__ == "__main__":
+    filename = "I:\stanford_campaign\PRISMA_all\PRS_L1_STD_OFFL_20211016183624_20211016183629_0001.he5"
+    wavelength_array, radiance_cube = get_prisma_bands_array(filename, 2150, 2500)
+    clip = radiance_cube[0, :, :]
+    location_calibration(clip, filename, r"I:\stanford_campaign\PRISMA\test1.tif")
+    # print(radiance_cube.shape)
+    # print(radiance_cube[0, :, :])
+    # print(wavelength_array)
     # main()
