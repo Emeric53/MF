@@ -1,5 +1,4 @@
 from osgeo import gdal
-from matplotlib import pyplot as plt
 import numpy as np
 
 import xml.etree.ElementTree as ET
@@ -7,7 +6,7 @@ import pathlib as pl
 import os
 import sys
 
-sys.path.append("c:\\Users\\RS\\VSCode\\matchedfiltermethod\src")
+sys.path.append("c:\\Users\\RS\\VSCode\\matchedfiltermethod\\src")
 from utils.satellites_data.general_functions import (
     save_ndarray_to_tiff,
     read_tiff_in_numpy,
@@ -101,9 +100,33 @@ def get_calibrated_radiance(
     return bands[indices], calibrated_radiance
 
 
+# 从元数据中获取 SZA 和地面高程
+def get_sza_altitude(filepath: str):
+    xml_file = filepath.replace("_SW.tif", ".xml")
+    # 解析XML文件
+    tree = ET.parse(xml_file)
+    root = tree.getroot()
+
+    # 查找center标签的太阳高度角 (在sunElevationAngle标签下)
+    sun_elevation = None
+    for elem in root.iter("SolarZenith"):
+        sun_elevation = float(elem.text)
+
+    if sun_elevation is not None:
+        print(f"中心点太阳高度角: {sun_elevation} 度")
+        return sun_elevation, 0
+    else:
+        print("未找到中心点太阳高度角信息")
+        return None
+
+
 # 将反演结果的数组导出为GeoTIFF文件,并使用与输入文件相同的地理参考
 def export_ahsi_array_to_tiff(
-    result: np.ndarray, filepath: str, output_folder: str, output_filename: str = None
+    result: np.ndarray,
+    filepath: str,
+    output_folder: str,
+    output_filename: str = None,
+    orthorectify=False,
 ):
     """
     Export a NumPy array to a GeoTIFF file with the same geo-referencing as the input file.
@@ -121,6 +144,8 @@ def export_ahsi_array_to_tiff(
         output_path = os.path.join(output_folder, filename)
         # Export with geo-referencing
         save_ndarray_to_tiff(result, output_path, reference_filepath=filepath)
+        if orthorectify:
+            image_coordinate(output_path)
 
     except FileNotFoundError as fnf_error:
         print(fnf_error)
@@ -159,7 +184,7 @@ def image_coordinate(image_path: str):
             corrected_dataset.FlushCache()
             corrected_dataset = None
             print(
-                f"Correction completed. Corrected file saved at: {corrected_image_path}"
+                f"Geolocation Correction completed. Corrected file saved at: {corrected_image_path}"
             )
 
         dataset = None
@@ -172,25 +197,7 @@ def image_coordinate(image_path: str):
         print(f"An error occurred: {e}")
 
 
-def get_sza_altitude(filepath: str):
-    xml_file = filepath.replace("_SW.tif", ".xml")
-    # 解析XML文件
-    tree = ET.parse(xml_file)
-    root = tree.getroot()
-
-    # 查找center标签的太阳高度角 (在sunElevationAngle标签下)
-    sun_elevation = None
-    for elem in root.iter("SolarZenith"):
-        sun_elevation = float(elem.text)
-
-    if sun_elevation is not None:
-        print(f"中心点太阳高度角: {sun_elevation} 度")
-        return sun_elevation, 0
-    else:
-        print("未找到中心点太阳高度角信息")
-        return None
-
-
+# 以下部分是由于读取 导出的 dat格式的 AHSI数据而添加的函数
 # ! 对AHSI数据读取SZA和地面高程
 def get_sza_altitude_from_dat(filepath: str):
     hdr_file = filepath.replace(".dat", ".hdr")
@@ -238,39 +245,5 @@ def extract_wavelengths_from_hdr(hdr_file):
     return np.array(wavelengths)
 
 
-def read_hdr_file(hdr_file):
-    with open(hdr_file, "r") as f:
-        for line in f:
-            if "=" in line:
-                key, value = line.strip().split("=")
-                if key.strip() == "solar zenith":
-                    sza = float(value.strip())
-                    print(f"SZA: {sza}")
-
-    return None
-
-
-# main 函数
-def main():
-    ahsi_file = (
-        "F:\\GF5-02_李飞论文所用数据\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222\\"
-        "GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222_SW.tif"
-    )
-    calibrated_radiance = get_calibrated_radiance(ahsi_file)
-    plt.plot(calibrated_radiance[:, 0, 0])
-    plt.show()
-
-
 if __name__ == "__main__":
-    a = r"J:\\AHSI_part4\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404_SW.tif"
-    sza, _ = get_sza_altitude(a)
-    print(sza)
-    # # 使用示例
-    # hdr_file = "I:\stanford_campaign\Stanford_Campaign_GF5-02-AHSI\GF5B_AHSI_W112.1_N32.8_20221115_006332_L10000239663_VNSW_Rad.hdr"
-    # # metadata = read_hdr_file(hdr_file)
-    # dat_file = "I:\stanford_campaign\Stanford_Campaign_GF5-02-AHSI\GF5B_AHSI_W112.1_N32.8_20221115_006332_L10000239663_VNSW_Rad.dat"
-
-    # wvls = extract_wavelengths_from_hdr(hdr_file)
-    # print(wvls)
-    # wavelength = get_ahsi_bands()
-    # print(wavelength.shape)
+    sample_filepath = r"J:\\AHSI_part4\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404_SW.tif"

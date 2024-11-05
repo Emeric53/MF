@@ -2,15 +2,21 @@ import pathlib as pl
 import os
 import sys
 
+import algorithms.columnwise_matchedfilter
+import algorithms.matchedfilter
+
 sys.path.append("C://Users//RS//VSCode//matchedfiltermethod//src")
 from algorithms import matched_filter_variants as mfs
+from algorithms import matched_filter_all as mfa
+import algorithms
 from utils import satellites_data as sd
 from utils import generate_radiance_lut_and_uas as glut
 
 
 # mf_type 以数字代表使用的匹配滤波算法 类型
 # 0：columnwise + 迭代 + 反射率校正因子 的匹配滤波算法
-
+# 1: 多层匹配滤波算法
+# 2: kalman 滤波器 匹配滤波算法
 
 # 部分参数设置
 low_wavelength = 2150
@@ -33,8 +39,12 @@ def run_for_GF5B(filepath, outputfolder, mf_type):
     _, uas = glut.generate_satellite_uas_for_specific_range_from_lut(
         "AHSI", 0, 50000, low_wavelength, high_wavelength, sza, altitude
     )
+    print(uas.shape)
     try:
-        process_radiance_by_mf(AHSI_radiance, uas, mf_type)
+        enhancement = process_radiance_by_mf(AHSI_radiance, uas, mf_type)
+        # sd.GF5B_data.export_ahsi_array_to_tiff(
+        #     enhancement, filepath, outputfolder, output_filename=None, orthorectify=True
+        # )
     except Exception as e:
         print("Error in processing: ", filepath)
         print(e)
@@ -120,8 +130,8 @@ def get_subdirectories(folder_path: str):
 
 
 # 批量运行
-def runinbatch(satellite_name: str):
-    if satellite_name == "AHSI":
+def run_in_batch(satellite_name: str):
+    if satellite_name == "GF5B":
         outputfolder = "J:\\AHSI_result"
         filefolder_list = [
             "I:\\AHSI_part2",
@@ -143,13 +153,18 @@ def runinbatch(satellite_name: str):
 def process_files(filefolder_list, outputfolder, satellite_name):
     if satellite_name == "AHSI":
         for filefolder in filefolder_list:
+            print("Current folder: ", filefolder)
             filelist, namelist = get_subdirectories(filefolder)
             for index in range(len(filelist)):
                 filepath = os.path.join(filelist[index], namelist[index] + "_SW.tif")
                 if os.path.exists(filepath) is False:
                     continue
                 print("Current file: ", filepath)
-                run_for_GF5B(filepath, outputfolder, mf_type=0)
+                try:
+                    run_for_GF5B(filepath, outputfolder, mf_type=0)
+                except Exception as e:
+                    print("Error in processing: ", filepath)
+                    print(e)
 
     elif satellite_name == "EMIT":
         radiance_path_list = pl.Path(filefolder_list[0]).glob("*.nc")
@@ -164,7 +179,14 @@ def process_files(filefolder_list, outputfolder, satellite_name):
 # 通用的radiance处理函数
 def process_radiance_by_mf(radiance_cube, uas, mf_type):
     if mf_type == 0:
-        enhancement = mfs.columnwise_matched_filter(radiance_cube, uas, True, True)
+        try:
+            # enhancement = mfa.columnwise_matched_filter(radiance_cube, uas, True, True)
+            enhancement = algorithms.columnwise_matchedfilter.columnwise_matched_filter(
+                radiance_cube, uas, True, True
+            )
+        except Exception as e:
+            print("Error in methane retrieval")
+            print(e)
     elif mf_type == 1:
         enhancement = mfs.ml_matched_filter(radiance_cube, uas, True)
     else:
@@ -173,67 +195,8 @@ def process_radiance_by_mf(radiance_cube, uas, mf_type):
     return enhancement
 
 
-# 各种卫星数据批量运算
-
-
-def prisma():
-    prisma_folder = "I:\\PRISMA"
-    outputfolder = "I:\\PRISMA_result"
-    if os.path.exists(outputfolder) is False:
-        os.mkdir(outputfolder)
-    filelist, namelist = get_subdirectories(prisma_folder)
-    for index in range(len(filelist)):
-        filepath = os.path.join(filelist[index], namelist[index] + ".tif")
-        run_for_PRISMA(filepath, outputfolder, mf_type=0)
-
-
-def gf5b():
-    gf5b_folder = "I:\\GF5B"
-    outputfolder = "I:\\GF5B_result"
-    if os.path.exists(outputfolder) is False:
-        os.mkdir(outputfolder)
-    filelist, namelist = get_subdirectories(gf5b_folder)
-    for index in range(len(filelist)):
-        filepath = os.path.join(filelist[index], namelist[index] + ".tif")
-        run_for_GF5B(filepath, outputfolder, mf_type=0)
-
-
-def zy1():
-    gf5b_folder = "I:\\GF5B"
-    outputfolder = "I:\\GF5B_result"
-    if os.path.exists(outputfolder) is False:
-        os.mkdir(outputfolder)
-    filelist, namelist = get_subdirectories(gf5b_folder)
-    for index in range(len(filelist)):
-        filepath = os.path.join(filelist[index], namelist[index] + ".tif")
-        run_for_ZY1(filepath, outputfolder, mf_type=0)
-
-
-def enmap():
-    enmap_folder = "I:\\EnMAP"
-    outputfolder = "I:\\EnMAP_result"
-    if os.path.exists(outputfolder) is False:
-        os.mkdir(outputfolder)
-    filelist, namelist = get_subdirectories(enmap_folder)
-    for index in range(len(filelist)):
-        filepath = os.path.join(filelist[index], namelist[index] + ".tif")
-        run_for_EnMAP(filepath, outputfolder, mf_type=0)
-
-
-def emit():
-    enmap_folder = "I:\\EnMAP"
-    outputfolder = "I:\\EnMAP_result"
-    if os.path.exists(outputfolder) is False:
-        os.mkdir(outputfolder)
-    filelist, namelist = get_subdirectories(enmap_folder)
-    for index in range(len(filelist)):
-        filepath = os.path.join(filelist[index], namelist[index] + ".tif")
-        run_for_EnMAP(filepath, outputfolder, mf_type=0)
-
-
 if __name__ == "__main__":
-    # runinbatch("AHSI")
-    print("All done!")
-    filepath = "I:\AHSI_part2\GF5B_AHSI_E78.1_N36.7_20231004_011030_L10000400463\GF5B_AHSI_E78.1_N36.7_20231004_011030_L10000400463_SW.tif"
-    radiance_cube = sd.GF5B_data.get_ahsi_array(filepath)
-    print(radiance_cube.shape)
+    # run_in_batch("GF5B")
+    filepath = "I:\AHSI_part2\GF5B_AHSI_E114.0_N30.3_20231026_011349_L10000410291\GF5B_AHSI_E114.0_N30.3_20231026_011349_L10000410291_SW.tif"
+    outputfolder = "C:\\Users\\RS\\Desktop\\GF5-02_李飞论文所用数据\\mf_result\\"
+    enhancement = run_for_GF5B(filepath, outputfolder, 0)
