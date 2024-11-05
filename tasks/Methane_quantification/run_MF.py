@@ -5,6 +5,94 @@ import sys
 sys.path.append("C://Users//RS//VSCode//matchedfiltermethod//src")
 from algorithms import matched_filter_variants as mf
 from utils import satellites_data as sd
+from utils import generate_radiance_lut_and_uas as glut
+
+
+# mf_type 以数字代表使用的匹配滤波算法 类型
+# 0：columnwise + 迭代 + 反射率校正因子 的匹配滤波算法
+
+
+# 部分参数设置
+low_wavelength = 2150
+high_wavelength = 2500
+
+
+# 单个AHSI文件处理
+def run_for_GF5B(filepath, outputfolder, mf_type):
+    filename = os.path.basename(filepath)
+    outputfile = os.path.join(outputfolder, filename)
+    if os.path.exists(outputfile):
+        return
+    # 基于 波段范围 读取辐射定标后的radiance的cube
+    _, AHSI_radiance = sd.AHSI_data.get_calibrated_radiance(
+        filepath, low_wavelength, high_wavelength
+    )
+    # 读取 sza，地表高程的参数
+    sza, altitude = sd.AHSI_data.get_sza_altitude(filepath)
+    # 生成初始单位吸收谱 用于计算
+    uas = glut.generate_satellite_uas_for_specific_range_from_lut(
+        "AHSI", 0, 50000, low_wavelength, high_wavelength, sza, altitude
+    )
+    process_radiance_by_mf(AHSI_radiance, uas, mf_type)
+
+
+# 单个AHSI文件处理
+def run_for_ZY1(filepath, outputfolder, mf_type):
+    filename = os.path.basename(filepath)
+    outputfile = os.path.join(outputfolder, filename)
+    if os.path.exists(outputfile):
+        return
+    # 基于 波段范围 读取辐射定标后的radiance的cube
+    _, AHSI_radiance = sd.AHSI_data.get_calibrated_radiance(
+        filepath, low_wavelength, high_wavelength
+    )
+    # 读取 sza，地表高程的参数
+    sza, altitude = sd.AHSI_data.get_sza_altitude(filepath)
+    # 生成初始单位吸收谱 用于计算
+    uas = glut.generate_satellite_uas_for_specific_range_from_lut(
+        "AHSI", 0, 50000, low_wavelength, high_wavelength, sza, altitude
+    )
+    process_radiance_by_mf(AHSI_radiance, uas, mf_type)
+
+
+# 单个EMIT文件处理
+def run_for_EMIT(filepath, outputfolder, mf_type):
+    filename = os.path.basename(filepath)
+    outputfile = os.path.join(outputfolder, filename)
+    if os.path.exists(outputfile):
+        return
+    emit_bands, EMIT_radiance = sd.EMIT_data.get_emit_bands_array(filepath, 2100, 2500)
+    uas_path = r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\EMIT_unit_absorption_spectrum.txt"
+    interval_uas_path = r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\AHSI_unit_absorption_spectrum.txt"
+    process_radiance_by_mf(EMIT_radiance, uas_path, interval_uas_path, mf_type)
+
+
+# 单个EnMAP文件处理
+def run_for_EnMAP(filepath, outputfolder, mf_type):
+    filename = os.path.basename(filepath)
+    outputfile = os.path.join(outputfolder, filename)
+    if os.path.exists(outputfile):
+        return
+    EnMAP_bands, EnMAP_radiance = sd.EnMAP_data.get_enmap_bands_array(
+        filepath, 2100, 2500
+    )
+    uas_path = r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\EnMAP_unit_absorption_spectrum.txt"
+    process_radiance_by_mf(EnMAP_radiance, uas_path, mf_type)
+
+
+# 单个PRISMA文件处理
+def run_for_PRISMA(filepath, outputfolder, mf_type):
+    filename = os.path.basename(filepath)
+    outputfile = os.path.join(outputfolder, filename)
+    if os.path.exists(outputfile):
+        return
+    EnMAP_bands, radiance = sd.PRISMA_data.get_prisma_bands_array(filepath, 2100, 2500)
+    uas_path = r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\PRISMA_unit_absorption_spectrum.txt"
+
+    enhancement_result = process_radiance_by_mf(
+        radiance, uas_path, filepath, outputfolder, mf_type
+    )
+    return enhancement_result
 
 
 # 获取文件夹中的所有子文件夹
@@ -47,14 +135,14 @@ def runinbatch(satellite_name: str):
         print("Invalid satellite name, please select from 'AHSI' or 'EMIT'.")
 
 
-# 公用处理函数
+# public 处理函数
 def process_files(filefolder_list, outputfolder, satellite_name):
     if satellite_name == "AHSI":
         for filefolder in filefolder_list:
             filelist, namelist = get_subdirectories(filefolder)
             for index in range(len(filelist)):
                 filepath = os.path.join(filelist[index], namelist[index] + "_SW.tif")
-                rumfor_AHSI(filepath, outputfolder, mf_type=0)
+                runfor_AHSI(filepath, outputfolder, mf_type=0)
 
     elif satellite_name == "EMIT":
         radiance_path_list = pl.Path(filefolder_list[0]).glob("*.nc")
@@ -63,58 +151,7 @@ def process_files(filefolder_list, outputfolder, satellite_name):
             current_filename = radiance_path.name
             if current_filename in outputfile_list:
                 continue
-            rumfor_EMIT(radiance_path, outputfolder, mf_type=0)
-
-
-# 单个AHSI文件处理
-def runfor_AHSI(filepath, outputfolder, mf_type):
-    filename = os.path.basename(filepath)
-    outputfile = os.path.join(outputfolder, filename)
-    if os.path.exists(outputfile):
-        return
-    _, AHSI_radiance = sd.AHSI_data.get_calibrated_radiance(filepath, 2100, 2500)
-    uas_path = r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Needed_data\\AHSI_unit_absorption_spectrum.txt"
-
-    enhancement_result = process_radiance_by_mf(AHSI_radiance, uas_path, mf_type)
-
-
-# 单个EMIT文件处理
-def runfor_EMIT(filepath, outputfolder, mf_type):
-    filename = os.path.basename(filepath)
-    outputfile = os.path.join(outputfolder, filename)
-    if os.path.exists(outputfile):
-        return
-    emit_bands, EMIT_radiance = sd.EMIT_data.get_emit_bands_array(filepath, 2100, 2500)
-    uas_path = r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\EMIT_unit_absorption_spectrum.txt"
-    interval_uas_path = r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\AHSI_unit_absorption_spectrum.txt"
-    process_radiance_by_mf(EMIT_radiance, uas_path, interval_uas_path, mf_type)
-
-
-# 单个EnMAP文件处理
-def runfor_EnMAP(filepath, outputfolder, mf_type):
-    filename = os.path.basename(filepath)
-    outputfile = os.path.join(outputfolder, filename)
-    if os.path.exists(outputfile):
-        return
-    EnMAP_bands, EnMAP_radiance = sd.EnMAP_data.get_enmap_bands_array(
-        filepath, 2100, 2500
-    )
-    uas_path = r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\EnMAP_unit_absorption_spectrum.txt"
-    process_radiance_by_mf(EnMAP_radiance, uas_path, mf_type)
-
-
-# 单个PRISMA文件处理
-def runfor_PRISMA(filepath, outputfolder, mf_type):
-    filename = os.path.basename(filepath)
-    outputfile = os.path.join(outputfolder, filename)
-    if os.path.exists(outputfile):
-        return
-    EnMAP_bands, radiance = sd.PRISMA_data.get_prisma_bands_array(filepath, 2100, 2500)
-    uas_path = r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\PRISMA_unit_absorption_spectrum.txt"
-
-    enhancement_result = process_radiance_by_mf(
-        radiance, uas_path, filepath, outputfolder, mf_type
-    )
+            runfor_EMIT(radiance_path, outputfolder, mf_type=0)
 
 
 # 通用的radiance处理函数
@@ -132,16 +169,18 @@ def process_radiance_by_mf(radiance_cube, uas_path, mf_type):
     return enhancement
 
 
+# 各种卫星数据批量运算
+
+
 def prisma():
     prisma_folder = "I:\\PRISMA"
-
     outputfolder = "I:\\PRISMA_result"
     if os.path.exists(outputfolder) is False:
         os.mkdir(outputfolder)
     filelist, namelist = get_subdirectories(prisma_folder)
     for index in range(len(filelist)):
         filepath = os.path.join(filelist[index], namelist[index] + ".tif")
-        runfor_PRISMA(filepath, outputfolder, mf_type=0)
+        run_for_PRISMA(filepath, outputfolder, mf_type=0)
 
 
 def gf5b():
@@ -152,7 +191,7 @@ def gf5b():
     filelist, namelist = get_subdirectories(gf5b_folder)
     for index in range(len(filelist)):
         filepath = os.path.join(filelist[index], namelist[index] + ".tif")
-        runfor_AHSI(filepath, outputfolder, mf_type=0)
+        run_for_GF5B(filepath, outputfolder, mf_type=0)
 
 
 def zy1():
@@ -163,7 +202,7 @@ def zy1():
     filelist, namelist = get_subdirectories(gf5b_folder)
     for index in range(len(filelist)):
         filepath = os.path.join(filelist[index], namelist[index] + ".tif")
-        runfor_AHSI(filepath, outputfolder, mf_type=0)
+        run_for_ZY1(filepath, outputfolder, mf_type=0)
 
 
 def enmap():
@@ -174,11 +213,22 @@ def enmap():
     filelist, namelist = get_subdirectories(enmap_folder)
     for index in range(len(filelist)):
         filepath = os.path.join(filelist[index], namelist[index] + ".tif")
-        runfor_EnMAP(filepath, outputfolder, mf_type=0)
+        run_for_EnMAP(filepath, outputfolder, mf_type=0)
 
 
-if __name__ == "__main__":
-    prisma()
-    gf5b()
-    zy1()
-    enmap()
+def emit():
+    enmap_folder = "I:\\EnMAP"
+    outputfolder = "I:\\EnMAP_result"
+    if os.path.exists(outputfolder) is False:
+        os.mkdir(outputfolder)
+    filelist, namelist = get_subdirectories(enmap_folder)
+    for index in range(len(filelist)):
+        filepath = os.path.join(filelist[index], namelist[index] + ".tif")
+        run_for_EnMAP(filepath, outputfolder, mf_type=0)
+
+
+# if __name__ == "__main__":
+#     prisma()
+#     gf5b()
+#     zy1()
+#     enmap()
