@@ -3,7 +3,7 @@ import os
 import sys
 
 sys.path.append("C://Users//RS//VSCode//matchedfiltermethod//src")
-from algorithms import matched_filter_variants as mf
+from algorithms import matched_filter_variants as mfs
 from utils import satellites_data as sd
 from utils import generate_radiance_lut_and_uas as glut
 
@@ -17,23 +17,27 @@ low_wavelength = 2150
 high_wavelength = 2500
 
 
-# 单个AHSI文件处理
+# 单个GF5B文件处理
 def run_for_GF5B(filepath, outputfolder, mf_type):
     filename = os.path.basename(filepath)
     outputfile = os.path.join(outputfolder, filename)
     if os.path.exists(outputfile):
         return
     # 基于 波段范围 读取辐射定标后的radiance的cube
-    _, AHSI_radiance = sd.AHSI_data.get_calibrated_radiance(
+    _, AHSI_radiance = sd.GF5B_data.get_calibrated_radiance(
         filepath, low_wavelength, high_wavelength
     )
     # 读取 sza，地表高程的参数
-    sza, altitude = sd.AHSI_data.get_sza_altitude(filepath)
+    sza, altitude = sd.GF5B_data.get_sza_altitude(filepath)
     # 生成初始单位吸收谱 用于计算
-    uas = glut.generate_satellite_uas_for_specific_range_from_lut(
+    _, uas = glut.generate_satellite_uas_for_specific_range_from_lut(
         "AHSI", 0, 50000, low_wavelength, high_wavelength, sza, altitude
     )
-    process_radiance_by_mf(AHSI_radiance, uas, mf_type)
+    try:
+        process_radiance_by_mf(AHSI_radiance, uas, mf_type)
+    except Exception as e:
+        print("Error in processing: ", filepath)
+        print(e)
 
 
 # 单个AHSI文件处理
@@ -43,11 +47,11 @@ def run_for_ZY1(filepath, outputfolder, mf_type):
     if os.path.exists(outputfile):
         return
     # 基于 波段范围 读取辐射定标后的radiance的cube
-    _, AHSI_radiance = sd.AHSI_data.get_calibrated_radiance(
+    _, AHSI_radiance = sd.GF5B_data.get_calibrated_radiance(
         filepath, low_wavelength, high_wavelength
     )
     # 读取 sza，地表高程的参数
-    sza, altitude = sd.AHSI_data.get_sza_altitude(filepath)
+    sza, altitude = sd.GF5B_data.get_sza_altitude(filepath)
     # 生成初始单位吸收谱 用于计算
     uas = glut.generate_satellite_uas_for_specific_range_from_lut(
         "AHSI", 0, 50000, low_wavelength, high_wavelength, sza, altitude
@@ -118,12 +122,12 @@ def get_subdirectories(folder_path: str):
 # 批量运行
 def runinbatch(satellite_name: str):
     if satellite_name == "AHSI":
-        outputfolder = "I:\\AHSI_result"
+        outputfolder = "J:\\AHSI_result"
         filefolder_list = [
-            "F:\\AHSI_part1",
-            "H:\\AHSI_part2",
-            "L:\\AHSI_part3",
-            "I:\\AHSI_part4",
+            "I:\\AHSI_part2",
+            "K:\\AHSI_part1",
+            "M:\\AHSI_part3",
+            "J:\\AHSI_part4",
         ]
         process_files(filefolder_list, outputfolder, "AHSI")
 
@@ -142,7 +146,10 @@ def process_files(filefolder_list, outputfolder, satellite_name):
             filelist, namelist = get_subdirectories(filefolder)
             for index in range(len(filelist)):
                 filepath = os.path.join(filelist[index], namelist[index] + "_SW.tif")
-                runfor_AHSI(filepath, outputfolder, mf_type=0)
+                if os.path.exists(filepath) is False:
+                    continue
+                print("Current file: ", filepath)
+                run_for_GF5B(filepath, outputfolder, mf_type=0)
 
     elif satellite_name == "EMIT":
         radiance_path_list = pl.Path(filefolder_list[0]).glob("*.nc")
@@ -151,18 +158,15 @@ def process_files(filefolder_list, outputfolder, satellite_name):
             current_filename = radiance_path.name
             if current_filename in outputfile_list:
                 continue
-            runfor_EMIT(radiance_path, outputfolder, mf_type=0)
+            run_for_EMIT(radiance_path, outputfolder, mf_type=0)
 
 
 # 通用的radiance处理函数
-def process_radiance_by_mf(radiance_cube, uas_path, mf_type):
-    bands, uas = sd.general_functions.open_unit_absorption_spectrum(
-        uas_path, 2100, 2500
-    )
+def process_radiance_by_mf(radiance_cube, uas, mf_type):
     if mf_type == 0:
-        enhancement = mf.columnwise_matched_filter(radiance_cube, uas, True, True)
+        enhancement = mfs.columnwise_matched_filter(radiance_cube, uas, True, True)
     elif mf_type == 1:
-        enhancement = mf.ml_matched_filter(radiance_cube, uas, True)
+        enhancement = mfs.ml_matched_filter(radiance_cube, uas, True)
     else:
         print("Invalid mf_type: 0 for original mf and 1 for modified mf")
         return
@@ -227,8 +231,9 @@ def emit():
         run_for_EnMAP(filepath, outputfolder, mf_type=0)
 
 
-# if __name__ == "__main__":
-#     prisma()
-#     gf5b()
-#     zy1()
-#     enmap()
+if __name__ == "__main__":
+    # runinbatch("AHSI")
+    print("All done!")
+    filepath = "I:\AHSI_part2\GF5B_AHSI_E78.1_N36.7_20231004_011030_L10000400463\GF5B_AHSI_E78.1_N36.7_20231004_011030_L10000400463_SW.tif"
+    radiance_cube = sd.GF5B_data.get_ahsi_array(filepath)
+    print(radiance_cube.shape)

@@ -2,6 +2,7 @@ from osgeo import gdal
 from matplotlib import pyplot as plt
 import numpy as np
 
+import xml.etree.ElementTree as ET
 import pathlib as pl
 import os
 import sys
@@ -13,7 +14,7 @@ from utils.satellites_data.general_functions import (
 )
 
 
-# 读取ahsi的数组
+# 基于 tiff 读取ahsi的数组
 def get_ahsi_array(filepath: str) -> np.array:
     """
     Reads a raster file and returns a NumPy array containing all the bands.
@@ -171,8 +172,27 @@ def image_coordinate(image_path: str):
         print(f"An error occurred: {e}")
 
 
-# ! 对AHSI数据读取SZA和地面高程
 def get_sza_altitude(filepath: str):
+    xml_file = filepath.replace("_SW.tif", ".xml")
+    # 解析XML文件
+    tree = ET.parse(xml_file)
+    root = tree.getroot()
+
+    # 查找center标签的太阳高度角 (在sunElevationAngle标签下)
+    sun_elevation = None
+    for elem in root.iter("SolarZenith"):
+        sun_elevation = float(elem.text)
+
+    if sun_elevation is not None:
+        print(f"中心点太阳高度角: {sun_elevation} 度")
+        return sun_elevation, 0
+    else:
+        print("未找到中心点太阳高度角信息")
+        return None
+
+
+# ! 对AHSI数据读取SZA和地面高程
+def get_sza_altitude_from_dat(filepath: str):
     hdr_file = filepath.replace(".dat", ".hdr")
     with open(hdr_file, "r") as f:
         for line in f:
@@ -242,12 +262,13 @@ def main():
 
 
 if __name__ == "__main__":
-    # a = r"I:\\AHSI_part4\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404_SW.tif"
-    # bands, radiance = get_calibrated_radiance(a, 1500, 2300)
-    # 使用示例
-    hdr_file = "I:\stanford_campaign\Stanford_Campaign_GF5-02-AHSI\GF5B_AHSI_W112.1_N32.8_20221115_006332_L10000239663_VNSW_Rad.hdr"
-    # metadata = read_hdr_file(hdr_file)
-    dat_file = "I:\stanford_campaign\Stanford_Campaign_GF5-02-AHSI\GF5B_AHSI_W112.1_N32.8_20221115_006332_L10000239663_VNSW_Rad.dat"
+    a = r"J:\\AHSI_part4\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404_SW.tif"
+    sza, _ = get_sza_altitude(a)
+    print(sza)
+    # # 使用示例
+    # hdr_file = "I:\stanford_campaign\Stanford_Campaign_GF5-02-AHSI\GF5B_AHSI_W112.1_N32.8_20221115_006332_L10000239663_VNSW_Rad.hdr"
+    # # metadata = read_hdr_file(hdr_file)
+    # dat_file = "I:\stanford_campaign\Stanford_Campaign_GF5-02-AHSI\GF5B_AHSI_W112.1_N32.8_20221115_006332_L10000239663_VNSW_Rad.dat"
 
     # wvls = extract_wavelengths_from_hdr(hdr_file)
     # print(wvls)

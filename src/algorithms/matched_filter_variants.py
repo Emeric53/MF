@@ -922,7 +922,7 @@ def matched_filter_test(*args):
     if os.path.exists(outputfile):
         return
 
-    _, image_cube = sd.AHSI_data.get_calibrated_radiance(filepath, 2150, 2500)
+    _, image_cube = sd.GF5B_data.get_calibrated_radiance(filepath, 2150, 2500)
     image_sample_cube = image_cube[:, 500:600, 700:800]
     unit_absoprtion_spectrum_path = "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\uas_files\\AHSI_unit_absorption_spectrum.txt"
 
@@ -1000,7 +1000,7 @@ def columnwise_matched_filter_test(*args):
     if os.path.exists(outputfile):
         return
 
-    _, image_cube = sd.AHSI_data.get_calibrated_radiance(filepath, 2150, 2500)
+    _, image_cube = sd.GF5B_data.get_calibrated_radiance(filepath, 2150, 2500)
     image_sample_cube = image_cube[:, 500:600, 700:800]
     unit_absoprtion_spectrum_path = "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\uas_files\\AHSI_unit_absorption_spectrum.txt"
 
@@ -1077,7 +1077,7 @@ def ml_matched_filter_test(*args):
     if os.path.exists(outputfile):
         return
 
-    _, image_cube = sd.AHSI_data.get_calibrated_radiance(filepath, 2150, 2500)
+    _, image_cube = sd.GF5B_data.get_calibrated_radiance(filepath, 2150, 2500)
     image_sample_cube = image_cube[:, 500:600, 700:800]
     unit_absoprtion_spectrum_path = "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\uas_files\\AHSI_unit_absorption_spectrum.txt"
 
@@ -1156,7 +1156,7 @@ def lognormal_matched_filter_test():
     if os.path.exists(outputfile):
         return
 
-    _, image_cube = sd.AHSI_data.get_calibrated_radiance(filepath, 2150, 2500)
+    _, image_cube = sd.GF5B_data.get_calibrated_radiance(filepath, 2150, 2500)
     image_sample_cube = image_cube[:, 500:600, 700:800]
     unit_absoprtion_spectrum_path = "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\uas_files\\AHSI_unit_absorption_spectrum.txt"
 

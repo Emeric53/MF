@@ -66,7 +66,7 @@ def emit_radiance_compare():
 
 # real radiance
 filepath = "C:\\Users\\RS\\Desktop\\GF5-02_李飞论文所用数据\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222_SW.tif"
-bands, real_spectrum = sd.AHSI_data.get_calibrated_radiance(filepath, 1500, 2500)
+bands, real_spectrum = sd.GF5B_data.get_calibrated_radiance(filepath, 1500, 2500)
 mean = np.mean(real_spectrum, axis=(1, 2))
 
 fig, ax = plt.subplots()
