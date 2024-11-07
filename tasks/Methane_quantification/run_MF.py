@@ -1,14 +1,16 @@
 import pathlib as pl
 import os
 import sys
-
-import algorithms.columnwise_matchedfilter
-import algorithms.matchedfilter
+import re
+import shutil
+# import algorithms.columnwise_matchedfilter
+# import algorithms.matchedfilter
 
 sys.path.append("C://Users//RS//VSCode//matchedfiltermethod//src")
 from algorithms import matched_filter_variants as mfs
 from algorithms import matched_filter_all as mfa
-import algorithms
+
+# import algorithms
 from utils import satellites_data as sd
 from utils import generate_radiance_lut_and_uas as glut
 
@@ -28,7 +30,8 @@ def run_for_GF5B(filepath, outputfolder, mf_type):
     filename = os.path.basename(filepath)
     outputfile = os.path.join(outputfolder, filename)
     if os.path.exists(outputfile):
-        return
+        os.remove(outputfile)
+        # return
     # 基于 波段范围 读取辐射定标后的radiance的cube
     _, AHSI_radiance = sd.GF5B_data.get_calibrated_radiance(
         filepath, low_wavelength, high_wavelength
@@ -42,9 +45,14 @@ def run_for_GF5B(filepath, outputfolder, mf_type):
     print(uas.shape)
     try:
         enhancement = process_radiance_by_mf(AHSI_radiance, uas, mf_type)
-        # sd.GF5B_data.export_ahsi_array_to_tiff(
-        #     enhancement, filepath, outputfolder, output_filename=None, orthorectify=True
-        # )
+        output_rpb = outputfile.replace(".tif", ".rpb")
+        if not os.path.exists(output_rpb):
+            original_rpb = filepath.replace(".tif", ".rpb")
+            shutil.copy(original_rpb, output_rpb)
+            print("copy rpb file")
+        sd.GF5B_data.export_ahsi_array_to_tiff(
+            enhancement, filepath, outputfolder, output_filename=None, orthorectify=True
+        )
     except Exception as e:
         print("Error in processing: ", filepath)
         print(e)
@@ -133,8 +141,9 @@ def get_subdirectories(folder_path: str):
 def run_in_batch(satellite_name: str):
     if satellite_name == "GF5B":
         outputfolder = "J:\\AHSI_result"
+        # outputfolder = "J;\\shanxi_result"
         filefolder_list = [
-            "I:\\AHSI_part2",
+            # "I:\\AHSI_part2",
             "K:\\AHSI_part1",
             "M:\\AHSI_part3",
             "J:\\AHSI_part4",
@@ -160,6 +169,17 @@ def process_files(filefolder_list, outputfolder, satellite_name):
                 if os.path.exists(filepath) is False:
                     continue
                 print("Current file: ", filepath)
+                if (
+                    is_within_province(
+                        filepath,
+                        shanxi_longitude_min,
+                        shanxi_longitude_max,
+                        shanxi_latitude_min,
+                        shanxi_latitude_max,
+                    )
+                    is False
+                ):
+                    continue
                 try:
                     run_for_GF5B(filepath, outputfolder, mf_type=0)
                 except Exception as e:
@@ -176,14 +196,32 @@ def process_files(filefolder_list, outputfolder, satellite_name):
             run_for_EMIT(radiance_path, outputfolder, mf_type=0)
 
 
+# 山西省的经纬度范围
+shanxi_longitude_min = 111.0  # 最小经度
+shanxi_longitude_max = 114.5  # 最大经度
+shanxi_latitude_min = 34.5  # 最小纬度
+shanxi_latitude_max = 40.8  # 最大纬度
+
+
+def is_within_province(data_name, lon_min, lon_max, lat_min, lat_max):
+    match = re.search(r"E([+-]?\d+\.\d+).*N([+-]?\d+\.\d+)", data_name)
+    if match:
+        longitude = float(match.group(1))
+        latitude = float(match.group(2))
+        # 判断经纬度是否在指定省份范围内
+        if lon_min <= longitude <= lon_max and lat_min <= latitude <= lat_max:
+            return True
+    return False
+
+
 # 通用的radiance处理函数
 def process_radiance_by_mf(radiance_cube, uas, mf_type):
     if mf_type == 0:
         try:
-            # enhancement = mfa.columnwise_matched_filter(radiance_cube, uas, True, True)
-            enhancement = algorithms.columnwise_matchedfilter.columnwise_matched_filter(
-                radiance_cube, uas, True, True
-            )
+            enhancement = mfa.columnwise_matched_filter(radiance_cube, uas, True, True)
+            # enhancement = algorithms.columnwise_matchedfilter.columnwise_matched_filter(
+            #     radiance_cube, uas, True, True
+            # )
         except Exception as e:
             print("Error in methane retrieval")
             print(e)
@@ -196,7 +234,12 @@ def process_radiance_by_mf(radiance_cube, uas, mf_type):
 
 
 if __name__ == "__main__":
-    # run_in_batch("GF5B")
-    filepath = "I:\AHSI_part2\GF5B_AHSI_E114.0_N30.3_20231026_011349_L10000410291\GF5B_AHSI_E114.0_N30.3_20231026_011349_L10000410291_SW.tif"
-    outputfolder = "C:\\Users\\RS\\Desktop\\GF5-02_李飞论文所用数据\\mf_result\\"
-    enhancement = run_for_GF5B(filepath, outputfolder, 0)
+    run_in_batch("GF5B")
+    # filepath = "J:\\AHSI_part4\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404_SW.tif"
+    # outputfile = (
+    #     "J:\shanxi_result\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404_SW.tif"
+    # )
+    # output_rpb = outputfile.replace(".tif", ".rpb")
+    # if not os.path.exists(output_rpb):
+    #     original_rpb = filepath.replace(".tif", ".rpb")
+    #     shutil.copy(original_rpb, output_rpb)

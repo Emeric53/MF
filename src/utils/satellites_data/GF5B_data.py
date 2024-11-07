@@ -120,6 +120,17 @@ def get_sza_altitude(filepath: str):
         return None
 
 
+def get_grb_from_array(filepath: str):
+    # 从 VNIR 中 提取 rgb真彩 三波段
+    calibration_filepath = os.path.dirname(filepath) + "//GF5B_AHSI_RadCal_VNIR.raw"
+    ahsi_array = get_ahsi_array(filepath)
+    coeffs = get_radiometric_calibration_coefficients(calibration_filepath)
+    bands = get_ahsi_bands()
+    calibrated_radiance = radiance_calibration(ahsi_array, coeffs)
+    rgb_bands = []
+    return rgb_bands
+
+
 # 将反演结果的数组导出为GeoTIFF文件,并使用与输入文件相同的地理参考
 def export_ahsi_array_to_tiff(
     result: np.ndarray,
