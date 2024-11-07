@@ -102,5 +102,14 @@ def matched_filter(
     return concentration
 
 
+def matched_filter_test():
+    test_image = np.random.rand(10, 10, 10)
+    unit_absorption_spectrum = np.random.rand(10)
+    iterate = True
+    albedoadjust = True
+    result = matched_filter(test_image, unit_absorption_spectrum, iterate, albedoadjust)
+    print(result)
+
+
 if __name__ == "__main__":
-    pass
+    
