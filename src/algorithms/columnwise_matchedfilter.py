@@ -118,6 +118,136 @@ def columnwise_matched_filter(
     return concentration
 
 
+# def columnwise_matched_filter(
+#     data_cube: np.ndarray,
+#     unit_absorption_spectrum: np.ndarray,
+#     group_size: int = 5,
+#     iterate: bool = False,
+#     albedoadjust: bool = False,
+#     sparsity: bool = False,
+# ) -> np.ndarray:
+#     """Calculate the methane enhancement of the image data based on the original matched filter method,
+#        with an adjustable column grouping size.
+
+#     Args:
+#         data_cube (np.ndarray): 3D array representing the image data cube.
+#         unit_absorption_spectrum (np.ndarray): 1D array representing the unit absorption spectrum.
+#         group_size (int): Number of columns to process as a group.
+#         iterate (bool): Flag indicating whether to perform iterative computation.
+#         albedoadjust (bool): Flag indicating whether to adjust for albedo.
+
+#     Returns:
+#         np.ndarray: 2D array representing the concentration of methane.
+#     """
+#     # Initialize the concentration array, matching satellite data dimensions
+#     _, rows, cols = data_cube.shape
+#     concentration = np.full((rows, cols), np.nan)  # Set default to NaN
+
+#     # Process the data in groups of columns
+#     for start_col in range(0, cols, group_size):
+#         end_col = min(
+#             start_col + group_size, cols
+#         )  # Ensure we do not exceed the number of columns
+#         current_group = data_cube[
+#             :, :, start_col:end_col
+#         ]  # Get the current column group
+#         # Identify valid rows in this group (non-NaN rows only)
+#         valid_pixel_mask = ~np.isnan(current_group).any(axis=0)
+#         count_not_nan = np.count_nonzero(valid_pixel_mask)
+
+#         # If there are no valid (non-NaN) rows, skip this group
+#         if count_not_nan > 0:
+#             # Calculate the background and target spectra for valid rows only
+#             background_spectrum = np.nanmean(current_group, axis=(1, 2))
+#             target_spectrum = background_spectrum * unit_absorption_spectrum
+#             radiancediff_with_bg = (
+#                 current_group[:, valid_pixel_mask] - background_spectrum[:, None, None]
+#             )
+
+#             # Compute covariance matrix and its pseudo-inverse for valid rows
+#             d_covariance = radiancediff_with_bg.reshape(
+#                 rows, -1
+#             )  # Flatten columns for covariance calculation
+#             covariance = (
+#                 np.einsum("ij,kj->ik", d_covariance, d_covariance) / count_not_nan
+#             )
+#             epsilon = 1e-10  # Set a small regularization value
+#             covariance += np.eye(covariance.shape[0]) * epsilon
+#             covariance_inverse = np.linalg.inv(covariance)
+
+#             # Adjust albedo if necessary
+#             albedo = np.ones(rows, end_col - start_col)
+#             if albedoadjust:
+#                 albedo[valid_pixel_mask] = (
+#                     current_group[:, valid_pixel_mask].reshape(rows, -1).T
+#                     @ background_spectrum
+#                 ) / (background_spectrum.T @ background_spectrum)
+#                 albedo = np.nan_to_num(albedo, nan=1.0)  # Replace NaNs in albedo
+
+#             # Initial concentration calculation
+#             numerator = (
+#                 radiancediff_with_bg.reshape(rows, -1).T
+#                 @ covariance_inverse
+#                 @ target_spectrum
+#             )
+#             denominator = albedo[valid_rows] * (
+#                 target_spectrum.T @ covariance_inverse @ target_spectrum
+#             )
+#             conc = np.full(rows, np.nan)  # Default to NaN for all rows
+#             conc[valid_rows] = numerator / denominator
+
+#             # Iterative update if specified
+#             if iterate:
+#                 for _ in range(5):
+#                     # Update the background and target spectra for valid rows only
+#                     background_spectrum = np.nanmean(
+#                         current_group[:, valid_rows, :]
+#                         - albedo[valid_rows][:, None]
+#                         * conc[valid_rows][:, None]
+#                         * target_spectrum[:, None],
+#                         axis=(1, 2),
+#                     )
+#                     target_spectrum = background_spectrum * unit_absorption_spectrum
+#                     radiancediff_with_bg = (
+#                         current_group[:, valid_rows, :]
+#                         - background_spectrum[:, None, None]
+#                     )
+
+#                     # Update covariance and concentration for valid rows
+#                     d_covariance = (
+#                         current_group[:, valid_rows, :]
+#                         - (
+#                             albedo[valid_rows][:, None]
+#                             * conc[valid_rows][:, None]
+#                             * target_spectrum[:, None]
+#                             + background_spectrum[:, None]
+#                         )
+#                     ).reshape(rows, -1)
+#                     covariance = (
+#                         np.einsum("ij,kj->ik", d_covariance, d_covariance)
+#                         / count_not_nan
+#                     )
+#                     covariance += np.eye(covariance.shape[0]) * epsilon
+#                     covariance_inverse = np.linalg.inv(covariance)
+
+#                     numerator = (
+#                         radiancediff_with_bg.reshape(rows, -1).T
+#                         @ covariance_inverse
+#                         @ target_spectrum
+#                     )
+#                     denominator = albedo[valid_rows] * (
+#                         target_spectrum.T @ covariance_inverse @ target_spectrum
+#                     )
+#                     conc[valid_rows] = np.maximum(numerator / denominator, 0.0)
+
+#             # Assign the computed concentration to the respective columns in the final output
+#             concentration[:, start_col:end_col] = np.tile(
+#                 conc[:, None], (1, end_col - start_col)
+#             )
+
+#     return concentration
+
+
 def columnwise_matched_filter_test():
     filepath = "C:\\Users\\RS\\Desktop\\Lifei_essay_data\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222_SW.tif"
     # filepath = "I:\AHSI_part2\GF5B_AHSI_E114.0_N30.3_20231026_011349_L10000410291\GF5B_AHSI_E114.0_N30.3_20231026_011349_L10000410291_SW.tif"

@@ -185,8 +185,6 @@ def export_emit_array_to_tif(
     :param original_data: NumPy array containing the original, uncorrected data
     """
     try:
-        filename = os.path.basename(input_nc_path).replace(".nc", "_enhanced.nc")
-
         root_ds = xr.open_dataset(input_nc_path)
         location_ds = xr.open_dataset(input_nc_path, group="location")
 
@@ -321,7 +319,89 @@ def export_emit_rgb_array_to_tif(filepath, outputfolder):
     outputpath = os.path.join(
         outputfolder, os.path.basename(filepath).replace(".nc", "_RGB.tif")
     )
-    export_emit_array_to_tif(rgb, filepath, outputpath)
+
+    root_ds = xr.open_dataset(filepath)
+    location_ds = xr.open_dataset(filepath, group="location")
+
+    GLT_NODATA_VALUE = 0
+    glt_array = np.nan_to_num(
+        np.stack([location_ds["glt_x"].data, location_ds["glt_y"].data], axis=-1),
+        nan=GLT_NODATA_VALUE,
+    ).astype(int)
+
+    fill_value = -9999
+    out_ds = np.full(
+        (3, glt_array.shape[0], glt_array.shape[1]), fill_value, dtype=np.float32
+    )
+    valid_glt = np.all(glt_array != GLT_NODATA_VALUE, axis=-1)
+    glt_array[valid_glt] -= 1
+    for band in range(3):
+        out_ds[band, valid_glt] = rgb[
+            band, glt_array[valid_glt, 1], glt_array[valid_glt, 0]
+        ]
+
+    GT = root_ds.geotransform
+    dim_x = location_ds.glt_x.shape[1]
+    dim_y = location_ds.glt_x.shape[0]
+    lon = np.zeros(dim_x)
+    lat = np.zeros(dim_y)
+
+    for x in range(dim_x):
+        x_geo = GT[0] + (x + 0.5) * GT[1]
+        lon[x] = x_geo
+    for y in range(dim_y):
+        y_geo = GT[3] + (y + 0.5) * GT[5]
+        lat[y] = y_geo
+
+    coords = {"lat": (["lat"], lat), "lon": (["lon"], lon)}
+    data_vars = {"methane_enhancement": (["band", "lat", "lon"], out_ds)}
+
+    out_xr = xr.Dataset(data_vars=data_vars, coords=coords, attrs=root_ds.attrs)
+    out_xr["methane_enhancement"].attrs = {
+        "Content": "Methane enhancement in the atmosphere",
+        "Units": "ppm·m",
+    }
+    out_xr.coords["lat"].attrs = location_ds["lat"].attrs
+    out_xr.coords["lon"].attrs = location_ds["lon"].attrs
+
+    try:
+        # 获取数据和坐标
+        data_array = out_xr["methane_enhancement"].values  # 提取数据 (3, height, width)
+        lon_array = out_xr.coords["lon"].values  # 提取经度
+        lat_array = out_xr.coords["lat"].values  # 提取纬度
+
+        # 获取地理变换信息
+        lon_min, lon_max = lon_array.min(), lon_array.max()
+        lat_min, lat_max = lat_array.min(), lat_array.max()
+
+        # 计算像素分辨率
+        pixel_size_x = (lon_max - lon_min) / data_array.shape[2]  # 经度方向的像素分辨率
+        pixel_size_y = (lat_max - lat_min) / data_array.shape[1]  # 纬度方向的像素分辨率
+
+        # 创建地理变换对象
+        transform = from_origin(lon_min, lat_max, pixel_size_x, pixel_size_y)
+
+        # 创建多波段 GeoTIFF 文件
+        with rasterio.open(
+            outputpath,
+            "w",
+            driver="GTiff",
+            count=3,  # 三个波段
+            dtype="float32",
+            width=data_array.shape[2],  # 列数
+            height=data_array.shape[1],  # 行数
+            crs="EPSG:4326",
+            transform=transform,
+            nodata=-9999,
+        ) as dst:
+            # 写入每个波段
+            for band in range(3):
+                dst.write(data_array[band, :, :], band + 1)
+
+        print(f"GeoTIFF file with 3 bands saved to {outputpath}")
+
+    except Exception as e:
+        print(f"An error occurred while exporting to GeoTIFF: {e}")
 
 
 # 将结果导出为nc文件 之前修改的版本
