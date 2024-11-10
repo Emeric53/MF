@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 import pathlib as pl
 import os
 import sys
+import shutil
 
 sys.path.append("c:\\Users\\RS\\VSCode\\matchedfiltermethod\\src")
 from utils.satellites_data.general_functions import (
@@ -120,17 +121,6 @@ def get_sza_altitude(filepath: str):
         return None
 
 
-def get_grb_from_array(filepath: str):
-    # 从 VNIR 中 提取 rgb真彩 三波段
-    calibration_filepath = os.path.dirname(filepath) + "//GF5B_AHSI_RadCal_VNIR.raw"
-    ahsi_array = get_ahsi_array(filepath)
-    coeffs = get_radiometric_calibration_coefficients(calibration_filepath)
-    bands = get_ahsi_bands()
-    calibrated_radiance = radiance_calibration(ahsi_array, coeffs)
-    rgb_bands = []
-    return rgb_bands
-
-
 # 将反演结果的数组导出为GeoTIFF文件,并使用与输入文件相同的地理参考
 def export_ahsi_array_to_tiff(
     result: np.ndarray,
@@ -164,6 +154,29 @@ def export_ahsi_array_to_tiff(
         print(io_error)
     except Exception as e:
         print(f"An error occurred: {e}")
+
+
+def export_rgb_tiff(filepath, outputfolder):
+    # 从 VNIR 中 提取 rgb真彩 三波段
+    calibration_filepath = os.path.dirname(filepath) + "//GF5B_AHSI_RadCal_VNIR.raw"
+    ahsi_array = get_ahsi_array(filepath.replace("_SW.tif", "_VN.tif"))
+    vn_rpb = filepath.replace("_SW.tif", "_VN.rpb")
+    rgb_rpb = (
+        outputfolder + "//" + os.path.basename(filepath).replace("_SW.tif", "_RGB.rpb")
+    )
+    if os.path.exists(rgb_rpb) is False:
+        shutil.copy(vn_rpb, rgb_rpb)
+    coeffs = get_radiometric_calibration_coefficients(calibration_filepath)
+    calibrated_radiance = radiance_calibration(ahsi_array, coeffs)
+    red = calibrated_radiance[59, :, :]  # band 60
+    green = calibrated_radiance[38, :, :]  # band 39
+    blue = calibrated_radiance[19, :, :]  # band 20
+    rgb_radiance = np.stack((red, green, blue), axis=0)
+    outputpath = os.path.join(
+        outputfolder, os.path.basename(filepath).replace("_SW.tif", "_RGB.tif")
+    )
+    save_ndarray_to_tiff(rgb_radiance, outputpath, reference_filepath=filepath)
+    image_coordinate(outputpath)
 
 
 # 利用rpc文件对影像进行几何校正
@@ -257,4 +270,7 @@ def extract_wavelengths_from_hdr(hdr_file):
 
 
 if __name__ == "__main__":
-    sample_filepath = r"J:\\AHSI_part4\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404_SW.tif"
+    # sample_filepath = r"J:\\AHSI_part4\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404_SW.tif"
+    filepath = r"C:\Users\RS\Desktop\Lifei_essay_data\GF5B_AHSI_W103.0_N31.3_20220424_003345_L10000118224\GF5B_AHSI_W103.0_N31.3_20220424_003345_L10000118224_SW.tif"
+    outputfolder = r"C:\\Users\\RS\\Desktop\\hi"
+    export_rgb_tiff(filepath, outputfolder)
