@@ -111,10 +111,15 @@ methane_column_concentration = trapezoidal_integration(
 mixing_ratio = methane_column_concentration / air_column_concentration
 print(mixing_ratio)
 
-# 基于缩放因子 获得新的甲烷廓线
-new_methane_profile = methane_profile * 1.9 / mixing_ratio
-print(new_methane_profile)
-np.save(
-    "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\modtran_related\\model1_1900ppb",
-    new_methane_profile,
-)
+print(2 / mixing_ratio)
+print(4 / mixing_ratio)
+print(8 / mixing_ratio)
+print(16 / mixing_ratio)
+print(32 / mixing_ratio)
+# # 基于缩放因子 获得新的甲烷廓线
+# new_methane_profile = methane_profile * 1.9 / mixing_ratio
+# print(new_methane_profile)
+# np.save(
+#     "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\modtran_related\\model1_1900ppb",
+#     new_methane_profile,
+# )

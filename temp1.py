@@ -1,6 +1,6 @@
 import re
 import numpy as np
 
-a = np.ones((10, 10, 10))
-b = a[:, :, 1:2]
-print(b.shape)
+prisma = r"C:\Users\RS\VSCode\matchedfiltermethod\src\data\satellite_channels\AHSI_channels.npz"
+data = np.load(prisma)
+print(data["fwhms"])

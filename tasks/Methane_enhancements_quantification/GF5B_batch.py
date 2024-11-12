@@ -37,31 +37,31 @@ def single_GF5B_run(filepath, outputfolder):
             single_GF5B_plume_run(outputfile, outputfolder)
         return
 
-    # 基于 波段范围 读取辐射定标后的radiance的cube
-    _, AHSI_radiance = sd.GF5B_data.get_calibrated_radiance(
-        filepath, low_wavelength, high_wavelength
-    )
-    # 读取 sza，地表高程的参数
-    sza, altitude = sd.GF5B_data.get_sza_altitude(filepath)
-    # 生成初始单位吸收谱 用于计算
-    _, uas = glut.generate_satellite_uas_for_specific_range_from_lut(
-        "AHSI", 0, 50000, low_wavelength, high_wavelength, sza, altitude
-    )
-    try:
-        enhancement = columnwise_matchedfilter.columnwise_matched_filter(
-            AHSI_radiance, uas, True, True
-        )
+    # # 基于 波段范围 读取辐射定标后的radiance的cube
+    # _, AHSI_radiance = sd.GF5B_data.get_calibrated_radiance(
+    #     filepath, low_wavelength, high_wavelength
+    # )
+    # # 读取 sza，地表高程的参数
+    # sza, altitude = sd.GF5B_data.get_sza_altitude(filepath)
+    # # 生成初始单位吸收谱 用于计算
+    # _, uas = glut.generate_satellite_uas_for_specific_range_from_lut(
+    #     "AHSI", 0, 50000, low_wavelength, high_wavelength, sza, altitude
+    # )
+    # try:
+    #     enhancement = columnwise_matchedfilter.columnwise_matched_filter(
+    #         AHSI_radiance, uas, True, True
+    #     )
 
-        output_rpb = outputfile.replace(".tif", ".rpb")
-        if not os.path.exists(output_rpb):
-            original_rpb = filepath.replace(".tif", ".rpb")
-            shutil.copy(original_rpb, output_rpb)
-        sd.GF5B_data.export_ahsi_array_to_tiff(
-            enhancement, filepath, outputfolder, output_filename=None, orthorectify=True
-        )
-    except Exception as e:
-        print("Error in processing: ", filepath)
-        print(e)
+    #     output_rpb = outputfile.replace(".tif", ".rpb")
+    #     if not os.path.exists(output_rpb):
+    #         original_rpb = filepath.replace(".tif", ".rpb")
+    #         shutil.copy(original_rpb, output_rpb)
+    #     sd.GF5B_data.export_ahsi_array_to_tiff(
+    #         enhancement, filepath, outputfolder, output_filename=None, orthorectify=True
+    #     )
+    # except Exception as e:
+    #     print("Error in processing: ", filepath)
+    #     print(e)
 
 
 def single_GF5B_plume_run(filepath, outputfolder):
@@ -285,7 +285,7 @@ if not os.path.exists(outputfolder):
     os.mkdir(outputfolder)
 target_folder = r"G:\shanxi_gf5b_result"
 pickup_result(outputfolder, target_folder)
-batch_GF5B_run(filefolder_list, outputfolder, shanxi_region_shapefile)
+# batch_GF5B_run(filefolder_list, outputfolder, shanxi_region_shapefile)
 
 xinjiang_region = [80.0, 95.0, 35.0, 49.0]
 xinjiang_region_shapefile = gpd.read_file(r"L:\行政区划\中国国省界SHP\xinjiang.shp")
@@ -294,15 +294,15 @@ if not os.path.exists(outputfolder):
     os.mkdir(outputfolder)
 
 target_folder = r"G:\xinjiang_gf5b_result"
-# pickup_result(outputfolder, target_folder)
-batch_GF5B_run(filefolder_list, outputfolder, xinjiang_region_shapefile)
+pickup_result(outputfolder, target_folder)
+# batch_GF5B_run(filefolder_list, outputfolder, xinjiang_region_shapefile)
 
-neimenggu_region = [97.0, 126.0, 37.0, 53.0]
-neimenggu_region_shapefile = gpd.read_file(r"L:\行政区划\中国国省界SHP\neimenggu.shp")
-outputfolder = r"L:\neimenggu_gf5b"
-if not os.path.exists(outputfolder):
-    os.mkdir(outputfolder)
-target_folder = r"G:\neimenggu_gf5b_result"
+# neimenggu_region = [97.0, 126.0, 37.0, 53.0]
+# neimenggu_region_shapefile = gpd.read_file(r"L:\行政区划\中国国省界SHP\neimenggu.shp")
+# outputfolder = r"L:\neimenggu_gf5b"
+# if not os.path.exists(outputfolder):
+#     os.mkdir(outputfolder)
+# target_folder = r"G:\neimenggu_gf5b_result"
 # pickup_result(outputfolder,target_folder)
 # batch_GF5B_run(filefolder_list, outputfolder, neimenggu_region_shapefile)
 

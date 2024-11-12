@@ -7,27 +7,26 @@ def emission_estimate(
     plume_array,
     pixel_resolution,
     windspeed_10m,
+    wind_speed_10m_std,
     slope,
     intercept,
     enhancement_unit="ppmm",
 ):
     # calculate the area and the length of the plume
     nan_count = np.count_nonzero(~np.isnan(plume_array))
+    IME = np.nansum(plume_array)
     pixel_area = math.pow(pixel_resolution, 2)
     plume_area = nan_count * pixel_area
     plume_length = math.sqrt(plume_area)
     # get the values of the plume
-    plume_values = [value for value in plume_array.flatten() if value != -9999]
-    # 转换系数还需再考虑 可能是  1 ppmm 甲烷质量为  7.15 * 10^{-4}
+    # 转换系数还需再考虑 可能是  1 ppmm 甲烷质量为  7.15 * 10^{-4} g
     if enhancement_unit == "ppmm":
         # convert the unit from  ppm*m to kg/ppm*m, then calculate the integrated mass enhancement
-        integrated_mass_enhancement = sum(plume_values) * 0.716 * 0.000001 * pixel_area
+        integrated_mass_enhancement = IME * 7.16 * 10e-7 * pixel_area
     elif enhancement_unit == "ppm":
         # convert the unit from  ppm*m to kg/ppm by setting 8km as the scale of troposphere,
         # then calculate the integrated mass enhancement
-        integrated_mass_enhancement = (
-            sum(plume_values) * 0.716 * 0.000001 * pixel_area * 8000
-        )
+        integrated_mass_enhancement = sum(IME) * 0.716 * 0.000001 * pixel_area * 8000
     else:
         print(
             "The unit of the enhancement is not supported, please enter 'ppmm' or 'ppm'."
@@ -38,4 +37,9 @@ def emission_estimate(
     emission_rate = (
         effective_windspeed * 3600 * integrated_mass_enhancement
     ) / plume_length
-    return emission_rate
+    effective_windspeed_std = slope * wind_speed_10m_std
+    # calculate the uncertainty of the emission rate
+    emission_rate_uncertainty = (
+        effective_windspeed_std * 3600 * integrated_mass_enhancement
+    ) / plume_length
+    return emission_rate, emission_rate_uncertainty
