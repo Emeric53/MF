@@ -18,6 +18,8 @@ def emission_estimate(
     pixel_area = math.pow(pixel_resolution, 2)
     plume_area = nan_count * pixel_area
     plume_length = math.sqrt(plume_area)
+    print("plume_length", plume_length)
+    print("plume_area", plume_area)
     # get the values of the plume
     # 转换系数还需再考虑 可能是  1 ppmm 甲烷质量为  7.15 * 10^{-4} g
     if enhancement_unit == "ppmm":
@@ -42,4 +44,4 @@ def emission_estimate(
     emission_rate_uncertainty = (
         effective_windspeed_std * 3600 * integrated_mass_enhancement
     ) / plume_length
-    return emission_rate, emission_rate_uncertainty
+    return emission_rate, emission_rate_uncertainty, plume_area, plume_length

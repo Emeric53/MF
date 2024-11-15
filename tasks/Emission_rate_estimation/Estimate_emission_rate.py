@@ -319,42 +319,45 @@ def extract_valid_points(data):
 #     print("---------------------------------------------------------------")
 
 
-plume_folder = r"C:\Users\RS\Desktop"
-plume_names = ["plumed_concentratioin1.tif"]
+# effective_length_sqrt = compute_effective_length_from_pixel_count(plume_data, 30)
+# print(f"Effective length (sqrt): {effective_length_sqrt}")
 
-# 批量读取烟羽tiff文件
-for plume_name in plume_names:
-    # 读取 烟羽的浓度数据
-    plume_filepath = os.path.join(plume_folder, plume_name)
-    plume_data = read_tif_with_nodata(plume_filepath)
-effective_length_sqrt = compute_effective_length_from_pixel_count(plume_data, 30)
-print(f"Effective length (sqrt): {effective_length_sqrt}")
-
-effective_length_mutual = calculate_distances_with_kdtree(plume_data, 30)
-print(f"Max distance: {effective_length_mutual[0]}")
+# effective_length_mutual = calculate_distances_with_kdtree(plume_data, 30)
+# print(f"Max distance: {effective_length_mutual[0]}")
 
 
-# 计算有效长度（使用PCA）
-effective_length_pca = compute_effective_length_with_pca(plume_data, 30)
-print(f"有效长度（PCA）：{effective_length_pca}")
+# # 计算有效长度（使用PCA）
+# effective_length_pca = compute_effective_length_with_pca(plume_data, 30)
+# print(f"有效长度（PCA）：{effective_length_pca}")
 
-# 计算有效长度（使用最小外接矩形）
-effective_length_bounding_box = compute_effective_length_using_bounding_box(
-    plume_data, 30
-)
-print(f"有效长度（最小外接矩形）：{effective_length_bounding_box}")
+# # 计算有效长度（使用最小外接矩形）
+# effective_length_bounding_box = compute_effective_length_using_bounding_box(
+#     plume_data, 30
+# )
+# print(f"有效长度（最小外接矩形）：{effective_length_bounding_box}")
 
 #     max, min = calculate_distances_with_kdtree(plume_data)
 #     print(plume_filepath + "   Max distance: " + str(max))
 #     print(plume_filepath + "   Min distance: " + str(min))
 # 获取 预估的10m风速
-wind_shp_path = r"L:\ERA5_shp\0.25_ERA5_wind_20230903.shp"
+
+
+plume_folder = r"C:\Users\RS\Desktop"
+plume_names = ["plumed_concentratioin1.tif"]
+plume_filepath = "G:\EMIT_plume_result_1sigma\EMIT_L1B_RAD_001_20230327T073331_2308605_002_plumeproduct.tif"  # for plume_name in plume_names:
+#     # 读取 烟羽的浓度数据
+#     plume_filepath = os.path.join(plume_folder, plume_name)
+
+
+plume_data = read_tif_with_nodata(plume_filepath)
+wind_shp_path = r"L:\ERA5_shp\0.25_ERA5_wind_20230327.shp"
 windspeed, windspeed_std = wind_speed_from_raster(plume_filepath, wind_shp_path)
 print(plume_filepath + "   Wind speed: " + str(windspeed) + " m/s")
 print(plume_filepath + "   Wind speed std: " + str(windspeed_std) + " m/s")
 # 基于 IME算法进行排放量估算
 print(np.nansum(plume_data))
-emission_rate_result, result_std = ime.emission_estimate(
+
+emission_rate_result, result_std, plume_area, plume_length = ime.emission_estimate(
     plume_data,
     pixel_resolution=30,
     windspeed_10m=windspeed,
@@ -363,6 +366,8 @@ emission_rate_result, result_std = ime.emission_estimate(
     intercept=0.41,
     enhancement_unit="ppmm",
 )
+print("plume_area:", plume_area)
+print("plume_length:", plume_length)
 print(plume_filepath + "   Emission rate: " + str(emission_rate_result) + " kg/h")
 print(plume_filepath + "   Emission rate std: " + str(result_std) + " kg/h")
 print("---------------------------------------------------------------")
