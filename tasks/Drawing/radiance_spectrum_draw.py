@@ -51,4 +51,4 @@ ax3.grid(True)
 # 调整布局
 plt.tight_layout()
 print("The radiance spectrum is drawn successfully.")
-# plt.show()
+plt.show()

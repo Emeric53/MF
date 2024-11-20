@@ -3,7 +3,7 @@ import numpy as np
 import sys
 
 sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src")
-from algorithms.ml_matchedfilter import ml_matched_filter as mlmf
+from mf_algorithms.ml_matchedfilter import ml_matched_filter as mlmf
 
 
 def columnwise_ml_matched_filter(

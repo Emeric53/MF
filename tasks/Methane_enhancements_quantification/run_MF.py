@@ -7,8 +7,8 @@ import shutil
 # import algorithms.matchedfilter
 
 sys.path.append("C://Users//RS//VSCode//matchedfiltermethod//src")
-from algorithms import matched_filter_variants as mfs
-from algorithms import matched_filter_all as mfa
+from mf_algorithms import matched_filter_variants as mfs
+from mf_algorithms import matched_filter_all as mfa
 
 # import algorithms
 from utils import satellites_data as sd

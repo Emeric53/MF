@@ -7,7 +7,7 @@ import os
 import sys
 
 sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src")
-from algorithms.matchedfilter import matched_filter as mf
+from mf_algorithms.matchedfilter import matched_filter as mf
 import utils.generate_radiance_lut_and_uas as glut
 import utils.simulate_images as si
 import utils.satellites_data as sd

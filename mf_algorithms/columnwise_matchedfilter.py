@@ -9,7 +9,7 @@ sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src")
 import utils.satellites_data as sd
 import utils.satellites_data.general_functions as gf
 
-import algorithms.matchedfilter as mf
+import mf_algorithms.matchedfilter as mf
 
 # # columnwise matched filter algorithm 逐列计算
 # def columnwise_matched_filter(
