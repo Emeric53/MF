@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.interpolate import griddata
-from sklearn.linear_model import LinearRegression
 import time
 
 import sys
@@ -179,16 +178,19 @@ def generate_satellite_uas_for_specific_range_from_lut(
     wavelengths, radiance_list = batch_get_radiance_from_lut(
         satellite_name, enhancement_range, sza, altitude
     )
-
+    # radiance_list /= radiance_list[0, :]
     # 3. 过滤波长范围
     condition = np.logical_and(
         wavelengths >= lower_wavelength, wavelengths <= upper_wavelength
     )
     used_wavelengths = wavelengths[condition]
-    total_radiance = np.log(radiance_list[:, condition]) * 100
+    total_radiance = np.log(radiance_list[:, condition])
+    print(total_radiance.shape)
+    total_radiance = total_radiance
 
     # 4. 使用多项式拟合计算斜率（矢量化处理）
     slopelist = np.polyfit(enhancement_range, total_radiance, deg=1)[0]
+
     # slopelist = []
     # model_no_intercept = LinearRegression(fit_intercept=False)
     # enhancement_range = (enhancement_range - np.min(enhancement_range)).reshape(-1, 1)
@@ -216,7 +218,7 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
     plt.figure()
-    plt.plot(wvls, np.array(slope) * 1000000)
+    plt.plot(wvls, np.array(slope))
     plt.show()
     # wvls, slope = generate_satellite_uas_for_specific_range_from_lut(
     #     "AHSI",
