@@ -28,9 +28,9 @@ def emit_radiance_compare():
     radiance_path2 = "C:\\PcModWin5\\Usr\\EMIT_methane.fl7"
     radiance_path3 = "C:\\PcModWin5\\Usr\\EMIT_methane_2.fl7"
 
-    emit_bands, convoluved_radiance1 = draw_radiance(radiance_path1, ax1)
-    emit_bands, convoluved_radiance2 = draw_radiance(radiance_path2, ax1)
-    emit_bands, convoluved_radiance3 = draw_radiance(radiance_path3, ax1)
+    emit_bands, convoluved_radiance1 = draw_radiance(ax1, radiance_path1, "EMIT")
+    emit_bands, convoluved_radiance2 = draw_radiance(ax1, radiance_path2, "EMIT")
+    emit_bands, convoluved_radiance3 = draw_radiance(ax1, radiance_path3, "EMIT")
 
     ax1.set_xlabel("Wavelength (nm)")
     ax1.set_ylabel("Radiance (W m$^{-2}$ sr$^{-1}$ nm$^{-1}$)")
@@ -65,10 +65,13 @@ def emit_radiance_compare():
 
 
 # real radiance
-filepath = "C:\\Users\\RS\\Desktop\\GF5-02_李飞论文所用数据\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222_SW.tif"
-bands, real_spectrum = sd.GF5B_data.get_calibrated_radiance(filepath, 1500, 2500)
-mean = np.mean(real_spectrum, axis=(1, 2))
+# filepath = "C:\\Users\\RS\\Desktop\\Lifei_essay_data\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222_SW.tif"
+# bands, real_spectrum = sd.GF5B_data.get_calibrated_radiance(filepath, 1500, 2500)
+# mean = np.mean(real_spectrum, axis=(1, 2))
 
-fig, ax = plt.subplots()
-ax.plot(bands, mean, label="real radiance")
-plt.show()
+# fig, ax = plt.subplots()
+# ax.plot(bands, mean, label="real radiance")
+# plt.show()
+
+
+emit_radiance_compare()

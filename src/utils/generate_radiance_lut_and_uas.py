@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.interpolate import griddata
-
+from sklearn.linear_model import LinearRegression
 import time
 
 import sys
@@ -188,24 +188,36 @@ def generate_satellite_uas_for_specific_range_from_lut(
     total_radiance = np.log(radiance_list[:, condition])
 
     # 4. 使用多项式拟合计算斜率（矢量化处理）
-    slopelist = np.polyfit(enhancement_range, total_radiance, 1)[0]
-
-    return used_wavelengths, slopelist
+    slopelist = np.polyfit(enhancement_range, total_radiance, deg=1)[0]
+    # slopelist = []
+    # model_no_intercept = LinearRegression(fit_intercept=False)
+    # enhancement_range = (enhancement_range - np.min(enhancement_range)).reshape(-1, 1)
+    # for i in range(total_radiance.shape[1]):
+    #     total_radiance[:, i] = -(total_radiance[:, i] - np.min(total_radiance[:, i]))
+    #     model_no_intercept.fit(enhancement_range, total_radiance[:, i])
+    #     slopelist.append(model_no_intercept.coef_[0])
+    return (used_wavelengths, slopelist)
 
 
 if __name__ == "__main__":
+    pass
     # print("Start generating radiance lookup table")
     # generate_radiance_lut_for_satellite("AHSI")
     # generate_radiance_lut_for_satellite("EnMAP")
     # generate_radiance_lut_for_satellite("EMIT")
     # generate_radiance_lut_for_satellite("PRISMA")
-    generate_radiance_lut_for_satellite("ZY1")
-    # start = time.time()
-    # generate_satellite_uas_for_specific_range_from_lut(
-    #     "AHSI", 0, 50000, 2150, 2500, 60, 0
-    # )
-    # end = time.time()
-    # print(f"Time cost: {end - start}")
+    # generate_radiance_lut_for_satellite("ZY1")
+    start = time.time()
+    wvls, slope = generate_satellite_uas_for_specific_range_from_lut(
+        "AHSI", 0, 50000, 2150, 2500, 60, 0
+    )
+    end = time.time()
+    print(f"Time cost: {end - start}")
+    import matplotlib.pyplot as plt
+
+    plt.figure()
+    plt.plot(wvls, np.array(slope) * 8000)
+    plt.show()
     # wvls, slope = generate_satellite_uas_for_specific_range_from_lut(
     #     "AHSI",
     #     start_enhancement=0,
