@@ -6,7 +6,7 @@ import os
 
 import sys
 
-sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src")
+sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod")
 import utils.simulate_images as si
 import utils.generate_radiance_lut_and_uas as glut
 import utils.satellites_data as sd
@@ -229,7 +229,7 @@ def matched_filter(
 
 def matched_filter_simulated_image_test():
     plume = np.load(
-        r"C:\Users\RS\VSCode\matchedfiltermethod\src\data\simulated_plumes\gaussianplume_1000_2_stability_D.npy"
+        r"C:\Users\RS\VSCode\matchedfiltermethod\data\simulated_plumes\gaussianplume_1000_2_stability_D.npy"
     )
     simulated_radiance_cube = si.simulate_satellite_images_with_plume(
         "AHSI", plume, 25, 0, 2150, 2500, 0.01

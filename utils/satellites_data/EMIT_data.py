@@ -59,7 +59,7 @@ def read_emit_bands():
     """
     # 读取校准文件
     wavelengths = np.load(
-        "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\satellite_channels\\EMIT_channels.npz"
+        "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\data\\satellite_channels\\EMIT_channels.npz"
     )["central_wvls"]
     return wavelengths
 
@@ -74,6 +74,7 @@ def get_emit_bands_array(
     return bands[indices], data[indices, :, :]
 
 
+# 基于nc文件读取当前影像的 SZA 和 高程
 def get_sza_altitude(filepath):
     try:
         obspath = filepath.replace("_RAD_", "_OBS_")
@@ -90,8 +91,9 @@ def get_sza_altitude(filepath):
     return sza, 0
 
 
-def is_within_region(filepath, province_region):
-    lon_min, lon_max, lat_min, lat_max = province_region[:]
+# 判断该影像是否位于指定的区域[经纬度范围]
+def is_within_region(filepath, region):
+    lon_min, lon_max, lat_min, lat_max = region[:]
     try:
         obspath = filepath.replace("_RAD_", "_OBS_")
         dataset = xr.open_dataset(obspath, group="location")
@@ -110,6 +112,7 @@ def is_within_region(filepath, province_region):
     return False
 
 
+# 判断该影像是否位于指定的区域[shapefile]
 def is_within_region_shapefile(filepath, province_region_shapefile):
     try:
         obspath = filepath.replace("_RAD_", "_OBS_")
@@ -130,6 +133,7 @@ def is_within_region_shapefile(filepath, province_region_shapefile):
     return False
 
 
+# 将结果导出为GeoTIFF文件
 def export_to_geotiff(out_xr, output_tiff_path):
     try:
         # 获取数据和坐标
@@ -169,7 +173,7 @@ def export_to_geotiff(out_xr, output_tiff_path):
         print(f"An error occurred while exporting to GeoTIFF: {e}")
 
 
-# 将结果导出为nc文件
+# 将结果导出为tiff文件
 def export_emit_array_to_tif(
     data_array: np.ndarray,
     input_nc_path: str,
@@ -236,7 +240,7 @@ def export_emit_array_to_tif(
         print(f"An unexpected error occurred: {e}")
 
 
-# 将结果导出为nc文件
+# 将结果导出为nc文件 和 tiff文件
 def export_emit_array_to_nc_tif(
     data_array: np.ndarray,
     input_nc_path: str,
@@ -309,6 +313,7 @@ def export_emit_array_to_nc_tif(
         print(f"An unexpected error occurred: {e}")
 
 
+# 将原始nc文件的rgb波段导出为tiff文件
 def export_emit_rgb_array_to_tif(filepath, outputfolder):
     radaince_cube = get_emit_array(filepath)
     # 获取 rgb 真彩色
@@ -404,92 +409,5 @@ def export_emit_rgb_array_to_tif(filepath, outputfolder):
         print(f"An error occurred while exporting to GeoTIFF: {e}")
 
 
-# 将结果导出为nc文件 之前修改的版本
-# def export_emit_array_to_nc(
-#     data_array: np.ndarray,
-#     input_nc_path: str,
-#     output_folder: str,
-#     original_data: np.ndarray,
-# ):
-#     """
-#     Export a NumPy array to a NetCDF (.nc) file, maintaining the geo-referencing and metadata
-#     from the input NetCDF file, and adding the original uncorrected data.
-
-#     :param data_array: NumPy array containing the processed data to be exported
-#     :param input_nc_path: Path to the input NetCDF file (used for referencing and metadata)
-#     :param output_folder: Directory to save the output NetCDF file
-#     :param original_data: NumPy array containing the original, uncorrected data
-#     """
-#     try:
-#         filename = os.path.basename(input_nc_path).replace(".nc", "_enhanced.nc")
-#         output_path = os.path.join(output_folder, filename)
-
-#         root_ds = xr.open_dataset(input_nc_path)
-#         location_ds = xr.open_dataset(input_nc_path, group="location")
-
-#         GLT_NODATA_VALUE = 0
-#         glt_array = np.nan_to_num(
-#             np.stack([location_ds["glt_x"].data, location_ds["glt_y"].data], axis=-1),
-#             nan=GLT_NODATA_VALUE,
-#         ).astype(int)
-
-#         fill_value = -9999
-#         out_ds = np.full(
-#             (glt_array.shape[0], glt_array.shape[1]), fill_value, dtype=np.float32
-#         )
-#         valid_glt = np.all(glt_array != GLT_NODATA_VALUE, axis=-1)
-#         glt_array[valid_glt] -= 1
-#         out_ds[valid_glt] = data_array[glt_array[valid_glt, 1], glt_array[valid_glt, 0]]
-
-#         GT = root_ds.geotransform
-#         dim_x = location_ds.glt_x.shape[1]
-#         dim_y = location_ds.glt_x.shape[0]
-#         lon = np.zeros(dim_x)
-#         lat = np.zeros(dim_y)
-
-#         for x in range(dim_x):
-#             x_geo = GT[0] + (x + 0.5) * GT[1]
-#             lon[x] = x_geo
-#         for y in range(dim_y):
-#             y_geo = GT[3] + (y + 0.5) * GT[5]
-#             lat[y] = y_geo
-
-#         coords = {"lat": (["lat"], lat), "lon": (["lon"], lon)}
-#         data_vars = {"methane_enhancement": (["lat", "lon"], out_ds)}
-
-#         out_xr = xr.Dataset(data_vars=data_vars, coords=coords, attrs=root_ds.attrs)
-#         out_xr["methane_enhancement"].attrs = {
-#             "Content": "Methane enhancement in the atmosphere",
-#             "Units": "ppm·m",
-#         }
-#         out_xr.coords["lat"].attrs = location_ds["lat"].attrs
-#         out_xr.coords["lon"].attrs = location_ds["lon"].attrs
-
-#         out_xr.rio.write_crs(root_ds.spatial_ref, inplace=True)
-#         out_xr.to_netcdf(output_path)
-#         out_xr.close()
-
-#         # 保存初始的 NextCDF 文件
-#         data_vars = {
-#             "methane_enhancement": (["crosstrack", "alongtrack"], original_data)
-#         }
-#         out_xr = xr.Dataset(data_vars=data_vars, attrs=root_ds.attrs)
-#         out_xr.to_netcdf(output_path.replace("_enhanced.nc", "_original_enhanced.nc"))
-#         out_xr.close()
-
-#     except FileNotFoundError as fnf_error:
-#         print(f"File not found: {fnf_error}")
-#     except IOError as io_error:
-#         print(f"I/O error: {io_error}")
-#     except Exception as e:
-#         print(f"An unexpected error occurred: {e}")
-
-
-# 主函数
-def main():
-    filepath = "J:\\EMIT\\L1B\\EMIT_L1B_RAD_001_20220810T064957_2222205_033.nc"
-    export_emit_rgb_array_to_tif(filepath, "C:\\Users\\RS\\Desktop\\hi")
-
-
 if __name__ == "__main__":
-    main()
+    pass

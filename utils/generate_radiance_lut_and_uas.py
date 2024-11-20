@@ -6,7 +6,7 @@ import time
 import sys
 import os
 
-sys.path.append("C://Users//RS//VSCode//matchedfiltermethod//src")
+sys.path.append("C://Users//RS//VSCode//matchedfiltermethod")
 from utils.satellites_data import general_functions as gf
 # built a lookup table for radiance spectrum at different circumstances
 # including different methane enhancement, different sensor height,
@@ -27,11 +27,11 @@ def generate_radiance_lut_for_satellite(satellitename: str):
     # Initialize an empty dictionary to store the radiance spectra
 
     # Function to simulate radiance spectrum using MODTRAN (this is just a placeholder for actual MODTRAN calls)
-    channels_path = f"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\satellite_channels\\{satellitename}_channels.npz"
+    channels_path = f"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\data\\satellite_channels\\{satellitename}_channels.npz"
     if not os.path.exists(channels_path):
         print("The satellite name is wrong")
         return None
-    output_file = f"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\lookuptables\\{satellitename}_radiance_lookup_table.npz"
+    output_file = f"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\data\\lookuptables\\{satellitename}_radiance_lookup_table.npz"
 
     def get_simulated_radiance(methane, altitude, sza):
         filename = rf"C:\PcModWin5\Bin\batch_result\batch\{int(methane)}_{int(sza)}_{int(altitude)}_tape7.txt"
@@ -75,7 +75,7 @@ def load_satellite_radiance_lookup_table(satellitename: str):
     :param filename: Path to the file from which the lookup table will be loaded
     :return: Tuple of wavelengths and the lookup table (dictionary of enhancements and spectra)
     """
-    filename = f"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\lookuptables\\{satellitename}_radiance_lookup_table.npz"
+    filename = f"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\data\\lookuptables\\{satellitename}_radiance_lookup_table.npz"
     data = np.load(filename)
     wavelengths = data["wavelengths"]
     parameters = data["parameters"]
@@ -185,7 +185,7 @@ def generate_satellite_uas_for_specific_range_from_lut(
         wavelengths >= lower_wavelength, wavelengths <= upper_wavelength
     )
     used_wavelengths = wavelengths[condition]
-    total_radiance = np.log(radiance_list[:, condition])
+    total_radiance = np.log(radiance_list[:, condition]) * 100
 
     # 4. 使用多项式拟合计算斜率（矢量化处理）
     slopelist = np.polyfit(enhancement_range, total_radiance, deg=1)[0]
@@ -216,7 +216,7 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
     plt.figure()
-    plt.plot(wvls, np.array(slope) * 8000)
+    plt.plot(wvls, np.array(slope) * 1000000)
     plt.show()
     # wvls, slope = generate_satellite_uas_for_specific_range_from_lut(
     #     "AHSI",

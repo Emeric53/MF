@@ -77,9 +77,9 @@ def get_prisma_array(filepath):
         return None, None, None
 
 
-def get_prisma_channels():
+def read_prisma_bands():
     wavelengths = np.load(
-        "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\satellite_channels\\Prisma_channels.npz"
+        "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\data\\satellite_channels\\Prisma_channels.npz"
     )["central_wvls"]
     return wavelengths
 
@@ -87,26 +87,10 @@ def get_prisma_channels():
 def get_prisma_bands_array(
     file_path: str, bot: float, top: float
 ) -> tuple[np.ndarray, np.ndarray]:
-    bands = get_prisma_channels()
+    bands = read_prisma_bands()
     data = get_prisma_array(file_path)
     indices = np.where((bands >= bot) & (bands <= top))[0]
     return bands[indices], data[indices, :, :]
-
-
-def main():
-    filepath = filename  # 替换为你的 PRISMA 数据文件路径
-    radiance_cube, wavelength_array, fwhm_array = get_prisma_radiance_and_fwhm(filepath)
-
-    if (
-        radiance_cube is not None
-        and wavelength_array is not None
-        and fwhm_array is not None
-    ):
-        print("辐射率数据立方体形状:", radiance_cube.shape)
-        print("波段波长数组:", wavelength_array)
-        print("波段 FWHM 数组:", fwhm_array)
-    else:
-        print("未能成功提取 PRISMA 数据。")
 
 
 def save_prisma_data_as_netcdf(bands, output_path):
@@ -150,7 +134,7 @@ def save_prisma_data_as_netcdf(bands, output_path):
         print(f"An error occurred while saving PRISMA data to NetCDF: {e}")
 
 
-def get_prisma_SZA_altitude(filepath):
+def get_SZA_altitude(filepath):
     with h5py.File(filepath, "r") as prisma_file:
         sza = prisma_file.attrs["Sun_zenith_angle"]
         altitude = 0
@@ -189,11 +173,29 @@ def location_calibration(data, original_filepath, output_tiff_path):
             dst.update_tags(ns="rio_gcps", gcp_crs=dst.crs, gcps=gcps)
 
 
+def main():
+    filepath = filename  # 替换为你的 PRISMA 数据文件路径
+    radiance_cube, wavelength_array, fwhm_array = get_prisma_radiance_and_fwhm(filepath)
+
+    if (
+        radiance_cube is not None
+        and wavelength_array is not None
+        and fwhm_array is not None
+    ):
+        print("辐射率数据立方体形状:", radiance_cube.shape)
+        print("波段波长数组:", wavelength_array)
+        print("波段 FWHM 数组:", fwhm_array)
+    else:
+        print("未能成功提取 PRISMA 数据。")
+
+
 if __name__ == "__main__":
-    filename = "I:\stanford_campaign\PRISMA_all\PRS_L1_STD_OFFL_20211016183624_20211016183629_0001.he5"
+    filename = (
+        "J:\stanford\PRISMA_all\PRS_L1_STD_OFFL_20211016183624_20211016183629_0001.he5"
+    )
     wavelength_array, radiance_cube = get_prisma_bands_array(filename, 2150, 2500)
     clip = radiance_cube[0, :, :]
-    location_calibration(clip, filename, r"I:\stanford_campaign\PRISMA\test1.tif")
+    sza, _ = get_SZA_altitude(filename)
     # print(radiance_cube.shape)
     # print(radiance_cube[0, :, :])
     # print(wavelength_array)

@@ -1,13 +1,12 @@
 from osgeo import gdal
 import numpy as np
-
 import xml.etree.ElementTree as ET
 import pathlib as pl
 import os
 import sys
 import shutil
 
-sys.path.append("c:\\Users\\RS\\VSCode\\matchedfiltermethod\\src")
+sys.path.append("c:\\Users\\RS\\VSCode\\matchedfiltermethod")
 from utils.satellites_data.general_functions import (
     save_ndarray_to_tiff,
     read_tiff_in_numpy,
@@ -26,7 +25,7 @@ def get_ahsi_array(filepath: str) -> np.array:
 
 
 # 获取ahsi的波段信息
-def get_ahsi_bands():
+def read_ahsi_bands():
     """
     get bands list of ahsi
     :param band_file:  filepath containing bands wavelength
@@ -34,7 +33,7 @@ def get_ahsi_bands():
     """
     # 读取校准文件
     wavelengths = np.load(
-        "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\satellite_channels\\AHSI_channels.npz"
+        "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\data\\satellite_channels\\AHSI_channels.npz"
     )["central_wvls"]
     return wavelengths
 
@@ -93,7 +92,7 @@ def get_calibrated_radiance(
     calibration_filepath = os.path.dirname(filepath) + "//GF5B_AHSI_RadCal_SWIR.raw"
     ahsi_array = get_ahsi_array(filepath)
     coeffs = get_radiometric_calibration_coefficients(calibration_filepath)
-    bands = get_ahsi_bands()
+    bands = read_ahsi_bands()
     indices = np.where((bands >= bot) & (bands <= top))[0]
     calibrated_radiance = radiance_calibration(
         ahsi_array[indices, :, :], coeffs[indices]
@@ -156,6 +155,7 @@ def export_ahsi_array_to_tiff(
         print(f"An error occurred: {e}")
 
 
+# 将VNIR数据的rgb波段导出为tiff
 def export_rgb_tiff(filepath, outputfolder):
     # 从 VNIR 中 提取 rgb真彩 三波段
     calibration_filepath = os.path.dirname(filepath) + "//GF5B_AHSI_RadCal_VNIR.raw"
@@ -222,7 +222,7 @@ def image_coordinate(image_path: str):
 
 
 # 以下部分是由于读取 导出的 dat格式的 AHSI数据而添加的函数
-# ! 对AHSI数据读取SZA和地面高程
+# ! 对 AHSI数据读取SZA和地面高程
 def get_sza_altitude_from_dat(filepath: str):
     hdr_file = filepath.replace(".dat", ".hdr")
     with open(hdr_file, "r") as f:
@@ -238,7 +238,7 @@ def get_sza_altitude_from_dat(filepath: str):
 def get_AHSI_radiances_from_dat(dat_file, low, high):
     radiance_cube = gdal.Open(dat_file)
     radiance = radiance_cube.ReadAsArray()[-180:]
-    wvls = get_ahsi_bands()
+    wvls = read_ahsi_bands()
     indices = np.where((wvls >= low) & (wvls <= high))[0]
     radiance = radiance[indices, :, :]
     return wvls[indices], radiance
@@ -272,5 +272,5 @@ def extract_wavelengths_from_hdr(hdr_file):
 if __name__ == "__main__":
     # sample_filepath = r"J:\\AHSI_part4\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404_SW.tif"
     filepath = r"C:\Users\RS\Desktop\Lifei_essay_data\GF5B_AHSI_W103.0_N31.3_20220424_003345_L10000118224\GF5B_AHSI_W103.0_N31.3_20220424_003345_L10000118224_SW.tif"
-    outputfolder = r"C:\\Users\\RS\\Desktop\\hi"
-    export_rgb_tiff(filepath, outputfolder)
+    radiance_cube = get_ahsi_array(filepath)
+    print(radiance_cube.shape)

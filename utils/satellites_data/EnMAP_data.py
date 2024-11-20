@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 import os
 import sys
 
-sys.path.append("c:\\Users\\RS\\VSCode\\matchedfiltermethod\src")
+sys.path.append("c:\\Users\\RS\\VSCode\\matchedfiltermethod")
 from utils.satellites_data.general_functions import (
     save_ndarray_to_tiff,
     read_tiff_in_numpy,
@@ -32,7 +32,7 @@ def read_enmap_bands() -> np.ndarray:
     """
     # 读取校准文件
     wavelengths = np.load(
-        "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\satellite_channels\\EnMAP_channels.npz"
+        "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\data\\satellite_channels\\EnMAP_channels.npz"
     )["central_wvls"]
     return wavelengths
 
@@ -47,13 +47,16 @@ def get_enmap_bands_array(
     return bands[indices], data[indices, :, :]
 
 
-def get_center_sun_elevation(xml_file_path):
+# 从metadata文件中获取中心点的太阳高度角
+def get_SZA_altitude(filepath):
+    xml_file_path = filepath.replace("SPECTRAL_IMAGE_SWIR.TIF", "METADATA.XML")
     # 解析XML文件
     tree = ET.parse(xml_file_path)
     root = tree.getroot()
 
     # 查找center标签的太阳高度角 (在sunElevationAngle标签下)
     sun_elevation = None
+    altitude = 0
     for elem in root.iter("sunElevationAngle"):
         center_elem = elem.find("center")
         if center_elem is not None:
@@ -61,8 +64,7 @@ def get_center_sun_elevation(xml_file_path):
             break
 
     if sun_elevation is not None:
-        print(f"中心点太阳高度角: {sun_elevation} 度")
-        return sun_elevation
+        return sun_elevation, altitude
     else:
         print("未找到中心点太阳高度角信息")
         return None
@@ -98,11 +100,8 @@ def export_enmap_array_to_tiff(
 
 
 if __name__ == "__main__":
-    filepath = r"I:\stanford_campaign\EnMAP\dims_op_oc_oc-en_701862725_1\ENMAP.HSI.L1B\ENMAP01-____L1B-DT0000005368_20221116T184046Z_004_V010501_20241017T040758Z\ENMAP01-____L1B-DT0000005368_20221116T184046Z_004_V010501_20241017T040758Z-SPECTRAL_IMAGE_SWIR.TIF"
+    filepath = r"J:\stanford\EnMAP\ENMAP01-____L1B-DT0000005368_20221116T184046Z_004_V010501_20241017T040758Z\ENMAP01-____L1B-DT0000005368_20221116T184046Z_004_V010501_20241017T040758Z-SPECTRAL_IMAGE_SWIR.TIF"
     bands, radiance = get_enmap_bands_array(filepath, 2150, 2500)
-    sza = get_center_sun_elevation(
-        filepath.replace("SPECTRAL_IMAGE_SWIR.TIF", "METADATA.XML")
-    )
+    sza, _ = get_SZA_altitude(filepath)
     print(sza)
     print(radiance.shape)
-    print(bands)
