@@ -8,7 +8,7 @@ import numpy as np
 from shapely.geometry import Point
 
 sys.path.append("C://Users//RS//VSCode//matchedfiltermethod//src")
-from mf_algorithms import columnwise_matchedfilter
+from methane_retrieval_algorithms import columnwise_matchedfilter
 from scipy.ndimage import median_filter, gaussian_filter
 from utils import satellites_data as sd
 from utils import generate_radiance_lut_and_uas as glut
