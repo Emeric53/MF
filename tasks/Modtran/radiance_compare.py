@@ -3,14 +3,14 @@ import numpy as np
 
 import sys
 
-sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src")
+sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod")
 from utils.satellites_data import general_functions as gf
 from utils import satellites_data as sd
 # Description: compare the simulated radiance with different methane concentration profiles
 
 
 def draw_radiance(ax, radiance_path: str, satellite_name: str):
-    channel_path = f"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\satellite_channels\\{satellite_name}_channels.npz"
+    channel_path = f"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\data\\satellite_channels\\{satellite_name}_channels.npz"
 
     bands, convoluved_radiance = gf.get_simulated_satellite_radiance(
         radiance_path, channel_path, 1500, 2500
@@ -21,12 +21,23 @@ def draw_radiance(ax, radiance_path: str, satellite_name: str):
 
 def emit_radiance_compare():
     # draw the plot of the convolved radiance
-    ax1 = plt.subplot2grid((3, 3), (0, 0), colspan=3, rowspan=2)
+    ax1 = plt.subplot2grid(
+        (3, 3),
+        (0, 0),
+        colspan=3,
+        rowspan=2,
+    )
 
     # read the simulated radiance data
     radiance_path1 = "C:\\PcModWin5\\Usr\\EMIT.fl7"
     radiance_path2 = "C:\\PcModWin5\\Usr\\EMIT_methane.fl7"
     radiance_path3 = "C:\\PcModWin5\\Usr\\EMIT_methane_2.fl7"
+
+    bands, randiance = gf.read_simulated_radiance(radiance_path1)
+    indice = np.where((bands >= 1500) & (bands <= 2500))
+    bands = bands[indice]
+    randiance = randiance[indice]
+    ax1.plot(bands, randiance, label="EMIT radiance", alpha=0.6)
 
     emit_bands, convoluved_radiance1 = draw_radiance(ax1, radiance_path1, "EMIT")
     emit_bands, convoluved_radiance2 = draw_radiance(ax1, radiance_path2, "EMIT")

@@ -1,7 +1,7 @@
 *.log
 archive/
 .DS_Store
-
+temp.py
 # Python bytecode files
 *.pyc
 *.pyo
