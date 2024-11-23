@@ -12,7 +12,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "env": {
-                "PYTHONPATH":  "C:\\Users\\RS\\VSCode\\matchedfiltermethod"
+                "PYTHONPATH":  "C:\\Users\\RS\\VSCode\\matchedfiltermethod",
             }
         }
     ]
