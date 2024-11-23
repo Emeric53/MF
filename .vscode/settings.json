@@ -1,4 +1,17 @@
-{
+"settings.mac":{
+    "editor.fontSize": 16,
+    "editor.fontFamily": "'JetBrains Mono', 'Microsoft YaHei'",
+    "python.terminal.executeInFileDir": false,
+    "python.envFile": "${workspaceFolder}/.env"
+},
+"settings.win": {
+    "editor.fontSize": 16,
+    "editor.fontFamily": "'JetBrains Mono', 'Microsoft YaHei'",
+    "python.terminal.executeInFileDir": false,
+    "python.envFile": "${workspaceFolder}/.env"
+},
+"settings.linux":{
+    "editor.fontSize": 16,
     "editor.fontFamily": "'JetBrains Mono', 'Microsoft YaHei'",
     "python.terminal.executeInFileDir": false,
     "python.envFile": "${workspaceFolder}/.env"
