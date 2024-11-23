@@ -1,9 +1,7 @@
 import numpy as np
 
 import os
-import sys
 
-sys.path.append("C://Users//RS//VSCode//matchedfiltermethod//src")
 from utils.satellites_data.general_functions import (
     get_simulated_satellite_radiance,
 )
@@ -79,6 +77,7 @@ def simulate_satellite_images(
     return simulated_noisy_image
 
 
+# ! 模拟 带 甲烷烟羽的卫星遥感影像 大小和 烟羽数组大小一致
 def simulate_satellite_images_with_plume(
     satellite_name: str,
     plume: np.ndarray,
@@ -135,6 +134,7 @@ def simulate_satellite_images_with_plume(
     return noisy_radiance_cube
 
 
+# ! 模拟 不带 甲烷烟羽的卫星遥感影像 大小和 烟羽数组大小一致
 def simulate_satellite_images_without_plume(
     satellite_name: str,
     image_shape,
@@ -171,7 +171,7 @@ def simulate_satellite_images_without_plume(
     row, col = image_shape[0], image_shape[1]
 
     wvls, radiance = get_satellite_radiance_spectrum_from_lut(
-        satellite_name, 0, sza, altitude, 2150, 2500
+        satellite_name, 0, sza, altitude, lower_wavelength, upper_wavelength
     )
 
     radiance_cube = np.ones((row, col))[None, :, :] * radiance[:, None, None]
@@ -187,7 +187,7 @@ def simulate_satellite_images_without_plume(
     return noisy_radiance_cube
 
 
-def add_plume_to_realimage(
+def add_plume_to_real_image(
     satellite_name: str,
     image_path: str,
     plume: np.ndarray,
@@ -204,10 +204,15 @@ def add_plume_to_realimage(
         row, col = plume.shape
         plume_flat = plume.flatten()
         wvls, radiance_cube = batch_get_radiance_from_lut(
-            satellite_name, plume_flat, sza, altitude, 2150, 2500
+            satellite_name,
+            plume_flat,
+            sza,
+            altitude,
+            lower_wavelength,
+            upper_wavelength,
         )
         _, base_radiance = get_satellite_radiance_spectrum_from_lut(
-            satellite_name, 0, 0, 0, 2150, 2500
+            satellite_name, 0, 0, 0, lower_wavelength, upper_wavelength
         )
 
         transmittance_cube = np.transpose(radiance_cube / base_radiance[None, :])
@@ -223,7 +228,7 @@ def add_plume_to_realimage(
 
 if __name__ == "__main__":
     image_file = r"K:\AHSI_part1\GF5B_AHSI_E111.6_N35.8_20231031_011422_L10000412729\GF5B_AHSI_E111.6_N35.8_20231031_011422_L10000412729_SW.tif"
-    plume_path = "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\simulated_plumes\\gaussianplume_1000_6_stability_D.npy"
+    plume_path = "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\data\\simulated_plumes\\gaussianplume_1000_6_stability_D.npy"
     plume = np.load(plume_path)
     plume[plume < 100] = 0
     row, col = plume.shape

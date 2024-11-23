@@ -6,121 +6,18 @@ import os
 
 import sys
 
-sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod")
+# sys.path.append(r"C:\Users\Emeric\Documents\VSCode projects\MF\MF-master")
+
 import utils.simulate_images as si
 import utils.generate_radiance_lut_and_uas as glut
 import utils.satellites_data as sd
-
-# # matched-filter algorithm
-# def matched_filter(
-#     data_cube: np.ndarray,
-#     unit_absorption_spectrum: np.ndarray,
-#     iterate: bool,
-#     albedoadjust: bool,
-#     sparsity: bool = False,
-# ) -> np.ndarray:
-#     """Calculate the methane enhancement of the image data based on the original matched filter method.
-
-#     Args:
-#         data_cube (np.ndarray): 3D array representing the image data cube.
-#         unit_absorption_spectrum (np.ndarray): 1D array representing the unit absorption spectrum.
-#         iterate (bool): Flag indicating whether to perform iterative computation.
-#         albedoadjust (bool): Flag indicating whether to adjust for albedo.
-
-#     Returns:
-#         np.ndarray: 2D array representing the concentration of methane.
-#     """
-#     # Get dimensions
-#     if data_cube.ndim == 2:
-#         data_cube = data_cube[np.newaxis, :, :]
-
-#     _, rows, cols = data_cube.shape
-#     concentration = np.zeros((rows, cols))
-
-#     # Calculate background spectrum and target spectrum ignoring NaN values
-#     background_spectrum = np.nanmean(data_cube, axis=(1, 2))
-#     target_spectrum = background_spectrum * unit_absorption_spectrum
-
-#     # Calculate radiance difference while handling NaNs
-#     radiancediff_with_background = data_cube - background_spectrum[:, None, None]
-
-#     # Compute covariance and its inverse
-#     d_covariance = radiancediff_with_background
-#     covariance = np.tensordot(d_covariance, d_covariance, axes=((1, 2), (1, 2))) / (
-#         rows * cols
-#     )
-#     covariance += np.eye(covariance.shape[0]) * 1e-6
-#     covariance_inverse = np.linalg.inv(covariance)
-
-#     # Adjust albedo if needed, ignoring NaNs
-#     albedo = np.ones((rows, cols))
-#     if albedoadjust:
-#         albedo = np.einsum("ijk,i->jk", data_cube, background_spectrum) / np.dot(
-#             background_spectrum, background_spectrum
-#         )
-#         albedo = np.nan_to_num(albedo, nan=1.0)
-
-#     # Pre-compute common denominator
-#     common_denominator = target_spectrum.T @ covariance_inverse @ target_spectrum
-
-#     # Vectorized concentration computation
-#     numerator = np.einsum(
-#         "ijk,i->jk",
-#         radiancediff_with_background,
-#         np.dot(covariance_inverse, target_spectrum),
-#     )
-#     concentration = numerator / (albedo * common_denominator)
-
-#     # Handle iteration for more accurate concentration calculation
-#     if iterate:
-#         for _ in range(5):
-#             # Update background and target spectra
-#             residual = (
-#                 data_cube
-#                 - (albedo * concentration)[None, :, :] * target_spectrum[:, None, None]
-#             )
-#             background_spectrum = np.nanmean(residual, axis=(1, 2))
-#             target_spectrum = background_spectrum * unit_absorption_spectrum
-
-#             # Update radiance difference with new background
-#             radiancediff_with_background = (
-#                 data_cube - background_spectrum[:, None, None]
-#             )
-#             radiancediff_with_background = np.nan_to_num(
-#                 radiancediff_with_background, nan=0.0
-#             )
-
-#             # Update covariance
-#             d_covariance = (
-#                 radiancediff_with_background
-#                 - (albedo * concentration)[None, :, :] * target_spectrum[:, None, None]
-#             )
-#             covariance = np.tensordot(
-#                 d_covariance, d_covariance, axes=((1, 2), (1, 2))
-#             ) / (rows * cols)
-#             covariance_inverse = np.linalg.pinv(covariance)
-
-#             # Update common denominator
-#             common_denominator = (
-#                 target_spectrum.T @ covariance_inverse @ target_spectrum
-#             )
-
-#             # Recompute concentration vectorized
-#             numerator = np.einsum(
-#                 "ijk,i->jk",
-#                 radiancediff_with_background,
-#                 np.dot(covariance_inverse, target_spectrum),
-#             )
-#             concentration = np.maximum(numerator / (albedo * common_denominator), 0)
-
-#     return concentration
 
 
 def matched_filter(
     data_cube: np.ndarray,
     unit_absorption_spectrum: np.ndarray,
-    iterate: bool,
-    albedoadjust: bool,
+    iterate: bool = False,
+    albedoadjust: bool = False,
     sparsity: bool = False,
 ) -> np.ndarray:
     """Calculate the methane enhancement of the image data based on the original matched filter method.
@@ -272,10 +169,10 @@ def matched_filter_simulated_image_test():
 
     # 在第一个子图上添加统计信息
     stats_text = (
-        f"Mean: {mean_concentration:.2f} ppm\n"
-        f"Std: {std_concentration:.2f} ppm\n"
-        f"Max: {max_concentration:.2f} ppm\n"
-        f"Min: {min_concentration:.2f} ppm"
+        f"Mean: {mean_concentration:.2f} ppmm\n"
+        f"Std: {std_concentration:.2f} ppmm\n"
+        f"Max: {max_concentration:.2f} ppmm\n"
+        f"Min: {min_concentration:.2f} ppmm"
     )
     axes[0].text(
         1.05,
@@ -314,7 +211,7 @@ def matched_filter_real_image_test():
 
     _, image_cube = sd.GF5B_data.get_calibrated_radiance(filepath, 2150, 2500)
     # 取整幅影像的 100*100 切片进行测试
-    image_sample_cube = image_cube[:, 500:600, 700:800]
+    image_sample_cube = image_cube[:, 500:700, 700:900]
     _, unit_absorption_spectrum = (
         glut.generate_satellite_uas_for_specific_range_from_lut(
             "AHSI", 0, 50000, 2150, 2500, 25, 0

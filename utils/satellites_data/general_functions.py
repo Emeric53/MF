@@ -1,7 +1,6 @@
 import numpy as np
 from osgeo import gdal
-from scipy.integrate import trapz
-
+from scipy.integrate import trapezoid as trapz
 import os
 
 
