@@ -46,7 +46,7 @@ def simulate_satellite_images(
     5. Adds Gaussian noise to the image.
     """
     # Load the simulated emit radiance spectrum
-    channels_path = f"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\satellite_channels\\{satellite_name}_channels.npz"
+    channels_path = f"data/satellite_channels/{satellite_name}_channels.npz"
     if not os.path.exists(channels_path):
         print("The satellite name is not supported.")
         return None
@@ -187,7 +187,7 @@ def simulate_satellite_images_without_plume(
     return noisy_radiance_cube
 
 
-# ! 基于甲烷烟羽 构建 透射率 ，叠加在真实影像上
+# ! 基于甲烷烟羽 构建 透射率cube，叠加在真实影像上
 def add_plume_to_real_image(
     satellite_name: str,
     image_path: str,

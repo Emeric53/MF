@@ -184,7 +184,6 @@ def generate_satellite_uas_for_specific_range_from_lut(
     )
     used_wavelengths = wavelengths[condition]
     total_radiance = np.log(radiance_list[:, condition])
-    print(total_radiance.shape)
     total_radiance = total_radiance
 
     # 4. 使用多项式拟合计算斜率（矢量化处理）
