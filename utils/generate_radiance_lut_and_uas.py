@@ -1,12 +1,11 @@
 import numpy as np
 from scipy.interpolate import griddata
-import time
 
-import sys
+import time
 import os
 
-sys.path.append("C://Users//RS//VSCode//matchedfiltermethod")
 from utils.satellites_data import general_functions as gf
+
 # built a lookup table for radiance spectrum at different circumstances
 # including different methane enhancement, different sensor height,
 # different sensor viewing angle, different sensor azimuth angle, different solar zenith angle,
@@ -26,11 +25,11 @@ def generate_radiance_lut_for_satellite(satellitename: str):
     # Initialize an empty dictionary to store the radiance spectra
 
     # Function to simulate radiance spectrum using MODTRAN (this is just a placeholder for actual MODTRAN calls)
-    channels_path = f"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\data\\satellite_channels\\{satellitename}_channels.npz"
+    channels_path = f"data/satellite_channels/{satellitename}_channels.npz"
     if not os.path.exists(channels_path):
         print("The satellite name is wrong")
         return None
-    output_file = f"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\data\\lookuptables\\{satellitename}_radiance_lookup_table.npz"
+    output_file = f"data/lookuptables/{satellitename}_radiance_lookup_table.npz"
 
     def get_simulated_radiance(methane, altitude, sza):
         filename = rf"C:\PcModWin5\Bin\batch_result\batch\{int(methane)}_{int(sza)}_{int(altitude)}_tape7.txt"
@@ -74,7 +73,7 @@ def load_satellite_radiance_lookup_table(satellitename: str):
     :param filename: Path to the file from which the lookup table will be loaded
     :return: Tuple of wavelengths and the lookup table (dictionary of enhancements and spectra)
     """
-    filename = f"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\data\\lookuptables\\{satellitename}_radiance_lookup_table.npz"
+    filename = f"data/lookuptables/{satellitename}_radiance_lookup_table.npz"
     data = np.load(filename)
     wavelengths = data["wavelengths"]
     parameters = data["parameters"]
@@ -209,6 +208,8 @@ if __name__ == "__main__":
     # generate_radiance_lut_for_satellite("EMIT")
     # generate_radiance_lut_for_satellite("PRISMA")
     # generate_radiance_lut_for_satellite("ZY1")
+    data = "data/uas_files/AHSI_UAS_0.txt"
+    print(os.path.exists(data))
     start = time.time()
     wvls, slope = generate_satellite_uas_for_specific_range_from_lut(
         "AHSI", 0, 50000, 2150, 2500, 60, 0

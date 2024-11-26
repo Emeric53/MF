@@ -58,9 +58,7 @@ def read_emit_bands():
     :return: bands list
     """
     # 读取校准文件
-    wavelengths = np.load(
-        "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\data\\satellite_channels\\EMIT_channels.npz"
-    )["central_wvls"]
+    wavelengths = np.load("data/satellite_channels/EMIT_channels.npz")["central_wvls"]
     return wavelengths
 
 

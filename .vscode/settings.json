@@ -1,20 +1,22 @@
 {
-"settings.mac": {
-    "editor.fontSize": 16,
+    "editor.fontSize": 24,
     "editor.fontFamily": "'JetBrains Mono', 'Microsoft YaHei'",
     "python.terminal.executeInFileDir": false,
-    "python.envFile": "${workspaceFolder}/.env"
-},
-"settings.win": {
-    "editor.fontSize": 16,
-    "editor.fontFamily": "'JetBrains Mono', 'Microsoft YaHei'",
-    "python.terminal.executeInFileDir": false,
-    "python.envFile": "${workspaceFolder}/.env"
-},
-"settings.linux": {
-    "editor.fontSize": 16,
-    "editor.fontFamily": "'JetBrains Mono', 'Microsoft YaHei'",
-    "python.terminal.executeInFileDir": false,
-    "python.envFile": "${workspaceFolder}/.env"
+    "python.envFile": "${workspaceFolder}/.env",
+    "editor.smoothScrolling": true,
+    "editor.cursorBlinking": "expand",
+    "editor.cursorSmoothCaretAnimation": "on",
+    "workbench.list.smoothScrolling": true,
+    "terminal.integrated.env.linux": {
+        "PYTHONPATH": "${workspaceFolder}"
+    },
+    "terminal.integrated.env.windows": {
+        "PYTHONPATH": "${workspaceFolder}"
+    },
+    "terminal.integrated.env.osx": {
+        "PYTHONPATH": "${workspaceFolder}"
+    }
+
 }
-}
+
+ 

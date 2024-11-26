@@ -1,14 +1,13 @@
 import numpy as np
-import os
+import matplotlib.pyplot as plt
+import seaborn as sns
 import time
+import os
 
-import sys
-
-sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod")
-
-import utils.satellites_data as sd
-import utils.satellites_data.general_functions as gf
-import methane_retrieval_algorithms.matchedfilter as mf
+from utils import satellites_data as sd
+from utils import generate_radiance_lut_and_uas as glut
+from methane_retrieval_algorithms import matchedfilter as mf
+from utils import simulate_images as si
 
 
 def columnwise_matched_filter(
@@ -79,98 +78,175 @@ def columnwise_matched_filter(
     return concentration
 
 
-def columnwise_matched_filter_test():
-    filepath = "C:\\Users\\RS\\Desktop\\Lifei_essay_data\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222_SW.tif"
-    # filepath = "I:\AHSI_part2\GF5B_AHSI_E114.0_N30.3_20231026_011349_L10000410291\GF5B_AHSI_E114.0_N30.3_20231026_011349_L10000410291_SW.tif"
-    outputfolder = "C:\\Users\\RS\\Desktop\\hi"
+def columnwise_matched_filter_simulated_image_test():
+    # load the plume numpy array
+    plume = np.load("data/simulated_plumes/gaussianplume_1000_2_stability_D.npy")
+    # generate a simulated satelite image with methaen plums
+    simulated_radiance_cube = si.simulate_satellite_images_with_plume(
+        "AHSI", plume, 25, 0, 2150, 2500, 0.01
+    )
+    # get the corresponding unit absorption spectrum
+    _, uas = glut.generate_satellite_uas_for_specific_range_from_lut(
+        "AHSI", 0, 50000, 2150, 2500, 25, 0
+    )
+    # count the time
+    startime = time.time()
+    # use MF to procedd the retrieval
+    methane_concentration = columnwise_matched_filter(
+        simulated_radiance_cube, uas, False, False, False, 5
+    )
+    finish_time = time.time()
+    print(f"running time: {finish_time - startime}")
+
+    # 计算统计信息
+    mean_concentration = np.mean(methane_concentration)
+    std_concentration = np.std(methane_concentration)
+    max_concentration = np.max(methane_concentration)
+    min_concentration = np.min(methane_concentration)
+    print(f"Mean: {mean_concentration:.2f} ppm")
+    print(f"Std: {std_concentration:.2f} ppm")
+    print(f"Max: {max_concentration:.2f} ppm")
+    print(f"Min: {min_concentration:.2f} ppm")
+
+    # 创建图形和子图
+    fig, axes = plt.subplots(1, 2, figsize=(20, 6))
+
+    # 子图1：甲烷浓度二维数组的可视化
+    im = axes[0].imshow(methane_concentration, cmap="viridis", origin="lower")
+    axes[0].set_title("Methane Concentration Enhancement (2D)")
+    axes[0].set_xlabel("X Coordinate")
+    axes[0].set_ylabel("Y Coordinate")
+
+    # 将 colorbar 移到下方
+    cbar = fig.colorbar(
+        im, ax=axes[0], orientation="horizontal", shrink=0.7, fraction=0.046, pad=0.04
+    )
+    cbar.set_label("Methane Concentration (ppm)")
+
+    # 在第一个子图上添加统计信息
+    stats_text = (
+        f"Mean: {mean_concentration:.2f} ppmm\n"
+        f"Std: {std_concentration:.2f} ppmm\n"
+        f"Max: {max_concentration:.2f} ppmm\n"
+        f"Min: {min_concentration:.2f} ppmm"
+    )
+    axes[0].text(
+        1.05,
+        0.5,
+        stats_text,
+        transform=axes[0].transAxes,
+        fontsize=12,
+        va="center",
+        bbox=dict(facecolor="white", alpha=0.6),
+    )
+    plume_mask = plume < 100
+    # 子图2：甲烷浓度分布的直方图和 KDE 图
+    sns.histplot(
+        methane_concentration[plume_mask].flatten(), bins=50, kde=True, ax=axes[1]
+    )
+    axes[1].set_title("Distribution of Methane Concentration")
+    axes[1].set_xlabel("Methane Concentration (ppm)")
+    axes[1].set_ylabel("Frequency")
+
+    # 调整布局
+    fig.tight_layout()
+    # 显示图表
+    plt.show()
+    return
+
+
+def columnwise_matched_filter_real_image_test(filepath, outputfolder):
+    # 获取 文件名称
     filename = os.path.basename(filepath)
+    # 设置 输出文件 名称
     outputfile = os.path.join(outputfolder, filename)
     if os.path.exists(outputfile):
         return
 
+    # 获取影像切片
     _, image_cube = sd.GF5B_data.get_calibrated_radiance(filepath, 2150, 2500)
-    image_sample_cube = image_cube
-    unit_absoprtion_spectrum_path = "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\uas_files\\AHSI_unit_absorption_spectrum.txt"
+    # 取整幅影像的 部分切片 进行测试
+    image_sample_cube = image_cube[:, 500:700, 700:900]
 
-    _, unit_absoprtion_spectrum = gf.open_unit_absorption_spectrum(
-        unit_absoprtion_spectrum_path, 2150, 2500
+    _, unit_absorption_spectrum = (
+        glut.generate_satellite_uas_for_specific_range_from_lut(
+            "AHSI", 0, 50000, 2150, 2500, 25, 0
+        )
     )
-    startime = time.time()
-    methane_concentration = mf.matched_filter(
-        image_sample_cube,
-        unit_absoprtion_spectrum,
-        iterate=True,
-        albedoadjust=True,
-        sparsity=True,
-    )
-
-    finish_time = time.time()
-    print(f"cw_mf running time: {finish_time - startime}")
-    sd.GF5B_data.export_ahsi_array_to_tiff(
-        methane_concentration, filepath, outputfolder, "test_mf.tif"
-    )
-
+    # 基于column的匹配滤波算法
     startime = time.time()
     methane_concentration = columnwise_matched_filter(
-        image_sample_cube,
-        unit_absoprtion_spectrum,
-        iterate=True,
-        albedoadjust=True,
-        sparsity=True,
-        group_size=5,
+        image_sample_cube, unit_absorption_spectrum, True, True, False, group_size=5
     )
-
     finish_time = time.time()
-    print(f"mf running time: {finish_time - startime}")
-    sd.GF5B_data.export_ahsi_array_to_tiff(
-        methane_concentration, filepath, outputfolder, "test.tif"
+    print(f"running time: {finish_time - startime}")
+
+    # sd.AHSI_data.export_ahsi_array_to_tiff(
+    #     methane_concentration,
+    #     filepath,
+    #     outputfolder,
+    # )
+
+    # 计算统计信息
+    mean_concentration = np.mean(methane_concentration)
+    std_concentration = np.std(methane_concentration)
+    max_concentration = np.max(methane_concentration)
+    min_concentration = np.min(methane_concentration)
+    print(f"Mean: {mean_concentration:.2f} ppm")
+    print(f"Std: {std_concentration:.2f} ppm")
+    print(f"Max: {max_concentration:.2f} ppm")
+    print(f"Min: {min_concentration:.2f} ppm")
+
+    # 创建图形和子图
+    fig, axes = plt.subplots(1, 2, figsize=(20, 6))
+
+    # 子图1：甲烷浓度二维数组的可视化
+    im = axes[0].imshow(methane_concentration, cmap="viridis", origin="lower")
+    axes[0].set_title("Methane Concentration Enhancement (2D)")
+    axes[0].set_xlabel("X Coordinate")
+    axes[0].set_ylabel("Y Coordinate")
+
+    # 将 colorbar 移到下方
+    cbar = fig.colorbar(
+        im, ax=axes[0], orientation="horizontal", shrink=0.7, fraction=0.046, pad=0.04
+    )
+    cbar.set_label("Methane Concentration (ppm)")
+
+    # 在第一个子图上添加统计信息
+    stats_text = (
+        f"Mean: {mean_concentration:.2f} ppm\n"
+        f"Std: {std_concentration:.2f} ppm\n"
+        f"Max: {max_concentration:.2f} ppm\n"
+        f"Min: {min_concentration:.2f} ppm"
+    )
+    axes[0].text(
+        1.05,
+        0.5,
+        stats_text,
+        transform=axes[0].transAxes,
+        fontsize=12,
+        va="center",
+        bbox=dict(facecolor="white", alpha=0.6),
     )
 
-    # # 计算统计信息
-    # mean_concentration = np.mean(methane_concentration)
-    # std_concentration = np.std(methane_concentration)
-    # max_concentration = np.max(methane_concentration)
-    # min_concentration = np.min(methane_concentration)
-    # print(f"Mean: {mean_concentration:.2f} ppm")
-    # print(f"Std: {std_concentration:.2f} ppm")
-    # print(f"Max: {max_concentration:.2f} ppm")
-    # print(f"Min: {min_concentration:.2f} ppm")
+    # 子图2：甲烷浓度分布的直方图和 KDE 图
+    sns.histplot(methane_concentration.flatten(), bins=50, kde=True, ax=axes[1])
+    axes[1].set_title("Distribution of Methane Concentration")
+    axes[1].set_xlabel("Methane Concentration (ppm)")
+    axes[1].set_ylabel("Frequency")
 
-    # # 创建图形和子图
-    # fig, axes = plt.subplots(1, 2, figsize=(20, 6))
-
-    # # 子图1：甲烷浓度二维数组的可视化
-    # im = axes[0].imshow(methane_concentration, cmap='viridis', origin='lower')
-    # axes[0].set_title("Methane Concentration Enhancement (2D)")
-    # axes[0].set_xlabel("X Coordinate")
-    # axes[0].set_ylabel("Y Coordinate")
-
-    # # 将 colorbar 移到下方
-    # cbar = fig.colorbar(im, ax=axes[0], orientation='horizontal', shrink=0.7, fraction=0.046, pad=0.04)
-    # cbar.set_label("Methane Concentration (ppm)")
-
-    # # 在第一个子图上添加统计信息
-    # stats_text = (f"Mean: {mean_concentration:.2f} ppm\n"
-    #             f"Std: {std_concentration:.2f} ppm\n"
-    #             f"Max: {max_concentration:.2f} ppm\n"
-    #             f"Min: {min_concentration:.2f} ppm")
-    # axes[0].text(1.05, 0.5, stats_text, transform=axes[0].transAxes,
-    #             fontsize=12, va='center', bbox=dict(facecolor='white', alpha=0.6))
-
-    # # 子图2：甲烷浓度分布的直方图和 KDE 图
-    # sns.histplot(methane_concentration.flatten(), bins=50, kde=True, ax=axes[1])
-    # axes[1].set_title("Distribution of Methane Concentration")
-    # axes[1].set_xlabel("Methane Concentration (ppm)")
-    # axes[1].set_ylabel("Frequency")
-
-    # # 调整布局
-    # fig.tight_layout()
-
-    # # 显示图表
-    # plt.show()
+    # 调整布局
+    fig.tight_layout()
+    # 显示图表
+    plt.show()
 
     return
 
 
 if __name__ == "__main__":
-    columnwise_matched_filter_test()
+    # 模拟影像测试
+    columnwise_matched_filter_simulated_image_test()
+    # 真实影像测试
+    # filepath = "C:\\Users\\RS\\Desktop\\Lifei_essay_data\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222_SW.tif"
+    # outputfolder = "C:/Users/RS\\Desktop\\Lifei_essay_data\\Lifei_essay_result\\"
+    # columnwise_matched_filter_real_image_test(filepath, outputfolder)

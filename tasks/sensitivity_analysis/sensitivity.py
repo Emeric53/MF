@@ -2,9 +2,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 import sys
-
-sys.path.append("C://Users//RS//VSCode//matchedfiltermethod//src")
-from utils.satellites_data import general_functions as gf
+import utils
+# from utils.satellites_data import general_functions as gf
 
 
 satellite_channels = "C://Users//RS//VSCode//matchedfiltermethod//src//data//satellite_channels//AHSI_channels.npz"
@@ -202,5 +201,6 @@ def export_graphes(wvls, diff_list, standardized_diff_list, name):
 if __name__ == "__main__":
     # watervapor_sensitivity_analysis()
     # aerosol_sensitivity_analysis()
-    albedo_sensitivity_analysis()
+    # albedo_sensitivity_analysis()
+    pass
     # co2_sensitivity_analysis()

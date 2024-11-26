@@ -4,13 +4,10 @@ import seaborn as sns
 import time
 import os
 
-import sys
 
-# sys.path.append(r"C:\Users\Emeric\Documents\VSCode projects\MF\MF-master")
-
-import utils.simulate_images as si
-import utils.generate_radiance_lut_and_uas as glut
-import utils.satellites_data as sd
+from utils import simulate_images as si
+from utils import satellites_data as sd
+from utils import generate_radiance_lut_and_uas as glut
 
 
 def matched_filter(
@@ -125,17 +122,19 @@ def matched_filter(
 
 
 def matched_filter_simulated_image_test():
-    plume = np.load(
-        r"C:\Users\RS\VSCode\matchedfiltermethod\data\simulated_plumes\gaussianplume_1000_2_stability_D.npy"
-    )
+    # load the plume numpy array
+    plume = np.load("data/simulated_plumes/gaussianplume_1000_2_stability_D.npy")
+    # generate a simulated satelite image with methaen plums
     simulated_radiance_cube = si.simulate_satellite_images_with_plume(
         "AHSI", plume, 25, 0, 2150, 2500, 0.01
     )
-    # unit_absoprtion_spectrum = glut.generate_satellite_uas_for_specific_range_from_lut()
+    # get the corresponding unit absorption spectrum
     _, uas = glut.generate_satellite_uas_for_specific_range_from_lut(
         "AHSI", 0, 50000, 2150, 2500, 25, 0
     )
+    # count the time
     startime = time.time()
+    # use MF to procedd the retrieval
     methane_concentration = matched_filter(
         simulated_radiance_cube, uas, False, False, False
     )
@@ -147,10 +146,10 @@ def matched_filter_simulated_image_test():
     std_concentration = np.std(methane_concentration)
     max_concentration = np.max(methane_concentration)
     min_concentration = np.min(methane_concentration)
-    print(f"Mean: {mean_concentration:.2f} ppm")
-    print(f"Std: {std_concentration:.2f} ppm")
-    print(f"Max: {max_concentration:.2f} ppm")
-    print(f"Min: {min_concentration:.2f} ppm")
+    print(f"Mean: {mean_concentration:.2f} ppmm")
+    print(f"Std: {std_concentration:.2f} ppmm")
+    print(f"Max: {max_concentration:.2f} ppmm")
+    print(f"Min: {min_concentration:.2f} ppmm")
 
     # 创建图形和子图
     fig, axes = plt.subplots(1, 2, figsize=(20, 6))
@@ -201,14 +200,14 @@ def matched_filter_simulated_image_test():
     return
 
 
-def matched_filter_real_image_test():
-    filepath = "C:\\Users\\RS\\Desktop\\Lifei_essay_data\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222_SW.tif"
-    outputfolder = "C:\\Users\\RS\\Desktop\\Lifei_essay_data\\Lifei_essay_result\\"
+def matched_filter_real_image_test(filepath, outputfolder):
+    # 获取文件名称
     filename = os.path.basename(filepath)
+    # 设置输出文件路径
     outputfile = os.path.join(outputfolder, filename)
     if os.path.exists(outputfile):
         return
-
+    # 获取影像切片进行实验
     _, image_cube = sd.GF5B_data.get_calibrated_radiance(filepath, 2150, 2500)
     # 取整幅影像的 100*100 切片进行测试
     image_sample_cube = image_cube[:, 500:700, 700:900]
@@ -217,6 +216,7 @@ def matched_filter_real_image_test():
             "AHSI", 0, 50000, 2150, 2500, 25, 0
         )
     )
+    # 使用匹配滤波算法进行实验
     startime = time.time()
     methane_concentration = matched_filter(
         image_sample_cube, unit_absorption_spectrum, True, True, False
@@ -282,10 +282,13 @@ def matched_filter_real_image_test():
     fig.tight_layout()
     # 显示图表
     plt.show()
-
     return
 
 
 if __name__ == "__main__":
+    # 模拟影像测试
     matched_filter_simulated_image_test()
+    # 真实影像测试
+    # filepath = "C:\\Users\\RS\\Desktop\\Lifei_essay_data\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222_SW.tif"
+    # outputfolder = "C:/Users/RS\\Desktop\\Lifei_essay_data\\Lifei_essay_result\\"
     # matched_filter_real_image_test()

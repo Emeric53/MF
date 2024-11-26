@@ -3,9 +3,7 @@ import pathlib as pl
 
 import xml.etree.ElementTree as ET
 import os
-import sys
 
-sys.path.append("c:\\Users\\RS\\VSCode\\matchedfiltermethod")
 from utils.satellites_data.general_functions import (
     save_ndarray_to_tiff,
     read_tiff_in_numpy,
@@ -31,9 +29,7 @@ def read_enmap_bands() -> np.ndarray:
     :return: bands list
     """
     # 读取校准文件
-    wavelengths = np.load(
-        "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\data\\satellite_channels\\EnMAP_channels.npz"
-    )["central_wvls"]
+    wavelengths = np.load("data/satellite_channels/EnMAP_channels.npz")["central_wvls"]
     return wavelengths
 
 

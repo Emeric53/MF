@@ -1,9 +1,6 @@
 import numpy as np
 from scipy.interpolate import interp1d
 
-import sys
-
-sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src")
 from utils.satellites_data import general_functions as gf
 
 

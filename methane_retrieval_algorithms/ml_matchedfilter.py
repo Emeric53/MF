@@ -1,22 +1,20 @@
-import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
 
 import time
 import os
-import sys
 
-sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src")
-from methane_retrieval_algorithms.matchedfilter import matched_filter as mf
-import utils.generate_radiance_lut_and_uas as glut
-import utils.simulate_images as si
-import utils.satellites_data as sd
+from utils import generate_radiance_lut_and_uas as glut
+from utils import simulate_images as si
+from utils import satellites_data as sd
 
 
 def ml_matched_filter(
     data_cube: np.ndarray,
     bg_uas: np.ndarray,
     bg_uas2: np.ndarray,
+    transmittance: np.ndarray,
     unit_absorption_spectrum: np.ndarray,
     iterate: bool,
     albedoadjust: bool,

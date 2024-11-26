@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import os
 import sys
 
-sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src")
+
 from utils.satellites_data.general_functions import (
     get_simulated_satellite_radiance,
     read_simulated_radiance,
@@ -315,7 +315,7 @@ if __name__ == "__main__":
         simulated_radiance = np.array(radiance_list)[::-1]
         return simulated_rad_wavelengths, simulated_radiance
 
-    channels_path = "C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src\\data\\satellite_channels\\AHSI_channels.npz"
+    channels_path = "data/satellite_channels/AHSI_channels.npz"
     filepath1 = "C:\\PcModWin5\\Bin\\batch\\25000_25_0_tape7.txt"
     # filepath = "C:\\PcModWin5\\Bin\\batch\\0_0_0_tape7.txt"
     filepath = "C:\\PcModWin5\\Bin\\batch\\AHSI_methane_20000_ppmm_tape7.txt"

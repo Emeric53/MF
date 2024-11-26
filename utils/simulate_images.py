@@ -187,6 +187,7 @@ def simulate_satellite_images_without_plume(
     return noisy_radiance_cube
 
 
+# ! 基于甲烷烟羽 构建 透射率 ，叠加在真实影像上
 def add_plume_to_real_image(
     satellite_name: str,
     image_path: str,
