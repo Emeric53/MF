@@ -85,10 +85,12 @@ def PRISMA_retrieval(filepath):
     # return mf_enhancement,cmf_enhancement,mlmf_enhancement
 
 
-filepath = "/home/emeric/Documents/stanford/PRISMA/PRS_L1_STD_OFFL_20221027182300_20221027182304_0001.he5"
-# filepath = "/home/emeric/Documents/stanford/PRISMA/PRS_L1_STD_OFFL_20221130180952_20221130180956_0001.he5"
-# filepath = "J:\stanford\PRISMA\PRS_L1_STD_OFFL_20221130180952_20221130180956_0001.he5"
-start_time = time.time()
-PRISMA_retrieval(filepath)
-finish_time = time.time()
-print("Time cost: ", finish_time - start_time)
+filepath = [
+    "/home/emeric/Documents/stanford/PRISMA/PRS_L1_STD_OFFL_20221027182300_20221027182304_0001.he5",
+    "/home/emeric/Documents/stanford/PRISMA/PRS_L1_STD_OFFL_20221130180952_20221130180956_0001.he5",
+]
+for file in filepath:
+    start_time = time.time()
+    PRISMA_retrieval(file)
+    finish_time = time.time()
+    print("Time cost: ", finish_time - start_time)
