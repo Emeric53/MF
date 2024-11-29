@@ -17,13 +17,15 @@ from utils import satellites_data as sd
 from utils import generate_radiance_lut_and_uas as glut
 
 
-def EnMAP_test():
-    filepath = r"J:\stanford\EnMAP\ENMAP01-____L1B-DT0000005368_20221116T184046Z_004_V010501_20241017T040758Z\ENMAP01-____L1B-DT0000005368_20221116T184046Z_004_V010501_20241017T040758Z-SPECTRAL_IMAGE_SWIR.TIF"
+def EnMAP_test(filepath, output_folder):
     _, radiance_cube = sd.EnMAP_data.get_enmap_bands_array(filepath, 2150, 2500)
-    sza, _ = sd.EnMAP_data.get_SZA_altitude(filepath)
+
+    # sza, _ = sd.EnMAP_data.get_SZA_altitude(filepath)
+    # altitude = 0
+    # if altitude > 5:
+    #     altitude = 5
+    sza = 25
     altitude = 0
-    if altitude > 5:
-        altitude = 5
     _, uas = glut.generate_satellite_uas_for_specific_range_from_lut(
         "EnMAP", 0, 50000, 2150, 2500, sza, altitude
     )
@@ -34,9 +36,8 @@ def EnMAP_test():
     # 多层匹配滤波算法结果测试
     # methane_enhancement_mlmf = mfs.ml_matched_filter_new(radiance_cube,uas, True)
 
-    output_folder = os.path.dirname(filepath)
+    # 输出结果到tiff文件
     filename = os.path.basename(filepath)
-    # vnir =  r"I:\stanford_campaign\EnMAP\dims_op_oc_oc-en_701862725_1\ENMAP.HSI.L1B\ENMAP01-____L1B-DT0000005368_20221116T184050Z_005_V010501_20241017T042058Z\ENMAP01-____L1B-DT0000005368_20221116T184050Z_005_V010501_20241017T042058Z-SPECTRAL_IMAGE_VNIR.TIF"
 
     sd.EnMAP_data.export_enmap_array_to_tiff(
         mf_enhancement, filepath, output_folder, filename.replace(".TIF", "_mf.tif")
@@ -48,7 +49,9 @@ def EnMAP_test():
     return mf_enhancement, cmf_enhancement
 
 
+filepath = "/home/emeric/Documents/stanford/EnMAP/enmap1.tif"
+output_folder = "/home/emeric/Documents/stanford/EnMAP/"
 start_time = time.time()
-result = EnMAP_test()
+result = EnMAP_test(filepath, output_folder)
 end_time = time.time()
 print("Time cost: ", end_time - start_time)

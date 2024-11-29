@@ -96,8 +96,20 @@ def export_enmap_array_to_tiff(
 
 
 if __name__ == "__main__":
-    filepath = r"J:\stanford\EnMAP\ENMAP01-____L1B-DT0000005368_20221116T184046Z_004_V010501_20241017T040758Z\ENMAP01-____L1B-DT0000005368_20221116T184046Z_004_V010501_20241017T040758Z-SPECTRAL_IMAGE_SWIR.TIF"
-    bands, radiance = get_enmap_bands_array(filepath, 2150, 2500)
-    sza, _ = get_SZA_altitude(filepath)
-    print(sza)
-    print(radiance.shape)
+    # filepath = "/home/emeric/EnPT/Output/20241127__1/ENMAP01-____L2A-DT0000005368_20221116T184046Z_004_V010501_20241017T040758Z/ENMAP01-____L2A-DT0000005368_20221116T184046Z_004_V010501_20241017T040758Z-SPECTRAL_IMAGE.TIF"
+    # print(filepath)
+    # print(os.path.exists(filepath))
+    import time
+
+    filepath = "/home/emeric/Documents/stanford/EnMAP/ENMAP01-____L1B-DT0000005368_20221116T184046Z_004_V010501_20241017T040758Z/ENMAP01-____L1B-DT0000005368_20221116T184046Z_004_V010501_20241017T040758Z-SPECTRAL_IMAGE_SWIR.TIF"
+    print(os.path.exists(filepath))
+
+    start = time.time()
+    radiance = get_enmap_array(filepath)
+    end = time.time()
+    print("Time cost: ", end - start)
+    # print(radiance.shape)
+
+    # wvls = read_enmap_bands()
+    # print(wvls)
+    # print(wvls.shape)
