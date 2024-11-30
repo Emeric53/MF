@@ -25,11 +25,11 @@ def generate_radiance_lut_for_satellite(satellitename: str):
     # Initialize an empty dictionary to store the radiance spectra
 
     # Function to simulate radiance spectrum using MODTRAN (this is just a placeholder for actual MODTRAN calls)
-    channels_path = f"data/satellite_channels/{satellitename}_channels.npz"
+    channels_path = f"/home/emeric/Documents/GitHub/MF/data/satellite_channels/{satellitename}_channels.npz"
     if not os.path.exists(channels_path):
         print("The satellite name is wrong")
         return None
-    output_file = f"data/lookuptables/{satellitename}_radiance_lookup_table.npz"
+    output_file = f"/home/emeric/Documents/GitHub/MF/data/lookuptables/{satellitename}_radiance_lookup_table.npz"
 
     def get_simulated_radiance(methane, altitude, sza):
         filename = rf"C:\PcModWin5\Bin\batch_result\batch\{int(methane)}_{int(sza)}_{int(altitude)}_tape7.txt"
@@ -73,7 +73,7 @@ def load_satellite_radiance_lookup_table(satellitename: str):
     :param filename: Path to the file from which the lookup table will be loaded
     :return: Tuple of wavelengths and the lookup table (dictionary of enhancements and spectra)
     """
-    filename = f"data/lookuptables/{satellitename}_radiance_lookup_table.npz"
+    filename = f"/home/emeric/Documents/GitHub/MF/data/lookuptables/{satellitename}_radiance_lookup_table.npz"
     data = np.load(filename)
     wavelengths = data["wavelengths"]
     parameters = data["parameters"]
@@ -177,12 +177,22 @@ def generate_satellite_uas_for_specific_range_from_lut(
     wavelengths, radiance_list = batch_get_radiance_from_lut(
         satellite_name, enhancement_range, sza, altitude
     )
-    # radiance_list /= radiance_list[0, :]
+
     # 3. 过滤波长范围
     condition = np.logical_and(
         wavelengths >= lower_wavelength, wavelengths <= upper_wavelength
     )
     used_wavelengths = wavelengths[condition]
+
+    # # 假设 radiance_list 已经通过批量处理获得了光谱数据
+    # radiance_spectrum_base = radiance_list[0, condition]  # 第一个光谱作为基底
+    # radiance_spectrum_final = radiance_list[
+    #     -1, condition
+    # ]  # 最后一个光谱作为增强后的光谱
+
+    # # 计算透射率谱
+    # transmission_spectrum = (radiance_spectrum_final) / radiance_spectrum_base
+
     total_radiance = np.log(radiance_list[:, condition])
     total_radiance = total_radiance
 
@@ -199,6 +209,44 @@ def generate_satellite_uas_for_specific_range_from_lut(
     return (used_wavelengths, slopelist)
 
 
+def generate_transmittance_for_specific_range_from_lut(
+    satellite_name: str,
+    start_enhancement: float,
+    end_enhancement: float,
+    lower_wavelength: float,
+    upper_wavelength: float,
+    sza: float,
+    altitude: float,
+):
+    # 1. 构建enhancement的范围
+    if start_enhancement < 0:
+        start_enhancement = 0
+    if end_enhancement > 50000:
+        end_enhancement == 50000
+
+    # 2. 查询所有甲烷增强值的光谱（批量处理）
+    wavelengths, radiance_list = batch_get_radiance_from_lut(
+        satellite_name, np.array([start_enhancement, end_enhancement]), sza, altitude
+    )
+
+    # 3. 过滤波长范围
+    condition = np.logical_and(
+        wavelengths >= lower_wavelength, wavelengths <= upper_wavelength
+    )
+    used_wavelengths = wavelengths[condition]
+
+    # 假设 radiance_list 已经通过批量处理获得了光谱数据
+    radiance_spectrum_base = radiance_list[0, condition]  # 第一个光谱作为基底
+    radiance_spectrum_final = radiance_list[
+        -1, condition
+    ]  # 最后一个光谱作为增强后的光谱
+
+    # 计算透射率谱
+    transmission_spectrum = (radiance_spectrum_final) / radiance_spectrum_base
+
+    return (used_wavelengths, transmission_spectrum)
+
+
 if __name__ == "__main__":
     pass
     # print("Start generating radiance lookup table")
@@ -207,18 +255,22 @@ if __name__ == "__main__":
     # generate_radiance_lut_for_satellite("EMIT")
     # generate_radiance_lut_for_satellite("PRISMA")
     # generate_radiance_lut_for_satellite("ZY1")
-    data = "data/uas_files/AHSI_UAS_0.txt"
-    print(os.path.exists(data))
+
     start = time.time()
-    wvls, slope = generate_satellite_uas_for_specific_range_from_lut(
-        "AHSI", 0, 50000, 2150, 2500, 60, 0
+    wvls, slope, transmittance = generate_satellite_uas_for_specific_range_from_lut(
+        "AHSI", 10000, 20000, 2150, 2500, 50, 0
     )
+
     end = time.time()
     print(f"Time cost: {end - start}")
     import matplotlib.pyplot as plt
 
     plt.figure()
-    plt.plot(wvls, np.array(slope))
+    uas = np.array(slope)
+    plt.plot(wvls, np.exp(uas * 10000), label=" uas ")
+    plt.plot(wvls, transmittance, label="transmittance")
+
+    plt.legend()
     plt.show()
     # wvls, slope = generate_satellite_uas_for_specific_range_from_lut(
     #     "AHSI",

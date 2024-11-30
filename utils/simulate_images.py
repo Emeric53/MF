@@ -46,7 +46,7 @@ def simulate_satellite_images(
     5. Adds Gaussian noise to the image.
     """
     # Load the simulated emit radiance spectrum
-    channels_path = f"data/satellite_channels/{satellite_name}_channels.npz"
+    channels_path = f"/home/emeric/Documents/GitHub/MF/data/satellite_channels/{satellite_name}_channels.npz"
     if not os.path.exists(channels_path):
         print("The satellite name is not supported.")
         return None
