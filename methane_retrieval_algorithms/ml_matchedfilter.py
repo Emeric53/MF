@@ -152,7 +152,7 @@ def ml_matched_filter(
     dynamic_adjust: bool = True,  # 新增动态调整标志
     threshold: float = 5000,  # 初始浓度增强阈值
     threshold_step: float = 5000,  # 阈值调整步长
-    max_threshold: float = 16000,  # 最大浓度增强阈值
+    max_threshold: float = 45000,  # 最大浓度增强阈值
 ) -> np.ndarray:
     """Calculate the methane enhancement of the image data with iterative and dynamic adjustment.
 
@@ -639,7 +639,7 @@ def ml_matched_filter(
 
 def ml_matched_filter_simulation_test():
     plume = np.load(
-        r"/home/emeric/Documents/GitHub/MF/data/simulated_plumes/gaussianplume_1000_2_stability_D.npy"
+        r"/home/emeric/Documents/GitHub/MF/data/simulated_plumes/gaussianplume_1000_4_stability_D.npy"
     )
     simulated_radiance_cube = si.simulate_satellite_images_with_plume(
         "AHSI", plume, 25, 0, 2150, 2500, 0.01
@@ -649,9 +649,9 @@ def ml_matched_filter_simulation_test():
     transmittance_list = []
     # 设置初始化的单位吸收光谱范围
     _, initial_uas = glut.generate_satellite_uas_for_specific_range_from_lut(
-        "AHSI", 0, 50000, 2150, 2500, 25, 0
+        "AHSI", 0, 1000, 2150, 2500, 25, 0
     )
-    for i in range(0, 50000, 5000):
+    for i in range(5000, 50000, 5000):
         _, uas = glut.generate_satellite_uas_for_specific_range_from_lut(
             "AHSI", i, i + 5000, 2150, 2500, 25, 0
         )
@@ -737,6 +737,7 @@ def ml_matched_filter_simulation_test():
     axes[2].set_title("Scatter plot of Methane Concentration")
     axes[2].set_xlabel("Plume Concentration (ppm)")
     axes[2].set_ylabel("Methane Concentration (ppm)")
+    axes[2].plot(plume[plume_mask].flatten(), plume[plume_mask].flatten(), "r-")
     # 调整布局
     fig.tight_layout()
     # 显示图表
