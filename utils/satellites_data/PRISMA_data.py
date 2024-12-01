@@ -78,7 +78,9 @@ def get_prisma_array(filepath):
 
 
 def read_prisma_bands():
-    wavelengths = np.load("data/satellite_channels/PRISMA_channels.npz")["central_wvls"]
+    wavelengths = np.load(
+        "/home/emeric/Documents/GitHub/MF/data/satellite_channels/PRISMA_channels.npz"
+    )["central_wvls"]
     return wavelengths
 
 

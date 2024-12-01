@@ -30,7 +30,9 @@ def read_ahsi_bands():
     :return: bands list
     """
     # 读取校准文件
-    wavelengths = np.load("data/satellite_channels/AHSI_channels.npz")["central_wvls"]
+    wavelengths = np.load(
+        "/home/emeric/Documents/GitHub/MF/data/satellite_channels/AHSI_channels.npz"
+    )["central_wvls"]
     return wavelengths
 
 

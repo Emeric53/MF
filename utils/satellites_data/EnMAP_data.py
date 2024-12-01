@@ -29,7 +29,9 @@ def read_enmap_bands() -> np.ndarray:
     :return: bands list
     """
     # 读取校准文件
-    wavelengths = np.load("data/satellite_channels/EnMAP_channels.npz")["central_wvls"]
+    wavelengths = np.load(
+        "/home/emeric/Documents/GitHub/MF/data/satellite_channels/EnMAP_channels.npz"
+    )["central_wvls"]
     return wavelengths
 
 
