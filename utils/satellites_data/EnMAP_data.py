@@ -104,6 +104,7 @@ if __name__ == "__main__":
     import time
 
     filepath = "/home/emeric/Documents/stanford/EnMAP/ENMAP01-____L1B-DT0000005368_20221116T184046Z_004_V010501_20241017T040758Z/ENMAP01-____L1B-DT0000005368_20221116T184046Z_004_V010501_20241017T040758Z-SPECTRAL_IMAGE_SWIR.TIF"
+
     print(os.path.exists(filepath))
 
     start = time.time()

@@ -1,5 +1,6 @@
 import numpy as np
-import sys
+import matplotlib.pyplot as plt
+import os
 
 
 def new_calc_sigmas(CATEGORY, x1):
@@ -75,6 +76,18 @@ def gaussian_fuc(Q, u, windir, x, y, xs, ys, STABILITY):
     return C, C_ppmm
 
 
+def plot_gaussian_plume(file_path, x, y):
+    concentration = np.load(file_path)
+    X, Y = np.meshgrid(x, y)
+    plt.figure(figsize=(10, 8))
+    plt.contourf(X, Y, concentration.T, levels=50, cmap="viridis")
+    plt.colorbar(label="Concentration (g/m^3)")
+    plt.xlabel("Downwind Distance (m)")
+    plt.ylabel("Crosswind Distance (m)")
+    plt.title(f"Gaussian Plume - {os.path.basename(file_path)}")
+    plt.show()
+
+
 if __name__ == "__main__":
     # 示例参数
     Q = 1000  # 排放率，单位 g/s
@@ -87,7 +100,95 @@ if __name__ == "__main__":
             _, concentration = gaussian_fuc(
                 Q, windspeed, windir, x, y, xs, ys, stability
             )
-            np.save(
-                f"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\Image_simulations\\simulated_plumes\\gaussianplume_1000_{windspeed}_stability_{stability}.npy",
-                concentration,
-            )
+            file_path = f"data/simulated_plumes/gaussianplume_1000_{windspeed}_stability_{stability}.npy"
+            plot_gaussian_plume(file_path, x, y)
+            # np.save(
+            #     f"data\simulated_plumes\\gaussianplume_1000_{windspeed}_stability_{stability}.npy",
+            #     concentration,
+            # )
+# import numpy as np
+# import sys
+# import matplotlib.pyplot as plt
+# import os
+
+
+# def new_calc_sigmas(CATEGORY, x1):
+#     x = np.abs(x1)
+#     x = np.maximum(x, 0.1)  # 避免 x 为零或负值
+
+#     # 根据 Pasquill-Gifford 稳定度类别计算参数
+#     if CATEGORY == "A":
+#         a_y, b_y = 213, 0.894
+#     elif CATEGORY == "B":
+#         a_y, b_y = 156, 0.894
+#     elif CATEGORY == "C":
+#         a_y, b_y = 104, 0.894
+#     elif CATEGORY == "D":
+#         a_y, b_y = 68, 0.894
+#     elif CATEGORY == "E":
+#         a_y, b_y = 50.5, 0.894
+#     elif CATEGORY == "F":
+#         a_y, b_y = 34, 0.894
+#     else:
+#         print("无效的稳定度类别")
+#         sys.exit()
+
+#     x_km = x / 1000.0  # 将距离转换为 km
+
+#     sig_y = a_y * (x_km**b_y)
+#     sig_y = np.maximum(sig_y, 0.1)
+
+#     return sig_y
+
+
+# def gaussian_fuc(Q, u, windir, x, y, xs, ys, STABILITY):
+#     # 将风向转换为数学坐标系角度
+#     theta = np.deg2rad(270 - windir)
+#     # 调整风向
+#     x1, y1 = np.meshgrid(x - xs, y - ys, indexing="ij")
+#     x_prime = x1 * np.cos(theta) + y1 * np.sin(theta)
+#     y_prime = -x1 * np.sin(theta) + y1 * np.cos(theta)
+
+#     # 只考虑下风向
+#     x_prime = np.maximum(x_prime, 0.1)
+
+#     # 计算 σ_y
+#     sig_y = new_calc_sigmas(STABILITY, x_prime)
+
+#     # 计算浓度，积分了 z 方向
+#     C = (Q / (np.sqrt(2 * np.pi) * u * sig_y)) * np.exp(-(y_prime**2) / (2 * sig_y**2))
+
+#     return C
+
+
+# def plot_gaussian_plume(concentration, x, y, file_path):
+#     X, Y = np.meshgrid(x, y, indexing="ij")
+#     plt.figure(figsize=(10, 8))
+#     plt.pcolormesh(X, Y, concentration, shading="auto", cmap="viridis")
+#     plt.colorbar(label="浓度 (g/s·m²)")
+#     plt.xlabel("X 距离 (m)")
+#     plt.ylabel("Y 距离 (m)")
+#     plt.title(f"高斯烟羽 - {os.path.basename(file_path)}")
+#     plt.axis("equal")
+#     plt.show()
+
+
+# if __name__ == "__main__":
+#     # 示例参数
+#     Q = 1000  # 排放率，单位 g/s
+#     windir = 180  # 风向，单位度
+#     x = np.arange(-1500, 1500, 30)  # 下风向距离，单位 m，分辨率为 30 m
+#     y = np.arange(-1500, 1500, 30)  # 横风向距离，单位 m，分辨率为 30 m
+#     xs, ys = 0, 0  # 排放源位置
+
+#     for stability in ["A", "B", "C", "D", "E", "F"]:
+#         for windspeed in [2, 4, 6, 8, 10]:
+#             concentration = gaussian_fuc(Q, windspeed, windir, x, y, xs, ys, stability)
+
+#             # 保存结果
+#             os.makedirs("data/simulated_plumes_new", exist_ok=True)
+#             file_path = f"data/simulated_plumes_new/gaussianplume_{Q}_{windspeed}_stability_{stability}.npy"
+#             np.save(file_path, concentration)
+
+#             # 绘制结果
+#             plot_gaussian_plume(concentration, x, y, file_path)

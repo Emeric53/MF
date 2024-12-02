@@ -194,8 +194,9 @@ def location_calibration(data, original_filepath, output_tiff_path):
         longitude = prisma_file[
             "/HDFEOS/SWATHS/PRS_L1_HCO/Geolocation Fields/Longitude_SWIR"
         ][:]
-    latitude = np.rot90(latitude, -1)
-    longitude = np.rot90(longitude, -1)
+
+    latitude = np.transpose(latitude, (1, 0))
+    longitude = np.transpose(longitude, (1, 0))
     # 检查形状是否匹配
     if data.shape != latitude.shape or data.shape != longitude.shape:
         raise ValueError("数据和地理位置数据的形状不匹配。")
@@ -243,5 +244,14 @@ def main():
 
 if __name__ == "__main__":
     filename = "/home/emeric/Documents/stanford/PRISMA/PRS_L1_STD_OFFL_20221027182300_20221027182304_0001.he5"
+    with h5py.File(filename, "r") as prisma_file:
+        # 定位到指定的数据集
+        swir_cube_dataset = prisma_file["/HDFEOS/SWATHS/PRS_L1_HCO/Data Fields"]
+        # 遍历并打印数据集的属性
+        for attr_name, attr_value in swir_cube_dataset.attrs.items():
+            print(f"{attr_name}: {attr_value}")
     wavelength_array, radiance_cube = get_prisma_bands_array(filename, 2150, 2500)
     clip = radiance_cube[0, :, :]
+    print(clip.shape)
+
+    location_calibration(clip, filename, "clip.tif")
