@@ -189,10 +189,10 @@ def location_calibration(data, original_filepath, output_tiff_path):
     # 打开原始 HDF5 文件并提取纬度和经度数组
     with h5py.File(original_filepath, "r") as prisma_file:
         latitude = prisma_file[
-            "/HDFEOS/SWATHS/PRS_L1_HCO/Geolocation Fields/Latitude_SWIR"
+            "/HDFEOS/SWATHS/PRS_L1_HCO/Geolocation Fields/Latitude_VNIR"
         ][:]
         longitude = prisma_file[
-            "/HDFEOS/SWATHS/PRS_L1_HCO/Geolocation Fields/Longitude_SWIR"
+            "/HDFEOS/SWATHS/PRS_L1_HCO/Geolocation Fields/Longitude_VNIR"
         ][:]
 
     latitude = np.transpose(latitude, (1, 0))
