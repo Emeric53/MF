@@ -455,24 +455,30 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
     def plot_gaussian_plume(
-        file_path, x, y, vmin=None, vmax=None, title="Gaussian Plume"
+        file_path,
+        x,
+        y,
+        vmin=None,
+        vmax=None,
+        title="Gaussian Plume",
+        label="Concentration (ppm m)",
     ):
         concentration = np.load(file_path)
         X, Y = np.meshgrid(x, y)
         plt.figure(figsize=(10, 8))
         plt.contourf(
-            X, Y, concentration.T, levels=50, cmap="viridis", vmin=vmin, vmax=vmax
+            X, Y, concentration.T, levels=50, cmap="Greys", vmin=vmin, vmax=vmax
         )
-        plt.colorbar(label="Concentration (ppm m)")
+        plt.colorbar(label=label)
         plt.xlabel("pixel number")
         plt.ylabel("pixel number")
-        plt.title("Gaussian Plume")
+        plt.title(title)
         plt.show()
 
     plot_gaussian_plume(
         "data/simulated_images/emitplume1_2.npy",
-        np.linspace(-50, 50, 100),
-        np.linspace(-50, 50, 100),
+        np.linspace(0, 100, 100),
+        np.linspace(0, 100, 100),
         100,
         8000,
         title="EMIT Plume 1",
@@ -489,8 +495,8 @@ if __name__ == "__main__":
 
     plot_gaussian_plume(
         "data/simulated_images/gaussianplume_1000_10_D.npy",
-        np.linspace(-50, 50, 100),
-        np.linspace(-50, 50, 100),
+        np.linspace(0, 100, 100),
+        np.linspace(0, 100, 100),
         100,
         8000,
         title="Gaussian Plume",
@@ -500,5 +506,6 @@ if __name__ == "__main__":
         "data/simulated_images/GF5B_2300nm.npy",
         np.linspace(0, 100, 100),
         np.linspace(0, 100, 100),
-        title="Simulated Gaussian Plume",
+        title="Radiance at 2300 nm",
+        label="Radiance (uW/m^2/sr/nm)",
     )
