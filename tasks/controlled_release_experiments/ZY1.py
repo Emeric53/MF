@@ -3,7 +3,6 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 import time
-import math
 import tempfile
 
 from methane_retrieval_algorithms.matchedfilter import matched_filter as mf

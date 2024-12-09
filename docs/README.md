@@ -1,8 +1,8 @@
 # 项目文档
 该项目为甲烷点源尺度浓度反演和排放量量化的研究项目\
-使用方法为匹配滤波算法,使用的数据为高光谱传感器辐亮度数据。 
-
-尝试使用高天git工作流进行测试。
+使用的甲烷柱浓度增强反演算法为匹配滤波算法,
+同时，便
+使用的数据为高光谱传感器辐亮度数据。 
 
 
 ## 项目分支
@@ -34,59 +34,12 @@
 
 #### 卫星数据处理
 针对卫星数据的处理，主要是读取卫星数据，获取卫星数据的辐亮度数据，将其传到匹配滤波算法中进行处理。\
-对于AHSI传感器，利用AHSI_data.py文件进行数据读取，使用方法如下：
-```
-from MF import AHSI_data
-# main functions:
 
-get_raster_array(filepath):
-    # 读取栅格数据
-    # filepath: 文件路径
-    # return: 栅格数据
-    
-rad_calibration(dataset, cal_file="GF5B_AHSI_RadCal_SWIR.raw"):**
-    # 辐亮度校正
-    # dataset: 数据集
-    # cal_file: 校正文件
-    # return: 校正后的数据集
 
-export_array_to_tiff(result, filepath, output_folder)
-    # 将结果导出为tiff文件
-    # result: 甲烷浓度增强数组
-    # filepath: 文件路径
-    # output_folder: 校正后的数据集
-    # return: none
-    
-image_coordinate(image_path):
-    # 基于同名rpb文件进行影像校正,会在同路径生成一个新的校正后的影像
-    # image_path: 影像路径
-    # return: none
-
-```
 ### 匹配滤波算法
 在MF文件夹中存储有关匹配滤波算法的python文件
 
 用法
-```
-from MF import matched_filter
-# main functions:
-
-open_unit_absorption_spectrum(filepath, min_wavelength, max_wavelength):
-    # 打开吸收光谱文件
-    # filepath: 文件路径
-    # min_wavelength: 最小波长
-    # max_wavelength: 最大波长
-    # return: 波长，吸收光谱  
-    
-matched_filter(data_array, unit_absorption_spectrum, is_iterate=False, is_albedo=False, is_filter=False):
-    # 匹配滤波函数
-    # data_array: 数据数组
-    # unit_absorption_spectrum: 单位吸收光谱
-    # is_iterate: 是否迭代
-    # is_albedo: 是否考虑反射率
-    # is_filter: 是否进行l1滤波
-    # return: 甲烷浓度增强结果 
-```
 
 
 ### 数据可视化

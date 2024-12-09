@@ -1,16 +1,11 @@
 import numpy as np
 from osgeo import gdal
-import Integrated_mass_enhancement as ime
 import os
 import geopandas as gpd
-import sys
 import rasterio
-import geopandas as gpd
 from shapely.geometry import Point
 
-sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod\\src")
-from utils.satellites_data.general_functions import read_tiff_in_numpy
-
+from utils.emission_estimate import Integrated_mass_enhancement as ime
 
 # def wind_speed(plume_name: str) -> float:
 #     """

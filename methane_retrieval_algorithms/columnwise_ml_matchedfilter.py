@@ -10,6 +10,7 @@ from utils import simulate_images as si
 from methane_retrieval_algorithms import ml_matchedfilter as mlmf
 
 
+# column为计算单元的 多层匹配滤波算法
 def columnwise_ml_matched_filter(
     data_cube: np.ndarray,
     initial_unit_absorption_spectrum: np.ndarray,
@@ -96,6 +97,7 @@ def columnwise_ml_matched_filter(
     return concentration
 
 
+# 测试函数： 模拟影像测试
 def columnwise_ml_matched_filter_simulated_image_test():
     # load the plume numpy array
     plume = np.load("data/simulated_plumes/gaussianplume_1000_2_stability_D.npy")
@@ -182,6 +184,7 @@ def columnwise_ml_matched_filter_simulated_image_test():
     return
 
 
+# 测试函数： 真实影像测试
 def columnwise_ml_matched_filter_real_image_test(filepath, outputfolder):
     # 获取 文件名称
     filename = os.path.basename(filepath)
@@ -270,10 +273,14 @@ def columnwise_ml_matched_filter_real_image_test(filepath, outputfolder):
     return
 
 
-if __name__ == "__main__":
+def main():
     # 模拟影像测试
     columnwise_ml_matched_filter_simulated_image_test()
     # 真实影像测试
-    # filepath = "C:\\Users\\RS\\Desktop\\Lifei_essay_data\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222_SW.tif"
-    # outputfolder = "C:/Users/RS\\Desktop\\Lifei_essay_data\\Lifei_essay_result\\"
-    # columnwise_matched_filter_real_image_test(filepath, outputfolder)
+    filepath = "C:\\Users\\RS\\Desktop\\Lifei_essay_data\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222_SW.tif"
+    outputfolder = "C:/Users/RS\\Desktop\\Lifei_essay_data\\Lifei_essay_result\\"
+    columnwise_ml_matched_filter_real_image_test(filepath, outputfolder)
+
+
+if __name__ == "__main__":
+    main()

@@ -5,17 +5,17 @@ import pathlib as pl
 import os
 import shutil
 
-from utils.satellites_data.general_functions import (
-    save_ndarray_to_tiff,
-    read_tiff_in_numpy,
-)
+# from utils.satellites_data.general_functions import (
+#     save_ndarray_to_tiff,
+#     read_tiff_in_numpy,
+# )
+from general_functions import save_ndarray_to_tiff, read_tiff_in_numpy
 
 
 # 基于 tiff 读取ahsi的数组
 def get_ahsi_array(filepath: str) -> np.array:
     """
     Reads a raster file and returns a NumPy array containing all the bands.
-
     :param filepath: the path of the raster file
     :return: a 3D NumPy array with shape (bands, height, width)
     """
@@ -268,7 +268,7 @@ def extract_wavelengths_from_hdr(hdr_file):
 
 
 if __name__ == "__main__":
-    # sample_filepath = r"J:\\AHSI_part4\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404_SW.tif"
+    sample_filepath = r"J:\\AHSI_part4\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404_SW.tif"
     filepath = r"C:\Users\RS\Desktop\Lifei_essay_data\GF5B_AHSI_W103.0_N31.3_20220424_003345_L10000118224\GF5B_AHSI_W103.0_N31.3_20220424_003345_L10000118224_SW.tif"
     radiance_cube = get_ahsi_array(filepath)
     print(radiance_cube.shape)

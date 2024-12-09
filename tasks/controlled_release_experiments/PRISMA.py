@@ -89,6 +89,7 @@ filepath = [
     "/home/emeric/Documents/stanford/PRISMA/PRS_L1_STD_OFFL_20221027182300_20221027182304_0001.he5",
     "/home/emeric/Documents/stanford/PRISMA/PRS_L1_STD_OFFL_20221130180952_20221130180956_0001.he5",
 ]
+
 for file in filepath:
     start_time = time.time()
     PRISMA_retrieval(file)

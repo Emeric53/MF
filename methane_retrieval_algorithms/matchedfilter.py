@@ -4,12 +4,12 @@ import seaborn as sns
 import time
 import os
 
-
 from utils import simulate_images as si
 from utils import satellites_data as sd
 from utils import generate_radiance_lut_and_uas as glut
 
 
+# 匹配滤波算法
 def matched_filter(
     data_cube: np.ndarray,
     unit_absorption_spectrum: np.ndarray,
@@ -121,6 +121,7 @@ def matched_filter(
     return concentration
 
 
+# 测试函数： 模拟影像测试
 def matched_filter_simulated_image_test():
     # load the plume numpy array
     plume = np.load("data/simulated_plumes/gaussianplume_1000_2_stability_D.npy")
@@ -200,6 +201,7 @@ def matched_filter_simulated_image_test():
     return
 
 
+# 测试函数： 真实影像测试
 def matched_filter_real_image_test(filepath, outputfolder):
     # 获取文件名称
     filename = os.path.basename(filepath)
@@ -285,10 +287,16 @@ def matched_filter_real_image_test(filepath, outputfolder):
     return
 
 
-if __name__ == "__main__":
+# 主函数
+def main():
     # 模拟影像测试
     matched_filter_simulated_image_test()
     # 真实影像测试
-    # filepath = "C:\\Users\\RS\\Desktop\\Lifei_essay_data\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222_SW.tif"
-    # outputfolder = "C:/Users/RS\\Desktop\\Lifei_essay_data\\Lifei_essay_result\\"
-    # matched_filter_real_image_test()
+    filepath = "C:\\Users\\RS\\Desktop\\Lifei_essay_data\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222\\GF5B_AHSI_W102.8_N32.3_20220424_003345_L10000118222_SW.tif"
+    outputfolder = "C:/Users/RS\\Desktop\\Lifei_essay_data\\Lifei_essay_result\\"
+    matched_filter_real_image_test(filepath, outputfolder)
+    return
+
+
+if __name__ == "__main__":
+    main()

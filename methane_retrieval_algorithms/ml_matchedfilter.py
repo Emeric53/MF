@@ -434,9 +434,13 @@ def ml_matched_filter_real_image_test():
     return
 
 
-if __name__ == "__main__":
+def main():
     ml_matched_filter_simulation_test()
     # ml_matched_filter_real_image_test()
+
+
+if __name__ == "__main__":
+    main()
 
 
 # def ml_matched_filter(

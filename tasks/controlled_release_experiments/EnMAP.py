@@ -50,6 +50,8 @@ def EnMAP_test(filepath, output_folder):
 
 
 filepath = "/home/emeric/Documents/stanford/EnMAP/enmap1.tif"
+
+
 output_folder = "/home/emeric/Documents/stanford/EnMAP/"
 start_time = time.time()
 result = EnMAP_test(filepath, output_folder)
