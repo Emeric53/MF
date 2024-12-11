@@ -5,11 +5,11 @@ import pathlib as pl
 import os
 import shutil
 
-# from utils.satellites_data.general_functions import (
-#     save_ndarray_to_tiff,
-#     read_tiff_in_numpy,
-# )
-from general_functions import save_ndarray_to_tiff, read_tiff_in_numpy
+from utils.satellites_data.general_functions import (
+    save_ndarray_to_tiff,
+    read_tiff_in_numpy,
+)
+# from general_functions import save_ndarray_to_tiff, read_tiff_in_numpy
 
 
 # 基于 tiff 读取ahsi的数组
