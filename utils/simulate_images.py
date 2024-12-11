@@ -159,7 +159,8 @@ def simulate_satellite_images_with_plume(
     noise_level (float, optional): Standard deviation of the Gaussian noise relative to the signal. Default is 0.005.
 
     Returns:
-    numpy.ndarray: Simulated radiance image with added plume effects and Gaussian noise.
+    numpy.ndarray: the 2D whole plume concentration image
+    numpy.ndarray: Simulated 3D radiance image with added plume effects and Gaussian noise.
 
     The function performs the following steps:
     1. Loads the simulated radiance spectrum from the specified path.
@@ -207,6 +208,7 @@ def simulate_satellite_images_with_plume(
 
     # 将噪声添加到辐射数据上
     noisy_radiance_cube = radiance_cube + noise
+
     return simulated_image, noisy_radiance_cube
 
 

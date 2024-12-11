@@ -3,7 +3,6 @@ import seaborn as sns
 import numpy as np
 
 import time
-import os
 
 from utils import generate_radiance_lut_and_uas as glut
 from utils import simulate_images as si
@@ -230,7 +229,7 @@ def generate_uas_transmittance_list(satelitetype, sza, altitude):
     return uas_list, transmittance_list
 
 
-def ml_matched_filter_simulation_test():
+def ml_matched_filter_simulated_image_test():
     plume = np.load(
         r"/home/emeric/Documents/GitHub/MF/data/simulated_plumes/gaussianplume_1000_2_stability_D.npy"
     )
@@ -435,7 +434,7 @@ def ml_matched_filter_real_image_test():
 
 
 def main():
-    ml_matched_filter_simulation_test()
+    ml_matched_filter_simulated_image_test()
     # ml_matched_filter_real_image_test()
 
 
