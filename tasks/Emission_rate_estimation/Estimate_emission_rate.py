@@ -347,6 +347,7 @@ wind_shp_path = r"/media/emeric/Documents/ERA5_shp/0.25_ERA5_wind_20230418.shp"
 windspeed, windspeed_std = wind_speed_from_raster(plume_filepath, wind_shp_path)
 print(plume_filepath + "   Wind speed: " + str(windspeed) + " m/s")
 print(plume_filepath + "   Wind speed std: " + str(windspeed_std) + " m/s")
+
 # 基于 IME算法进行排放量估算
 print(np.nansum(plume_data))
 
