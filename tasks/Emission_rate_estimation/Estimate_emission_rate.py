@@ -181,10 +181,6 @@ def compute_effective_length_using_sqrt(date):
     return effective_length
 
 
-from sklearn.decomposition import PCA
-import cv2
-
-
 def compute_effective_length_from_pixel_count(data, pixel_resolution):
     """
     计算所有有效值像素个数的平方根，作为有效烟羽的长度，考虑空间分辨率
@@ -343,9 +339,11 @@ plume_filepath = "G:\EMIT_plume_result_1sigma\EMIT_L1B_RAD_001_20230327T073331_2
 #     # 读取 烟羽的浓度数据
 #     plume_filepath = os.path.join(plume_folder, plume_name)
 
+plume_filepath = r"/media/emeric/Glass/EMITL2BCH4PLM_001-20241108_114914/shanxi/EMIT_L2B_CH4PLM_001_20230418T060625_000824.tif"
 
 plume_data = read_tif_with_nodata(plume_filepath)
-wind_shp_path = r"L:\ERA5_shp\0.25_ERA5_wind_20230327.shp"
+
+wind_shp_path = r"/media/emeric/Documents/ERA5_shp/0.25_ERA5_wind_20230418.shp"
 windspeed, windspeed_std = wind_speed_from_raster(plume_filepath, wind_shp_path)
 print(plume_filepath + "   Wind speed: " + str(windspeed) + " m/s")
 print(plume_filepath + "   Wind speed std: " + str(windspeed_std) + " m/s")
