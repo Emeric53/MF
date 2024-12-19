@@ -7,8 +7,8 @@ import geopandas as gpd
 import numpy as np
 from shapely.geometry import Point
 
-sys.path.append("C://Users//RS//VSCode//matchedfiltermethod//src")
 from methane_retrieval_algorithms import columnwise_matchedfilter
+from methane_retrieval_algorithms import matchedfilter
 from scipy.ndimage import median_filter, gaussian_filter
 from utils import satellites_data as sd
 from utils import generate_radiance_lut_and_uas as glut
@@ -64,6 +64,7 @@ def single_GF5B_run(filepath, outputfolder):
     #     print(e)
 
 
+# 单个GF5B 烟羽处理
 def single_GF5B_plume_run(filepath, outputfolder):
     filename = os.path.basename(filepath)
     basename = filename.replace("_SW.tif", "")
