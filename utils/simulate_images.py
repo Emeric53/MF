@@ -535,50 +535,50 @@ if __name__ == "__main__":
         return c
 
     # Create a figure with 1 row and 4 columns
-    fig, axes = plt.subplots(1, 4, figsize=(20, 5), constrained_layout=True)
+    fig, axes = plt.subplots(1, 3, figsize=(18, 5), constrained_layout=True)
 
     # Plot each Gaussian plume or radiance image with individual colorbars
     plot_gaussian_plume(
         axes[0],
-        "data/simulated_images/emitplume1_2.npy",
+        "data/simulated_images/emitplume1_5.npy",
         np.linspace(0, 100, 100),
         np.linspace(0, 100, 100),
         vmin=100,
-        vmax=8000,
+        vmax=25000,
         cmap="viridis",
         title="(a) EMIT Plume 1",
-        label="Concentration (ppm m)",
+        label=r"Concentration ($ppm\cdot m$)",
     )
+    # plot_gaussian_plume(
+    #     axes[1],
+    #     "data/simulated_images/emitplume2_2.npy",
+    #     np.linspace(0, 100, 100),
+    #     np.linspace(0, 100, 100),
+    #     vmin=100,
+    #     vmax=8000,
+    #     cmap="viridis",
+    #     title="(b) EMIT Plume 2",
+    #     label="Concentration (ppm m)",
+    # )
     plot_gaussian_plume(
         axes[1],
-        "data/simulated_images/emitplume2_2.npy",
+        "data/simulated_images/gaussianplume_1000_2_D.npy",
         np.linspace(0, 100, 100),
         np.linspace(0, 100, 100),
         vmin=100,
-        vmax=8000,
+        vmax=50000,
         cmap="viridis",
-        title="(b) EMIT Plume 2",
-        label="Concentration (ppm m)",
+        title="(b) Gaussian Plume",
+        label="Concentration ($ppm\cdot m$)",
     )
     plot_gaussian_plume(
         axes[2],
-        "data/simulated_images/gaussianplume_1000_10_D.npy",
-        np.linspace(0, 100, 100),
-        np.linspace(0, 100, 100),
-        vmin=100,
-        vmax=8000,
-        cmap="viridis",
-        title="(c) Gaussian Plume",
-        label="Concentration (ppm m)",
-    )
-    plot_gaussian_plume(
-        axes[3],
         "data/simulated_images/GF5B_2300nm.npy",
         np.linspace(0, 100, 100),
         np.linspace(0, 100, 100),
         cmap="Greys",
-        title="(d) Radiance at 2300 nm",
-        label="Radiance (uW/m^2/sr/nm)",
+        title="(c) Radiance at 2300 nm",
+        label=r"Radiance ($\mu W/m^2\cdot sr\cdot nm$)",
     )
 
     plt.savefig("gaussian_plume_combined.png", dpi=500)
