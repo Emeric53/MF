@@ -7,26 +7,26 @@ This code is used to calculate the cross section flux of the plume.
 by computing the flux through one or more plume cross sections orthogonal to the plume axis.
 """
 
-# sourcerate = the intergral of the product of the plume concentration and the wind speed over the plume cross section
-# Set the path of the plume
-plume_filepath = r"C:\\Users\\RS\\Desktop\\EMIT\\MethanePlume\\EMIT_L2B_CH4PLM_001_20230204T041009_000618_tiff.tif"
+# # sourcerate = the intergral of the product of the plume concentration and the wind speed over the plume cross section
+# # Set the path of the plume
+# plume_filepath = r"C:\\Users\\RS\\Desktop\\EMIT\\MethanePlume\\EMIT_L2B_CH4PLM_001_20230204T041009_000618_tiff.tif"
 
-# Read the plume data and remove the invalid values
-plume_data = gdal.Open(plume_filepath, gdal.GA_ReadOnly)
-plume_data = plume_data.ReadAsArray()
+# # Read the plume data and remove the invalid values
+# plume_data = gdal.Open(plume_filepath, gdal.GA_ReadOnly)
+# plume_data = plume_data.ReadAsArray()
 
-# Set the pixel resolution, unit: m
-pixel_resolution = 30
+# # Set the pixel resolution, unit: m
+# pixel_resolution = 30
 
-# 当前像元的行列号
-original_row = 100
-original_col = 100
+# # 当前像元的行列号
+# original_row = 100
+# original_col = 100
 
-# 指定风向的角度，例如45度
-wind_direction_degrees = 45
+# # 指定风向的角度，例如45度
+# wind_direction_degrees = 45
 
-# 移动步长
-step_size = 1  # 假设每次移动一个像元的距离
+# # 移动步长
+# step_size = 1  # 假设每次移动一个像元的距离
 
 
 # 基于风向和步长计算目标像元的行列号
@@ -74,14 +74,14 @@ def move(current_row, current_col, wind_direction_degrees, step_size):
     return new_row, new_col
 
 
-# 预定义当前像元的行列号
-current_row = original_row
-current_col = original_col
+# # 预定义当前像元的行列号
+# current_row = original_row
+# current_col = original_col
 
-# 设置遍历的条件
-while 0 < current_row < 200 and 0 < current_col < 200:
-    current_row, current_col = move(
-        original_row, original_col, wind_direction_degrees, step_size
-    )
-    print(current_row, current_col)
-    step_size += 1
+# # 设置遍历的条件
+# while 0 < current_row < 200 and 0 < current_col < 200:
+#     current_row, current_col = move(
+#         original_row, original_col, wind_direction_degrees, step_size
+#     )
+#     print(current_row, current_col)
+#     step_size += 1

@@ -1,0 +1,245 @@
+import pathlib as pl
+import os
+import sys
+import re
+import shutil
+# import algorithms.columnwise_matchedfilter
+# import algorithms.matchedfilter
+
+sys.path.append("C://Users//RS//VSCode//matchedfiltermethod//src")
+from methane_retrieval_algorithms import matched_filter_variants as mfs
+from methane_retrieval_algorithms import matched_filter_all as mfa
+
+# import algorithms
+from utils import satellites_data as sd
+from utils import generate_radiance_lut_and_uas as glut
+
+
+# mf_type 以数字代表使用的匹配滤波算法 类型
+# 0：columnwise + 迭代 + 反射率校正因子 的匹配滤波算法
+# 1: 多层匹配滤波算法
+# 2: kalman 滤波器 匹配滤波算法
+
+# 部分参数设置
+low_wavelength = 2150
+high_wavelength = 2500
+
+
+# 单个GF5B文件处理
+def run_for_GF5B(filepath, outputfolder, mf_type):
+    filename = os.path.basename(filepath)
+    outputfile = os.path.join(outputfolder, filename)
+    if os.path.exists(outputfile):
+        os.remove(outputfile)
+        # return
+    # 基于 波段范围 读取辐射定标后的radiance的cube
+    _, AHSI_radiance = sd.GF5B_data.get_calibrated_radiance(
+        filepath, low_wavelength, high_wavelength
+    )
+    # 读取 sza，地表高程的参数
+    sza, altitude = sd.GF5B_data.get_sza_altitude(filepath)
+    # 生成初始单位吸收谱 用于计算
+    _, uas = glut.generate_satellite_uas_for_specific_range_from_lut(
+        "AHSI", 0, 50000, low_wavelength, high_wavelength, sza, altitude
+    )
+    print(uas.shape)
+    try:
+        enhancement = process_radiance_by_mf(AHSI_radiance, uas, mf_type)
+        output_rpb = outputfile.replace(".tif", ".rpb")
+        if not os.path.exists(output_rpb):
+            original_rpb = filepath.replace(".tif", ".rpb")
+            shutil.copy(original_rpb, output_rpb)
+            print("copy rpb file")
+        sd.GF5B_data.export_ahsi_array_to_tiff(
+            enhancement, filepath, outputfolder, output_filename=None, orthorectify=True
+        )
+    except Exception as e:
+        print("Error in processing: ", filepath)
+        print(e)
+
+
+# 单个AHSI文件处理
+def run_for_ZY1(filepath, outputfolder, mf_type):
+    filename = os.path.basename(filepath)
+    outputfile = os.path.join(outputfolder, filename)
+    if os.path.exists(outputfile):
+        return
+    # 基于 波段范围 读取辐射定标后的radiance的cube
+    _, AHSI_radiance = sd.GF5B_data.get_calibrated_radiance(
+        filepath, low_wavelength, high_wavelength
+    )
+    # 读取 sza，地表高程的参数
+    sza, altitude = sd.GF5B_data.get_sza_altitude(filepath)
+    # 生成初始单位吸收谱 用于计算
+    uas = glut.generate_satellite_uas_for_specific_range_from_lut(
+        "AHSI", 0, 50000, low_wavelength, high_wavelength, sza, altitude
+    )
+    process_radiance_by_mf(AHSI_radiance, uas, mf_type)
+
+
+# 单个EMIT文件处理
+def run_for_EMIT(filepath, outputfolder, mf_type):
+    filename = os.path.basename(filepath)
+    outputfile = os.path.join(outputfolder, filename)
+    if os.path.exists(outputfile):
+        return
+    emit_bands, EMIT_radiance = sd.EMIT_data.get_emit_bands_array(filepath, 2100, 2500)
+    uas_path = r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\EMIT_unit_absorption_spectrum.txt"
+    interval_uas_path = r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\AHSI_unit_absorption_spectrum.txt"
+    process_radiance_by_mf(EMIT_radiance, uas_path, interval_uas_path, mf_type)
+
+
+# 单个EnMAP文件处理
+def run_for_EnMAP(filepath, outputfolder, mf_type):
+    filename = os.path.basename(filepath)
+    outputfile = os.path.join(outputfolder, filename)
+    if os.path.exists(outputfile):
+        return
+    EnMAP_bands, EnMAP_radiance = sd.EnMAP_data.get_enmap_bands_array(
+        filepath, 2100, 2500
+    )
+    uas_path = r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\EnMAP_unit_absorption_spectrum.txt"
+    process_radiance_by_mf(EnMAP_radiance, uas_path, mf_type)
+
+
+# 单个PRISMA文件处理
+def run_for_PRISMA(filepath, outputfolder, mf_type):
+    filename = os.path.basename(filepath)
+    outputfile = os.path.join(outputfolder, filename)
+    if os.path.exists(outputfile):
+        return
+    EnMAP_bands, radiance = sd.PRISMA_data.get_prisma_bands_array(filepath, 2100, 2500)
+    uas_path = r"C:\\Users\\RS\\VSCode\\matchedfiltermethod\\MyData\\PRISMA_unit_absorption_spectrum.txt"
+
+    enhancement_result = process_radiance_by_mf(
+        radiance, uas_path, filepath, outputfolder, mf_type
+    )
+    return enhancement_result
+
+
+# 获取文件夹中的所有子文件夹
+def get_subdirectories(folder_path: str):
+    """
+    获取指定文件夹中所有子文件夹的路径列表。
+    :param  folder_path: 父文件夹的路径。
+    :return: 子文件夹路径列表, 子文件夹名称列表
+    """
+    dir_paths = [
+        os.path.join(folder_path, name)
+        for name in os.listdir(folder_path)
+        if os.path.isdir(os.path.join(folder_path, name))
+    ]
+    dir_names = [
+        name
+        for name in os.listdir(folder_path)
+        if os.path.isdir(os.path.join(folder_path, name))
+    ]
+    return dir_paths, dir_names
+
+
+# 批量运行
+def run_in_batch(satellite_name: str):
+    if satellite_name == "GF5B":
+        outputfolder = "J:\\AHSI_result"
+        # outputfolder = "J;\\shanxi_result"
+        filefolder_list = [
+            # "I:\\AHSI_part2",
+            "K:\\AHSI_part1",
+            "M:\\AHSI_part3",
+            "J:\\AHSI_part4",
+        ]
+        process_files(filefolder_list, outputfolder, "AHSI")
+
+    elif satellite_name == "EMIT":
+        radiance_folder = "I:\\EMIT\\rad"
+        result_folder = "I:\\EMIT\\methane_result\\Direct_result"
+        process_files([radiance_folder], result_folder, "EMIT")
+    else:
+        print("Invalid satellite name, please select from 'AHSI' or 'EMIT'.")
+
+
+# public 处理函数
+def process_files(filefolder_list, outputfolder, satellite_name):
+    if satellite_name == "AHSI":
+        for filefolder in filefolder_list:
+            print("Current folder: ", filefolder)
+            filelist, namelist = get_subdirectories(filefolder)
+            for index in range(len(filelist)):
+                filepath = os.path.join(filelist[index], namelist[index] + "_SW.tif")
+                if os.path.exists(filepath) is False:
+                    continue
+                print("Current file: ", filepath)
+                if (
+                    is_within_province(
+                        filepath,
+                        shanxi_longitude_min,
+                        shanxi_longitude_max,
+                        shanxi_latitude_min,
+                        shanxi_latitude_max,
+                    )
+                    is False
+                ):
+                    continue
+                try:
+                    run_for_GF5B(filepath, outputfolder, mf_type=0)
+                except Exception as e:
+                    print("Error in processing: ", filepath)
+                    print(e)
+
+    elif satellite_name == "EMIT":
+        radiance_path_list = pl.Path(filefolder_list[0]).glob("*.nc")
+        outputfile_list = [str(f.name) for f in pl.Path(outputfolder).glob("*.nc")]
+        for radiance_path in radiance_path_list:
+            current_filename = radiance_path.name
+            if current_filename in outputfile_list:
+                continue
+            run_for_EMIT(radiance_path, outputfolder, mf_type=0)
+
+
+# 山西省的经纬度范围
+shanxi_longitude_min = 111.0  # 最小经度
+shanxi_longitude_max = 114.5  # 最大经度
+shanxi_latitude_min = 34.5  # 最小纬度
+shanxi_latitude_max = 40.8  # 最大纬度
+
+
+def is_within_province(data_name, lon_min, lon_max, lat_min, lat_max):
+    match = re.search(r"E([+-]?\d+\.\d+).*N([+-]?\d+\.\d+)", data_name)
+    if match:
+        longitude = float(match.group(1))
+        latitude = float(match.group(2))
+        # 判断经纬度是否在指定省份范围内
+        if lon_min <= longitude <= lon_max and lat_min <= latitude <= lat_max:
+            return True
+    return False
+
+
+# 通用的radiance处理函数
+def process_radiance_by_mf(radiance_cube, uas, mf_type):
+    if mf_type == 0:
+        try:
+            enhancement = mfa.columnwise_matched_filter(radiance_cube, uas, True, True)
+            # enhancement = algorithms.columnwise_matchedfilter.columnwise_matched_filter(
+            #     radiance_cube, uas, True, True
+            # )
+        except Exception as e:
+            print("Error in methane retrieval")
+            print(e)
+    elif mf_type == 1:
+        enhancement = mfs.ml_matched_filter(radiance_cube, uas, True)
+    else:
+        print("Invalid mf_type: 0 for original mf and 1 for modified mf")
+        return
+    return enhancement
+
+
+if __name__ == "__main__":
+    run_in_batch("GF5B")
+    # filepath = "J:\\AHSI_part4\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404_SW.tif"
+    # outputfile = (
+    #     "J:\shanxi_result\GF5B_AHSI_E83.9_N43.1_20230929_010957_L10000398404_SW.tif"
+    # )
+    # output_rpb = outputfile.replace(".tif", ".rpb")
+    # if not os.path.exists(output_rpb):
+    #     original_rpb = filepath.replace(".tif", ".rpb")
+    #     shutil.copy(original_rpb, output_rpb)

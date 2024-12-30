@@ -159,7 +159,8 @@ def simulate_satellite_images_with_plume(
     noise_level (float, optional): Standard deviation of the Gaussian noise relative to the signal. Default is 0.005.
 
     Returns:
-    numpy.ndarray: Simulated radiance image with added plume effects and Gaussian noise.
+    numpy.ndarray: the 2D whole plume concentration image
+    numpy.ndarray: Simulated 3D radiance image with added plume effects and Gaussian noise.
 
     The function performs the following steps:
     1. Loads the simulated radiance spectrum from the specified path.
@@ -207,6 +208,7 @@ def simulate_satellite_images_with_plume(
 
     # 将噪声添加到辐射数据上
     noisy_radiance_cube = radiance_cube + noise
+
     return simulated_image, noisy_radiance_cube
 
 
@@ -460,52 +462,125 @@ if __name__ == "__main__":
         y,
         vmin=None,
         vmax=None,
+        cmap="Greys",
         title="Gaussian Plume",
         label="Concentration (ppm m)",
     ):
         concentration = np.load(file_path)
         X, Y = np.meshgrid(x, y)
         plt.figure(figsize=(10, 8))
-        plt.contourf(
-            X, Y, concentration.T, levels=50, cmap="Greys", vmin=vmin, vmax=vmax
-        )
+        plt.contourf(X, Y, concentration.T, levels=50, cmap=cmap, vmin=vmin, vmax=vmax)
         plt.colorbar(label=label)
         plt.xlabel("pixel number")
         plt.ylabel("pixel number")
         plt.title(title)
+        plt.savefig(f"{title}.png")
         plt.show()
 
-    plot_gaussian_plume(
-        "data/simulated_images/emitplume1_2.npy",
-        np.linspace(0, 100, 100),
-        np.linspace(0, 100, 100),
-        100,
-        8000,
-        title="EMIT Plume 1",
-    )
+    # plot_gaussian_plume(
+    #     "data/simulated_images/emitplume1_2.npy",
+    #     np.linspace(0, 100, 100),
+    #     np.linspace(0, 100, 100),
+    #     100,
+    #     8000,
+    #     "viridis",
+    #     title="EMIT Plume 1",
+    # )
 
-    plot_gaussian_plume(
-        "data/simulated_images/emitplume2_2.npy",
-        np.linspace(0, 100, 100),
-        np.linspace(0, 100, 100),
-        100,
-        8000,
-        title="EMIT Plume 2",
-    )
+    # plot_gaussian_plume(
+    #     "data/simulated_images/emitplume2_2.npy",
+    #     np.linspace(0, 100, 100),
+    #     np.linspace(0, 100, 100),
+    #     100,
+    #     8000,
+    #     "viridis",
+    #     title="EMIT Plume 2",
+    # )
 
-    plot_gaussian_plume(
-        "data/simulated_images/gaussianplume_1000_10_D.npy",
-        np.linspace(0, 100, 100),
-        np.linspace(0, 100, 100),
-        100,
-        8000,
-        title="Gaussian Plume",
-    )
+    # plot_gaussian_plume(
+    #     "data/simulated_images/gaussianplume_1000_10_D.npy",
+    #     np.linspace(0, 100, 100),
+    #     np.linspace(0, 100, 100),
+    #     100,
+    #     8000,
+    #     "viridis",
+    #     title="Gaussian Plume",
+    # )
 
+    # plot_gaussian_plume(
+    #     "data/simulated_images/GF5B_2300nm.npy",
+    #     np.linspace(0, 100, 100),
+    #     np.linspace(0, 100, 100),
+    #     cmap="Greys",
+    #     title="Radiance at 2300 nm",
+    #     label="Radiance (uW/m^2/sr/nm)",
+    # )
+    import matplotlib.pyplot as plt
+    import numpy as np
+    from matplotlib.colors import Normalize
+
+    def plot_gaussian_plume(
+        ax, file_path, x, y, vmin=None, vmax=None, cmap="viridis", title="", label=""
+    ):
+        concentration = np.load(file_path)
+        X, Y = np.meshgrid(x, y)
+        c = ax.contourf(
+            X, Y, concentration.T, levels=50, cmap=cmap, vmin=vmin, vmax=vmax
+        )
+        ax.set_title(title, fontsize=10)
+        ax.set_xlabel("Pixel number")
+        ax.set_ylabel("Pixel number")
+        cb = plt.colorbar(c, ax=ax, orientation="vertical", pad=0.02, shrink=0.8)
+        cb.set_label(label)
+        return c
+
+    # Create a figure with 1 row and 4 columns
+    fig, axes = plt.subplots(1, 3, figsize=(18, 5), constrained_layout=True)
+
+    # Plot each Gaussian plume or radiance image with individual colorbars
     plot_gaussian_plume(
+        axes[0],
+        "data/simulated_images/emitplume1_5.npy",
+        np.linspace(0, 100, 100),
+        np.linspace(0, 100, 100),
+        vmin=100,
+        vmax=25000,
+        cmap="viridis",
+        title="(a) EMIT Plume 1",
+        label=r"Concentration ($ppm\cdot m$)",
+    )
+    # plot_gaussian_plume(
+    #     axes[1],
+    #     "data/simulated_images/emitplume2_2.npy",
+    #     np.linspace(0, 100, 100),
+    #     np.linspace(0, 100, 100),
+    #     vmin=100,
+    #     vmax=8000,
+    #     cmap="viridis",
+    #     title="(b) EMIT Plume 2",
+    #     label="Concentration (ppm m)",
+    # )
+    plot_gaussian_plume(
+        axes[1],
+        "data/simulated_images/gaussianplume_1000_2_D.npy",
+        np.linspace(0, 100, 100),
+        np.linspace(0, 100, 100),
+        vmin=100,
+        vmax=50000,
+        cmap="viridis",
+        title="(b) Gaussian Plume",
+        label="Concentration ($ppm\cdot m$)",
+    )
+    plot_gaussian_plume(
+        axes[2],
         "data/simulated_images/GF5B_2300nm.npy",
         np.linspace(0, 100, 100),
         np.linspace(0, 100, 100),
-        title="Radiance at 2300 nm",
-        label="Radiance (uW/m^2/sr/nm)",
+        cmap="Greys",
+        title="(c) Radiance at 2300 nm",
+        label=r"Radiance ($\mu W/m^2\cdot sr\cdot nm$)",
     )
+
+    plt.savefig("gaussian_plume_combined.png", dpi=500)
+    plt.savefig("gaussian_plume_combined.pdf")
+    plt.show()
