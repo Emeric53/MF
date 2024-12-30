@@ -1,18 +1,19 @@
 import numpy as np
 import matplotlib.pyplot as plt
+# from sklearn.linear_model import LinearRegression
 
 import os
-import sys
+# import sys
 
 
 from utils.satellites_data.general_functions import (
     get_simulated_satellite_radiance,
-    read_simulated_radiance,
 )
-from utils.satellites_data.general_functions import open_unit_absorption_spectrum
-from utils.generate_radiance_lut_and_uas import (
-    generate_satellite_uas_for_specific_range_from_lut,
-)
+
+# from utils.satellites_data.general_functions import open_unit_absorption_spectrum
+# from utils.generate_radiance_lut_and_uas import (
+#     generate_satellite_uas_for_specific_range_from_lut,
+# )
 
 
 # 基于modtran模拟结果，基于甲烷浓度增强范围，为特定卫星 生成单位吸收谱
@@ -61,6 +62,15 @@ def generate_satellite_uas(
     return bands, slopelist
 
 
+# 将单位吸收谱导出到文件
+def export_uas_to_file(
+    wavelengths: np.ndarray, slopelist: np.ndarray, output_file: str
+):
+    with open(output_file, "w") as output:
+        for index, data in enumerate(slopelist):
+            output.write(str(wavelengths[index]) + " " + str(data) + "\n")
+
+
 # # 基于modtran模拟结果生成的查找表，基于甲烷浓度的头和尾，，为特定卫星生成单位吸收谱
 # def generate_satellite_uas_for_specific_range_from_lut(
 #     satellite_name: str,
@@ -96,15 +106,6 @@ def generate_satellite_uas(
 #         slopelist.append(slope)
 
 #     return used_wavelengths, slopelist
-
-
-# 将单位吸收谱导出到文件
-def export_uas_to_file(
-    wavelengths: np.ndarray, slopelist: np.ndarray, output_file: str
-):
-    with open(output_file, "w") as output:
-        for index, data in enumerate(slopelist):
-            output.write(str(wavelengths[index]) + " " + str(data) + "\n")
 
 
 # def build_satellite_radiance_lut(enhancements: np.ndarray, satellite: str):
