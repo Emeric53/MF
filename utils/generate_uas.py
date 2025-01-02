@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-# from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression
 
 import os
 # import sys
@@ -54,9 +54,19 @@ def generate_satellite_uas(
         total_radiance.append(convoluved_radiance)
     total_radiance = np.transpose(np.log(np.array(total_radiance)))
 
-    # 拟合斜率作为单位吸收谱的结果
+    # 拟合斜率作为单位吸收谱的结果，使用np.polyfit
     for data in total_radiance:
         slope, _ = np.polyfit(enhancement_range, data, 1)
+        slopelist.append(min(slope, 0))
+
+    # 拟合斜率作为单位吸收谱的结果，使用linearregression
+
+    for data in total_radiance:
+        # 拟合数据
+        lin_reg.fit(enhancement_range.reshape(-1, 1), data)
+
+        # 获取斜率，并确保斜率不大于0
+        slope = lin_reg.coef_[0]
         slopelist.append(min(slope, 0))
 
     return bands, slopelist
