@@ -1,10 +1,15 @@
+# %%
 import numpy as np
 from scipy.interpolate import griddata
+from sklearn.linear_model import LinearRegression
+
+import sys
+
+sys.path.append("/home/emeric/Documents/GitHub/MF")
+from utils.satellites_data import general_functions as gf
 
 import time
 import os
-
-from utils.satellites_data import general_functions as gf
 
 # built a lookup table for radiance spectrum at different circumstances
 # including different methane enhancement, different sensor height,
@@ -199,6 +204,29 @@ def generate_satellite_uas_for_specific_range_from_lut(
     # 4. 使用多项式拟合计算斜率（矢量化处理）
     slopelist = np.polyfit(enhancement_range, total_radiance, deg=1)[0]
 
+    # 使得拟合结果经过第一个点 (x0, 0)，我们将 x0 作为原点
+    x0 = enhancement_range[0]
+
+    # 进行线性回归，要求拟合线通过 (x0, 0)，我们不考虑截距
+    X = enhancement_range.reshape(-1, 1) - x0  # 特征矩阵
+
+    # 创建线性回归对象，并强制截距为 0
+    model = LinearRegression(fit_intercept=False)
+
+    # 结果数组，存储每个维度的斜率
+    slopes = np.zeros(total_radiance.shape[1])  # 假设 total_radiance 有多个维度（列）
+
+    # 对每个维度进行拟合（这里的维度是 total_radiance 的列）
+    for i in range(total_radiance.shape[1]):
+        # 取出第 i 列作为目标值
+        y = total_radiance[:, i] - total_radiance[0, i]
+
+        # 进行线性回归拟合
+        model.fit(X, y)
+
+        # 获取拟合的斜率
+        slopes[i] = model.coef_[0]
+
     # slopelist = []
     # model_no_intercept = LinearRegression(fit_intercept=False)
     # enhancement_range = (enhancement_range - np.min(enhancement_range)).reshape(-1, 1)
@@ -206,7 +234,7 @@ def generate_satellite_uas_for_specific_range_from_lut(
     #     total_radiance[:, i] = -(total_radiance[:, i] - np.min(total_radiance[:, i]))
     #     model_no_intercept.fit(enhancement_range, total_radiance[:, i])
     #     slopelist.append(model_no_intercept.coef_[0])
-    return (used_wavelengths, slopelist)
+    return (used_wavelengths, slopelist, slopes)
 
 
 def generate_transmittance_for_specific_range_from_lut(
@@ -247,17 +275,16 @@ def generate_transmittance_for_specific_range_from_lut(
     return (used_wavelengths, transmission_spectrum)
 
 
+# %%
 if __name__ == "__main__":
-    pass
     # print("Start generating radiance lookup table")
     # generate_radiance_lut_for_satellite("AHSI")
     # generate_radiance_lut_for_satellite("EnMAP")
     # generate_radiance_lut_for_satellite("EMIT")
     # generate_radiance_lut_for_satellite("PRISMA")
     # generate_radiance_lut_for_satellite("ZY1")
-
     start = time.time()
-    wvls, slope, transmittance = generate_satellite_uas_for_specific_range_from_lut(
+    wvls, slope, slope2 = generate_satellite_uas_for_specific_range_from_lut(
         "AHSI", 10000, 20000, 2150, 2500, 50, 0
     )
 
@@ -267,8 +294,9 @@ if __name__ == "__main__":
 
     plt.figure()
     uas = np.array(slope)
-    plt.plot(wvls, np.exp(uas * 10000), label=" uas ")
-    plt.plot(wvls, transmittance, label="transmittance")
+    plt.plot(wvls, slope, label=" uas1 ")
+    uas = np.array(slope2)
+    plt.plot(wvls, slope2, label=" uas2 ")
 
     plt.legend()
     plt.show()
@@ -299,3 +327,5 @@ if __name__ == "__main__":
     #     sza=60,
     #     altitude=0,
     # )
+
+# %%

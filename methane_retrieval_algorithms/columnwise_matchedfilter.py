@@ -2,11 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-
 from methane_retrieval_algorithms import matchedfilter as mf
 from utils import generate_radiance_lut_and_uas as glut
 from utils import satellites_data as sd
-from utils import simulate_images as si
 
 import time
 import os
