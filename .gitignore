@@ -4,7 +4,6 @@ archive/
 temp.py
 *.png
 *.pdf
-
 # Python bytecode files
 *.pyc
 *.pyo
