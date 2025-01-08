@@ -2,8 +2,6 @@ import sys
 
 sys.path.append("C:\\Users\\RS\\VSCode\\matchedfiltermethod")
 from matplotlib import pyplot as plt
-from MyFunctions.needed_functions import get_simulated_satellite_transmittance
-
 # Description: This script demonstrates how to convolve a spectrum with a Gaussian response function.
 
 transmittance_path1 = "C:\\PcModWin5\\Usr\\Trans_1.fl7"
