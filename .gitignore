@@ -2,6 +2,8 @@
 archive/
 .DS_Store
 temp.py
+*.png
+*.pdf
 # Python bytecode files
 *.pyc
 *.pyo

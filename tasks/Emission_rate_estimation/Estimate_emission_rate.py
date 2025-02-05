@@ -6,6 +6,7 @@ import rasterio
 from shapely.geometry import Point
 
 from utils.emission_estimate import Integrated_mass_enhancement as ime
+from scipy.spatial import cKDTree
 
 # def wind_speed(plume_name: str) -> float:
 #     """
@@ -162,10 +163,6 @@ def read_tif_with_nodata(tif_path: str):
             data = np.where(data == nodata_value, np.nan, data)
 
     return data
-
-
-from scipy.spatial import cKDTree
-import numpy as np
 
 
 def compute_effective_length_using_sqrt(date):

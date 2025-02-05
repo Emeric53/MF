@@ -280,6 +280,7 @@ if __name__ == "__main__":
     # 导出rgb影像
     # row, col = (200, 200)
     # outputpath = r"/home/emeric/Documents/GitHub/MF/data/simulated_images/GF5B_rgb.tif"
+
     # filepath = image_file
     # calibration_filepath = os.path.dirname(filepath) + "//GF5B_AHSI_RadCal_VNIR.raw"
     # ahsi_array = sd.GF5B_data.get_ahsi_array(filepath.replace("_SW.tif", "_VN.tif"))

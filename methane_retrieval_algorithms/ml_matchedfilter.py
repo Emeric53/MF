@@ -5,7 +5,6 @@ import numpy as np
 import time
 
 from utils import generate_radiance_lut_and_uas as glut
-from utils import simulate_images as si
 from utils import satellites_data as sd
 
 
@@ -434,8 +433,9 @@ def ml_matched_filter_real_image_test():
 
 
 def main():
-    ml_matched_filter_simulated_image_test()
+    # ml_matched_filter_simulated_image_test()
     # ml_matched_filter_real_image_test()
+    generate_uas_transmittance_list("AHSI", 25, 0)
 
 
 if __name__ == "__main__":

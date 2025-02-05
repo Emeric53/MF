@@ -1,18 +1,19 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
 
 import os
-import sys
+# import sys
 
 
 from utils.satellites_data.general_functions import (
     get_simulated_satellite_radiance,
-    read_simulated_radiance,
 )
-from utils.satellites_data.general_functions import open_unit_absorption_spectrum
-from utils.generate_radiance_lut_and_uas import (
-    generate_satellite_uas_for_specific_range_from_lut,
-)
+
+# from utils.satellites_data.general_functions import open_unit_absorption_spectrum
+# from utils.generate_radiance_lut_and_uas import (
+#     generate_satellite_uas_for_specific_range_from_lut,
+# )
 
 
 # 基于modtran模拟结果，基于甲烷浓度增强范围，为特定卫星 生成单位吸收谱
@@ -53,12 +54,31 @@ def generate_satellite_uas(
         total_radiance.append(convoluved_radiance)
     total_radiance = np.transpose(np.log(np.array(total_radiance)))
 
-    # 拟合斜率作为单位吸收谱的结果
+    # 拟合斜率作为单位吸收谱的结果，使用np.polyfit
     for data in total_radiance:
         slope, _ = np.polyfit(enhancement_range, data, 1)
         slopelist.append(min(slope, 0))
 
+    # 拟合斜率作为单位吸收谱的结果，使用linearregression
+
+    for data in total_radiance:
+        # 拟合数据
+        lin_reg.fit(enhancement_range.reshape(-1, 1), data)
+
+        # 获取斜率，并确保斜率不大于0
+        slope = lin_reg.coef_[0]
+        slopelist.append(min(slope, 0))
+
     return bands, slopelist
+
+
+# 将单位吸收谱导出到文件
+def export_uas_to_file(
+    wavelengths: np.ndarray, slopelist: np.ndarray, output_file: str
+):
+    with open(output_file, "w") as output:
+        for index, data in enumerate(slopelist):
+            output.write(str(wavelengths[index]) + " " + str(data) + "\n")
 
 
 # # 基于modtran模拟结果生成的查找表，基于甲烷浓度的头和尾，，为特定卫星生成单位吸收谱
@@ -96,15 +116,6 @@ def generate_satellite_uas(
 #         slopelist.append(slope)
 
 #     return used_wavelengths, slopelist
-
-
-# 将单位吸收谱导出到文件
-def export_uas_to_file(
-    wavelengths: np.ndarray, slopelist: np.ndarray, output_file: str
-):
-    with open(output_file, "w") as output:
-        for index, data in enumerate(slopelist):
-            output.write(str(wavelengths[index]) + " " + str(data) + "\n")
 
 
 # def build_satellite_radiance_lut(enhancements: np.ndarray, satellite: str):
