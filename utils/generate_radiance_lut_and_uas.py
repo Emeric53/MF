@@ -1,7 +1,7 @@
 # %%
 import numpy as np
 from scipy.interpolate import griddata
-from sklearn.linear_model import LinearRegression
+# from sklearn.linear_model import LinearRegression
 
 import sys
 
@@ -160,84 +160,6 @@ def generate_series_with_multiples_of_500(
     return multiples_of_500
 
 
-# def generate_satellite_uas_for_specific_range_from_lut(
-#     satellite_name: str,
-#     start_enhancement: float,
-#     end_enhancement: float,
-#     lower_wavelength: float,
-#     upper_wavelength: float,
-#     sza: float,
-#     altitude: float,
-# ):
-#     # 1. 构建enhancement的范围
-#     if start_enhancement < 0:
-#         start_enhancement = 0
-#     if end_enhancement > 50000:
-#         end_enhancement == 50000
-#     enhancement_range = generate_series_with_multiples_of_500(
-#         start_enhancement, end_enhancement
-#     )
-
-#     # 2. 查询所有甲烷增强值的光谱（批量处理）
-#     wavelengths, radiance_list = batch_get_radiance_from_lut(
-#         satellite_name, enhancement_range, sza, altitude
-#     )
-
-#     # 3. 过滤波长范围
-#     condition = np.logical_and(
-#         wavelengths >= lower_wavelength, wavelengths <= upper_wavelength
-#     )
-#     used_wavelengths = wavelengths[condition]
-
-#     # # 假设 radiance_list 已经通过批量处理获得了光谱数据
-#     # radiance_spectrum_base = radiance_list[0, condition]  # 第一个光谱作为基底
-#     # radiance_spectrum_final = radiance_list[
-#     #     -1, condition
-#     # ]  # 最后一个光谱作为增强后的光谱
-
-#     # # 计算透射率谱
-#     # transmission_spectrum = (radiance_spectrum_final) / radiance_spectrum_base
-
-#     total_radiance = np.log(radiance_list[:, condition])
-#     total_radiance = total_radiance
-
-#     # 4. 使用多项式拟合计算斜率（矢量化处理）
-#     slopelist = np.polyfit(enhancement_range, total_radiance, deg=1)[0]
-
-#     # # 使得拟合结果经过第一个点 (x0, 0)，我们将 x0 作为原点
-#     # x0 = enhancement_range[0]
-
-#     # # 进行线性回归，要求拟合线通过 (x0, 0)，我们不考虑截距
-#     # X = enhancement_range.reshape(-1, 1) - x0  # 特征矩阵
-
-#     # # 创建线性回归对象，并强制截距为 0
-#     # model = LinearRegression(fit_intercept=False)
-
-#     # # 结果数组，存储每个维度的斜率
-#     # slopes = np.zeros(total_radiance.shape[1])  # 假设 total_radiance 有多个维度（列）
-
-#     # # 对每个维度进行拟合（这里的维度是 total_radiance 的列）
-#     # for i in range(total_radiance.shape[1]):
-#     #     # 取出第 i 列作为目标值
-#     #     y = total_radiance[:, i] - total_radiance[0, i]
-
-#     #     # 进行线性回归拟合
-#     #     model.fit(X, y)
-
-#     #     # 获取拟合的斜率
-#     #     slopes[i] = model.coef_[0]
-
-#     # slopelist = []
-#     # model_no_intercept = LinearRegression(fit_intercept=False)
-#     # enhancement_range = (enhancement_range - np.min(enhancement_range)).reshape(-1, 1)
-#     # for i in range(total_radiance.shape[1]):
-#     #     total_radiance[:, i] = -(total_radiance[:, i] - np.min(total_radiance[:, i]))
-#     #     model_no_intercept.fit(enhancement_range, total_radiance[:, i])
-#     #     slopelist.append(model_no_intercept.coef_[0])
-#     return (used_wavelengths, slopelist)
-
-
-# 优化后的生成函数
 def generate_satellite_uas_for_specific_range_from_lut(
     satellite_name: str,
     start_enhancement: float,
@@ -248,9 +170,10 @@ def generate_satellite_uas_for_specific_range_from_lut(
     altitude: float,
 ):
     # 1. 构建enhancement的范围
-    start_enhancement = max(start_enhancement, 0)
-    end_enhancement = min(end_enhancement, 50000)
-
+    if start_enhancement < 0:
+        start_enhancement = 0
+    if end_enhancement > 50000:
+        end_enhancement == 50000
     enhancement_range = generate_series_with_multiples_of_500(
         start_enhancement, end_enhancement
     )
@@ -266,25 +189,102 @@ def generate_satellite_uas_for_specific_range_from_lut(
     )
     used_wavelengths = wavelengths[condition]
 
-    # 4. 批量计算 log(radiance)
-    total_radiance = np.log(radiance_list[:, condition])  # 直接进行批量操作
+    # # 假设 radiance_list 已经通过批量处理获得了光谱数据
+    # radiance_spectrum_base = radiance_list[0, condition]  # 第一个光谱作为基底
+    # radiance_spectrum_final = radiance_list[
+    #     -1, condition
+    # ]  # 最后一个光谱作为增强后的光谱
 
-    # 5. 批量计算斜率
-    # 优化：使用线性回归批量计算斜率
-    model = LinearRegression(fit_intercept=False)
-    enhancement_range_reshaped = enhancement_range.reshape(
-        -1, 1
-    )  # 将enhancement_range重塑为列向量
+    # # 计算透射率谱
+    # transmission_spectrum = (radiance_spectrum_final) / radiance_spectrum_base
 
-    # 为每一列（每一个光谱）进行拟合
-    slopes = np.array(
-        [
-            model.fit(enhancement_range_reshaped, total_radiance[:, i]).coef_[0]
-            for i in range(total_radiance.shape[1])
-        ]
-    )
+    total_radiance = np.log(radiance_list[:, condition])
+    total_radiance = total_radiance
 
-    return used_wavelengths, slopes
+    # 4. 使用多项式拟合计算斜率（矢量化处理）
+    slopelist = np.polyfit(enhancement_range, total_radiance, deg=1)[0]
+
+    # # 使得拟合结果经过第一个点 (x0, 0)，我们将 x0 作为原点
+    # x0 = enhancement_range[0]
+
+    # # 进行线性回归，要求拟合线通过 (x0, 0)，我们不考虑截距
+    # X = enhancement_range.reshape(-1, 1) - x0  # 特征矩阵
+
+    # # 创建线性回归对象，并强制截距为 0
+    # model = LinearRegression(fit_intercept=False)
+
+    # # 结果数组，存储每个维度的斜率
+    # slopes = np.zeros(total_radiance.shape[1])  # 假设 total_radiance 有多个维度（列）
+
+    # # 对每个维度进行拟合（这里的维度是 total_radiance 的列）
+    # for i in range(total_radiance.shape[1]):
+    #     # 取出第 i 列作为目标值
+    #     y = total_radiance[:, i] - total_radiance[0, i]
+
+    #     # 进行线性回归拟合
+    #     model.fit(X, y)
+
+    #     # 获取拟合的斜率
+    #     slopes[i] = model.coef_[0]
+
+    # slopelist = []
+    # model_no_intercept = LinearRegression(fit_intercept=False)
+    # enhancement_range = (enhancement_range - np.min(enhancement_range)).reshape(-1, 1)
+    # for i in range(total_radiance.shape[1]):
+    #     total_radiance[:, i] = -(total_radiance[:, i] - np.min(total_radiance[:, i]))
+    #     model_no_intercept.fit(enhancement_range, total_radiance[:, i])
+    #     slopelist.append(model_no_intercept.coef_[0])
+    return (used_wavelengths, slopelist)
+
+
+# 优化后的生成函数
+# def generate_satellite_uas_for_specific_range_from_lut(
+#     satellite_name: str,
+#     start_enhancement: float,
+#     end_enhancement: float,
+#     lower_wavelength: float,
+#     upper_wavelength: float,
+#     sza: float,
+#     altitude: float,
+# ):
+#     # 1. 构建enhancement的范围
+#     start_enhancement = max(start_enhancement, 0)
+#     end_enhancement = min(end_enhancement, 50000)
+
+#     enhancement_range = generate_series_with_multiples_of_500(
+#         start_enhancement, end_enhancement
+#     )
+
+#     # 2. 查询所有甲烷增强值的光谱（批量处理）
+#     wavelengths, radiance_list = batch_get_radiance_from_lut(
+#         satellite_name, enhancement_range, sza, altitude
+#     )
+
+#     # 3. 过滤波长范围
+#     condition = np.logical_and(
+#         wavelengths >= lower_wavelength, wavelengths <= upper_wavelength
+#     )
+#     used_wavelengths = wavelengths[condition]
+
+#     # 4. 批量计算 log(radiance)
+#     total_radiance = np.log(radiance_list[:, condition])  # 直接进行批量操作
+
+#     # 5. 批量计算斜率
+#     # 优化：使用线性回归批量计算斜率
+#     model = LinearRegression(fit_intercept=False)
+#     enhancement_range_reshaped = enhancement_range.reshape(
+#         -1, 1
+#     )  # 将enhancement_range重塑为列向量
+
+#     # 为每一列（每一个光谱）进行拟合
+#     slopes = np.array(
+#         [
+#             model.fit(enhancement_range_reshaped, total_radiance[:, i]).coef_[0]
+#             for i in range(total_radiance.shape[1])
+#         ]
+#     )
+
+#     return used_wavelengths, slopes
 
 
 def generate_transmittance_for_specific_range_from_lut(
