@@ -1,13 +1,9 @@
-import pathlib as pl
 import os
-import sys
-import geopandas as gpd
 import re
 import shutil
 from scipy.ndimage import gaussian_filter, median_filter
 import numpy as np
 
-sys.path.append("C://Users//RS//VSCode//matchedfiltermethod//src")
 from methane_retrieval_algorithms import columnwise_matchedfilter
 
 from utils import satellites_data as sd
@@ -85,7 +81,7 @@ def EMIT_mask(enhancement):
 def batch_EMIT_run(outputfolder, province_region):
     # 结果文件夹
     # outputfolder = "J:\\shanxi_result"
-    filefolder = "J:\EMIT\L1B"
+    filefolder = "/media/emeric/Leap/EMIT_L1B_RAD_shanxi"
     # 用于存储符合条件的文件路径
     filepathlist = []
 
@@ -165,12 +161,13 @@ def find_matching_radiance(plume_folder, radiance_folder):
 # # single_GF5B_run(filepath, outputfolder)
 
 
-# shanxi_region = [111.0, 114.5, 34.5, 40.8]
+shanxi_region = [111.0, 114.5, 34.5, 40.8]
+shanxi_region = [0, 180, 0, 90]
 # shanxi_region_shapefile = gpd.read_file(r"L:\行政区划\中国国省界SHP\shanxi.shp")
-# outputfolder = r"L:\shanxi_emit"
-# if not os.path.exists(outputfolder):
-#     os.mkdir(outputfolder)
-# batch_EMIT_run(outputfolder, shanxi_region)
+outputfolder = r"/media/emeric/Documents/shanxi_emit"
+if not os.path.exists(outputfolder):
+    os.mkdir(outputfolder)
+batch_EMIT_run(outputfolder, shanxi_region)
 
 # xinjiang_region = [80.0, 95.0, 35.0, 49.0]
 # xinjiang_region_shapefile = gpd.read_file(r"L:\行政区划\中国国省界SHP\xinjiang.shp")
@@ -187,7 +184,7 @@ def find_matching_radiance(plume_folder, radiance_folder):
 # batch_EMIT_run(outputfolder, neimenggu_region)
 
 
-plume_folder = r"M:\EMITL2BCH4PLM_001-20241108_114914"  # 替换为 plume 文件夹的实际路径
-radiance_folder = r"J:\EMIT\L1B"  # 替换为 radiance 文件夹的实际路径
-outputfolder = r"G:\EMIT_plume_result_1sigma"  # 替换为输出文件夹的实际路径
-batch_Plume_EMIT_run(plume_folder, radiance_folder, outputfolder)
+# plume_folder = r"M:\EMITL2BCH4PLM_001-20241108_114914"  # 替换为 plume 文件夹的实际路径
+# radiance_folder = r"J:\EMIT\L1B"  # 替换为 radiance 文件夹的实际路径
+# outputfolder = r"G:\EMIT_plume_result_1sigma"  # 替换为输出文件夹的实际路径
+# batch_Plume_EMIT_run(plume_folder, radiance_folder, outputfolder)
