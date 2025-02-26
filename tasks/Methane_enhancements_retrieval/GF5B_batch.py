@@ -1,6 +1,4 @@
-import pathlib as pl
 import os
-import sys
 import re
 import shutil
 import geopandas as gpd
@@ -70,8 +68,7 @@ def single_GF5B_plume_run(filepath, outputfolder):
     basename = filename.replace("_SW.tif", "")
 
     # 如果输出文件夹不存在，则创建
-    if not os.path.exists(outputfolder):
-        os.makedirs(outputfolder)
+    os.makedirs(outputfolder, exist_ok=True)
 
     try:
         # 读取图像数据
@@ -281,10 +278,10 @@ filefolder_list = [
 
 shanxi_region = [111.0, 114.5, 34.5, 40.8]
 shanxi_region_shapefile = gpd.read_file(r"L:\行政区划\中国国省界SHP\shanxi.shp")
-outputfolder = r"L:\shanxi_gf5b"
+outputfolder = r"L:\\shanxi_gf5b"
 if not os.path.exists(outputfolder):
     os.mkdir(outputfolder)
-target_folder = r"G:\shanxi_gf5b_result"
+target_folder = r"G:\\shanxi_gf5b_result"
 pickup_result(outputfolder, target_folder)
 # batch_GF5B_run(filefolder_list, outputfolder, shanxi_region_shapefile)
 
