@@ -2,6 +2,7 @@
 archive/
 .DS_Store
 temp.py
+temp2.py
 *.png
 *.pdf
 # Python bytecode files
