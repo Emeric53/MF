@@ -102,7 +102,11 @@ def batch_EMIT_run(outputfolder, province_region):
             continue
         if sd.EMIT_data.is_within_region(filepath, province_region) is True:
             print(f"current file: {filepath} is in targeted province")
-            single_EMIT_run(filepath, outputfolder)
+            try:
+                single_EMIT_run(filepath, outputfolder)
+            except Exception as e:
+                print("Error in processing: ", filepath)
+                print(e)
 
 
 def batch_Plume_EMIT_run(plume_folder, radiance_folder, outputfolder):
