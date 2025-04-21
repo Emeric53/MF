@@ -9,3 +9,5 @@ temp2.py
 *.pyc
 *.pyo
 __pycache__/
+results/
+other_code/
