@@ -16,38 +16,40 @@ def single_EMIT_run(filepath, outputfolder):
     high_wavelength = 2500
     filename = os.path.basename(filepath)
     outputfile = os.path.join(outputfolder, filename.replace(".nc", "_enhanced.tif"))
-    rgbfile = os.path.join(outputfolder, filename.replace(".nc", "_RGB.tif"))
-    if not os.path.exists(rgbfile):
-        sd.EMIT_data.export_emit_rgb_array_to_tif(filepath, outputfolder)
+    # rgbfile = os.path.join(outputfolder, filename.replace(".nc", "_RGB.tif"))
+    # if not os.path.exists(rgbfile):
+    #     sd.EMIT_data.export_emit_rgb_array_to_tif(filepath, outputfolder)
     if os.path.exists(outputfile):
         return
+
+    # 读取 radiance 数组
     _, EMIT_radiance = sd.EMIT_data.get_emit_bands_array(
         filepath, low_wavelength, high_wavelength
     )
 
     # 读取 sza，地表高程的参数
     sza, altitude = sd.EMIT_data.get_sza_altitude(filepath)
+
     # 生成初始单位吸收谱 用于计算
     _, uas = glut.generate_satellite_uas_for_specific_range_from_lut(
         "EMIT", 0, 50000, low_wavelength, high_wavelength, sza, altitude
     )
-    print(sza, altitude)
+
     try:
         enhancement = columnwise_matchedfilter.columnwise_matched_filter(
             EMIT_radiance, uas, True, True
         )
-
+        # 将增强结果导出为 tif 文件
         sd.EMIT_data.export_emit_array_to_nc_tif(enhancement, filepath, outputfolder)
-
-        mask1, mask2, mask3, mask4 = EMIT_mask(enhancement)
-        mask1_file = os.path.join(outputfolder, filename.replace(".nc", "_mask1.tif"))
-        mask2_file = os.path.join(outputfolder, filename.replace(".nc", "_mask2.tif"))
-        mask3_file = os.path.join(outputfolder, filename.replace(".nc", "_mask3.tif"))
-        mask4_file = os.path.join(outputfolder, filename.replace(".nc", "_mask4.tif"))
-        sd.EMIT_data.export_emit_array_to_tif(mask1, filepath, mask1_file)
-        sd.EMIT_data.export_emit_array_to_tif(mask2, filepath, mask2_file)
-        sd.EMIT_data.export_emit_array_to_tif(mask3, filepath, mask3_file)
-        sd.EMIT_data.export_emit_array_to_tif(mask4, filepath, mask4_file)
+        # mask1, mask2, mask3, mask4 = EMIT_mask(enhancement)
+        # mask1_file = os.path.join(outputfolder, filename.replace(".nc", "_mask1.tif"))
+        # mask2_file = os.path.join(outputfolder, filename.replace(".nc", "_mask2.tif"))
+        # mask3_file = os.path.join(outputfolder, filename.replace(".nc", "_mask3.tif"))
+        # mask4_file = os.path.join(outputfolder, filename.replace(".nc", "_mask4.tif"))
+        # sd.EMIT_data.export_emit_array_to_tif(mask1, filepath, mask1_file)
+        # sd.EMIT_data.export_emit_array_to_tif(mask2, filepath, mask2_file)
+        # sd.EMIT_data.export_emit_array_to_tif(mask3, filepath, mask3_file)
+        # sd.EMIT_data.export_emit_array_to_tif(mask4, filepath, mask4_file)
     except Exception as e:
         print("Error in processing: ", filepath)
         print(e)
@@ -100,7 +102,11 @@ def batch_EMIT_run(outputfolder, province_region):
             continue
         if sd.EMIT_data.is_within_region(filepath, province_region) is True:
             print(f"current file: {filepath} is in targeted province")
-            single_EMIT_run(filepath, outputfolder)
+            try:
+                single_EMIT_run(filepath, outputfolder)
+            except Exception as e:
+                print("Error in processing: ", filepath)
+                print(e)
 
 
 def batch_Plume_EMIT_run(plume_folder, radiance_folder, outputfolder):
@@ -165,8 +171,7 @@ shanxi_region = [111.0, 114.5, 34.5, 40.8]
 shanxi_region = [0, 180, 0, 90]
 # shanxi_region_shapefile = gpd.read_file(r"L:\行政区划\中国国省界SHP\shanxi.shp")
 outputfolder = r"/media/emeric/Documents/shanxi_emit"
-if not os.path.exists(outputfolder):
-    os.mkdir(outputfolder)
+os.makedirs(outputfolder, exist_ok=True)
 batch_EMIT_run(outputfolder, shanxi_region)
 
 # xinjiang_region = [80.0, 95.0, 35.0, 49.0]
