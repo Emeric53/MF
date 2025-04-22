@@ -1,13 +1,9 @@
 # 多层匹配滤波算法
 
-![项目Logo或相关图片，如果适用，请替换此占位符]
-
-[在此简要描述项目的目标、背景和主要功能。例如：这是一个用于开发、测试和应用甲烷遥感反演算法的项目。]
+这是一个基于匹配滤波算法和高光谱卫星传感器数据进行点源尺度甲烷浓度增强反演的项目。
 
 ## 目录
 
-- [项目名称](#请填写项目名称)
-- [目录](#目录)
 - [项目概览](#项目概览)
 - [主要功能](#主要功能)
 - [环境设置](#环境设置)
@@ -18,51 +14,37 @@
 
 ## 项目概览
 
-[在此详细描述项目的目的、解决了什么问题、主要技术栈等。例如：本项目旨在实现多种甲烷浓度遥感反演算法，并提供一套统一的框架用于算法的验证和比较，以便于研究人员对比不同方法的性能。]
+该项目为了实现多种基于高光谱卫星成像仪的甲烷浓度增强反演，通过一系列数据读取和处理算法，反演算法和数据导出；核心功能在于不同的卫星传感器数据读取，结合不同的匹配滤波算法处理管道进行浓度增强反演。
 
 ## 主要功能
 
-*   [功能1，例如：实现基于最优估计理论的甲烷反演算法]
-*   [功能2，例如：支持处理 Sentinel-5P TROPOMI 卫星数据]
-*   [功能3，例如：提供反演结果的空间可视化和时序分析工具]
-*   [功能4，例如：自动化批量处理大量卫星数据]
-*   ...
+- [功能1，例如：实现基于最优估计理论的甲烷反演算法]
+- [功能2，例如：支持处理 Sentinel-5P TROPOMI 卫星数据]
+- [功能3，例如：提供反演结果的空间可视化和时序分析工具]
+- [功能4，例如：自动化批量处理大量卫星数据]
+- ...
 
 ## 环境设置
 
-本项目推荐使用 Conda 或 Mamba 管理环境。确保你的系统中已经安装了 Conda 或 Mamba。
+本项目推荐使用 Conda 管理环境。确保你的系统中已经安装了 Conda 。
 
-1.  **克隆仓库:** 如果你还没有克隆本项目，请使用以下命令：
-    ```bash
-    git clone [你的仓库URL]
-    cd [项目文件夹名称]
-    ```
-2.  **创建并激活环境:** 使用项目根目录下的 `mf_environment.yml` 文件创建并激活所需的 Conda 环境。
-    
+1. **创建并激活环境:**
+使用项目根目录下的 `mf_environment.yml` 文件创建并激活所需的 Conda 环境。
+
     ```bash
     conda env create -f mf_environment.yml
     conda activate mf_environment
     ```
-    或者使用 Mamba (通常速度更快)：
-    ```bash
-    mamba env create -f mf_environment.yml
-    mamba activate mf_environment
-    ```
-3.  **安装项目代码 (如果需要):** 如果 `methane_retrieval_algorithms` 模块需要作为本地包安装（例如通过 `setup.py` 或 `pyproject.toml`），请在激活环境后运行：
-    
-    ```bash
-    # 如果项目使用了 setuptools 或 poetry 等构建工具
-    pip install -e .
-    ```
-    这会将项目代码安装到当前环境中，方便导入。
+
+这会将项目代码安装到当前环境中，方便后续 Python 环境及第三方库能正确运行。
 
 ## 项目结构
 
 本项目的主要目录和文件说明如下：
 
 .
-├── .vscode/                  # VS Code 编辑器配置文件 (通常无需用户修改)
-├── archive/                  # 存放旧版本代码、不再使用的文件等 (如果包含重要内容，请详细说明)
+├── .vscode/                  # VS Code 编辑器配置文件
+├── archive/                  # 存放旧版本代码、不再使用的文件等
 ├── data/                     # 项目所需的输入数据存放目录
 ├── docs/                     # 项目相关的文档，可能包含更详细的技术文档、报告等
 │   └── README.md             # 此文件或其他文档
@@ -78,30 +60,33 @@
 ├── .gitignore                # Git 版本控制忽略文件列表，指定哪些文件不应提交到仓库
 └── mf_environment.yml        # Conda 环境定义文件，列出了项目所需的依赖库
 
-
 ## 数据
 
-*   **输入数据:**
-    *   请将项目运行所需的原始输入数据文件（例如卫星数据、地表高程模型、先验廓线等）存放在 `data/` 目录及其子目录中。
-    *   **数据格式:** [明确说明期望的数据文件格式，例如：NetCDF (.nc)、HDF5 (.h5)、CSV (.csv) 等。]
-    *   **数据组织:** [说明数据在 `data/` 目录下的组织方式，例如：数据按日期分文件夹存放 (`data/YYYY/MM/DD/`)，或按数据类型分文件夹存放 (`data/satellite_data/`, `data/ancillary_data/`)。]
-*   **数据获取:** [如果输入数据需要下载或通过其他方式生成，请提供获取数据的说明、链接或脚本位置。]
+- **输入数据:**
+  - 请将项目运行所需的原始输入数据文件（例如卫星数据、地表高程模型、先验廓线等）存放在 `data/` 目录及其子目录中。
+  - **数据格式:** [明确说明期望的数据文件格式，例如：NetCDF (.nc)、HDF5 (.h5)、CSV (.csv) 等。]
+  - **数据组织:** [说明数据在 `data/` 目录下的组织方式，例如：数据按日期分文件夹存放 (`data/YYYY/MM/DD/`)，或按数据类型分文件夹存放 (`data/satellite_data/`, `data/ancillary_data/`)。]
+- **数据获取:**
 
 ## 使用方法
 
 [详细说明如何运行项目的核心功能。这通常涉及运行 `tasks/` 目录下的脚本，或者说明如何在自己的脚本中导入核心库进行使用。]
 
-1.  **激活环境:** 确保你已经激活了项目的 Conda 环境：
+1. **激活环境:** 确保你已经激活了项目的 Conda 环境：
+  
     ```bash
-    conda activate mf_environment
+      conda activate mf_environment
     ```
-2.  **运行预定义任务:** 你可以直接运行 `tasks/` 目录下的脚本来执行特定的反演或分析任务。
+
+2. **运行预定义任务:** 你可以直接运行 `tasks/` 目录下的脚本来执行特定的反演或分析任务。
+
     ```bash
     # 示例：运行一个处理 Sentinel-5P 数据的任务脚本
     python tasks/run_s5p_retrieval.py --input data/path/to/your/s5p_data.nc --output results/path/for/output --param config/params.yaml
     ```
-    [提供具体、有代表性的命令示例，并简要说明每个参数的含义。]
-3.  **在自定义脚本中使用核心库:** 你可以在自己的 Python 脚本中导入 `methane_retrieval_algorithms` 或 `utils` 中的模块和函数来构建更复杂的流程或进行实验。
+
+3. **在自定义脚本中使用核心库:** 你可以在自己的 Python 脚本中导入 `methane_retrieval_algorithms` 或 `utils` 中的模块和函数来构建更复杂的流程或进行实验。
+
     ```python
     # example_custom_process.py
     import os
@@ -130,21 +115,67 @@
     
     print("Custom retrieval process completed.")
     ```
-    [提供一个简洁的代码示例，展示如何导入和调用库的关键功能。]
+
+## 甲烷反演算法
+
+本项目所编写的所有甲烷反演算法存放在 `methane_retrieval_algorithms` 目录中
+
+- `columnwise_matchedfilter.py`
+  该函数基于原始匹配滤波算法进行浓度增强反演，以影像中的列为计算单元进行计算
+- `columnwise_ml_matchedfilter.py`
+  该函数基于**多层匹配滤波算法**进行浓度增强反演，以影像中的列为计算单元进行计算
+
+  ```python
+  def columnwise_ml_matched_filter(
+      data_cube: np.ndarray, # 卫星数据 cube
+      initial_unit_absorption_spectrum: np.ndarray, # 初始单位吸收谱 numpy 数组
+      uas_list: np.ndarray, # 单位吸收谱 多维数组
+      transmittance_list: np.ndarray, # 透射率多维数组
+      iterate: bool = False, # 是否迭代运算，默认为否
+      albedoadjust: bool = False, # 是否校正 albedo，默认为否
+      sparsity: bool = False, # 是否考虑系数分布，默认为否
+      group_size: int = 5, # 行计算单元尺寸，默认以五列为一组
+      dynamic_adjust: bool = True,  # 新增动态调整标志
+      threshold: float = 5000,  # 初始浓度增强阈值
+      threshold_step: float = 5000,  # 阈值调整步长
+      max_threshold: float = 50000,  # 最大浓度增强阈值
+  ) -> np.ndarray:
+      """Calculate the methane enhancement of the image data based on the original matched filter method.
+
+      Args:
+          data_cube (np.ndarray): 3D array representing the image data cube.
+          unit_absorption_spectrum (np.ndarray): 1D array representing the unit absorption spectrum.
+          iterate (bool): Flag indicating whether to perform iterative computation.
+          albedoadjust (bool): Flag indicating whether to adjust for albedo.
+          sparsity (bool): Flag for sparsity adjustment, not used here but can be implemented.
+          group_size (int): The number of columns in each group to process together.
+
+      Returns:
+          np.ndarray: 2D array representing the concentration of methane.
+      """
+  ```
+  
+- `columnwise_kalmanfilter_matchedfilter.py`
+  该函数基于卡曼滤波匹配滤波算法进行浓度增强反演，以影像中的列为计算单元进行计算
+- `columnwise_lognormal_matchedfilter.py`
+  该函数基于对数正态分布滤波算法进行浓度增强反演，以影像中的列为计算单元进行计算
+- `matchedfilter.py`
+  该函数基于原始匹配滤波算法进行浓度增强反演，以整副影像为计算单元进行计算
+- `ml_matchedfilter.py`
+  该函数基于**多层滤波匹配滤波算法**进行浓度增强反演，以整副影像为计算单元进行计算
+- `kalmanfilter_matchedfilter.py`
+  该函数基于卡曼滤波匹配滤波算法进行浓度增强反演，以整副影像为计算单元进行计算
+- `lognormal_matchedfilter.py`
+  该函数基于对数正态匹配滤波算法进行浓度增强反演，以整副影像为计算单元进行计算
 
 ## 结果
 
-项目运行生成的输出文件将存放在 `results/` 和 `figures/` 目录中。
+项目运行生成的输出文件将存放在 `results` 和 `figures` 目录中。
 
-*   `results/`: 存放结构化的结果数据，例如：
-    *   反演得到的甲烷浓度值 (CSV, NetCDF, etc.)
-    *   算法性能评估指标 (JSON, CSV)
-    *   详细的反演报告或日志文件 (TXT)
-    *   [请具体说明这里包含的文件类型和含义]
-*   `figures/`: 存放可视化输出，例如：
-    *   反演结果的空间分布图
-    *   误差分析图
-    *   时序变化图
-    *   [请具体说明这里包含的图表类型和含义]
-
-
+- `results/`: 存放结构化的结果数据，例如：
+  - 反演得到的甲烷浓度值 (CSV, NetCDF, etc.)
+  - 算法性能评估指标 (JSON, CSV)
+  - 详细的反演报告或日志文件 (TXT)
+  - [请具体说明这里包含的文件类型和含义]
+- `figures/`: 存放可视化输出，例如：
+  - 反演结果的空间分布图
