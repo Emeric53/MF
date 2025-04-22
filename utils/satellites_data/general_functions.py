@@ -38,7 +38,7 @@ def read_tiff_in_numpy(filepath: str) -> np.ndarray:
 
 # Export a NumPy array to a TIFF file, optionally with the same geo-referencing as a reference file.
 def save_ndarray_to_tiff(
-    data_array: np.ndarray, output_path: str, reference_filepath: str = None
+    data_array:np.ndarray, output_path:str, reference_filepath: str = None
 ):
     """
     Export a NumPy array to a TIFF file, optionally with the same geo-referencing as a reference file.

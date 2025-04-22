@@ -8,8 +8,9 @@
 - [主要功能](#主要功能)
 - [环境设置](#环境设置)
 - [项目结构](#项目结构)
-- [数据](#数据)
-- [使用方法](#使用方法)
+- [内部数据](#内部数据)
+- [卫星数据预处理](#卫星数据预处理)
+- [甲烷浓度增强反演算法](#甲烷浓度增强反演算法)
 - [结果](#结果)
 
 ## 项目概览
@@ -26,23 +27,23 @@
 
 ## 环境设置
 
-本项目推荐使用 Conda 管理环境。确保你的系统中已经安装了 Conda 。
+本项目推荐使用 Conda 管理环境。确保你的系统中已经安装了 Conda ，推荐使用 miniforge3 作为 Conda 环境和包管理器。
 
-1. **创建并激活环境:**
+ **创建并激活环境:**
 使用项目根目录下的 `mf_environment.yml` 文件创建并激活所需的 Conda 环境。
 
-    ```bash
+  ```bash
     conda env create -f mf_environment.yml
     conda activate mf_environment
-    ```
+  ```
 
-这会将项目代码安装到当前环境中，方便后续 Python 环境及第三方库能正确运行。
+这样能设置一份与本人在代码编写与调试时完全一致的 Python 环境，方便后续正确运行。
 
 ## 项目结构
 
 本项目的主要目录和文件说明如下：
 
-.
+```
 ├── .vscode/                  # VS Code 编辑器配置文件
 ├── archive/                  # 存放旧版本代码、不再使用的文件等
 ├── data/                     # 项目所需的输入数据存放目录
@@ -59,114 +60,156 @@
 │   └── [工具文件]            # 例如： data_processing_utils.py, plot_helpers.py
 ├── .gitignore                # Git 版本控制忽略文件列表，指定哪些文件不应提交到仓库
 └── mf_environment.yml        # Conda 环境定义文件，列出了项目所需的依赖库
+```
 
-## 数据
+## 内部数据
 
-- **输入数据:**
-  - 请将项目运行所需的原始输入数据文件（例如卫星数据、地表高程模型、先验廓线等）存放在 `data/` 目录及其子目录中。
-  - **数据格式:** [明确说明期望的数据文件格式，例如：NetCDF (.nc)、HDF5 (.h5)、CSV (.csv) 等。]
-  - **数据组织:** [说明数据在 `data/` 目录下的组织方式，例如：数据按日期分文件夹存放 (`data/YYYY/MM/DD/`)，或按数据类型分文件夹存放 (`data/satellite_data/`, `data/ancillary_data/`)。]
-- **数据获取:**
+- **辐亮度查找表**
+`\data\looluptables\` 目录下存储了对应不同高光谱卫星传感器的辐亮度查找表，存储格式为 npz，
+- **卫星传感器光谱通道信息**
+`\data\satellite_channels\` 目录下存储了对应不同高光谱卫星传感器的短波红外通道信息，包括中心波长和 FWHM（Full Width at Half Maximum），存储格式为 npz，
 
-## 使用方法
+## 卫星数据预处理
 
-[详细说明如何运行项目的核心功能。这通常涉及运行 `tasks/` 目录下的脚本，或者说明如何在自己的脚本中导入核心库进行使用。]
+在 `\utils\satellites_data\` 目录下存放了用于对各种高光谱成像仪卫星数据进行预处理的代码文件，包含一些通用的函数以及对应不同特定传感器的专用处理函数。
 
-1. **激活环境:** 确保你已经激活了项目的 Conda 环境：
-  
-    ```bash
-      conda activate mf_environment
-    ```
-
-2. **运行预定义任务:** 你可以直接运行 `tasks/` 目录下的脚本来执行特定的反演或分析任务。
-
-    ```bash
-    # 示例：运行一个处理 Sentinel-5P 数据的任务脚本
-    python tasks/run_s5p_retrieval.py --input data/path/to/your/s5p_data.nc --output results/path/for/output --param config/params.yaml
-    ```
-
-3. **在自定义脚本中使用核心库:** 你可以在自己的 Python 脚本中导入 `methane_retrieval_algorithms` 或 `utils` 中的模块和函数来构建更复杂的流程或进行实验。
-
-    ```python
-    # example_custom_process.py
-    import os
-    from methane_retrieval_algorithms.retrieval_methods import OptimalEstimation
-    from methane_retrieval_algorithms.data_readers import S5PDataReader
-    from utils.plotting import plot_retrieval_map
-    
-    # 定义输入和输出路径
-    input_file = 'data/specific_s5p_file.nc'
-    output_dir = 'results/custom_run/'
-    os.makedirs(output_dir, exist_ok=True)
-    
-    # 读取数据
-    reader = S5PDataReader(input_file)
-    data = reader.read_data()
-    
-    # 执行反演 (假设 OptimalEstimation 需要数据作为输入)
-    retriever = OptimalEstimation()
-    retrieval_result = retriever.apply(data)
-    
-    # 保存或处理结果
-    retrieval_result.to_csv(os.path.join(output_dir, 'retrieval_output.csv'))
-    
-    # 绘制结果
-    plot_retrieval_map(retrieval_result, os.path.join(output_dir, 'retrieval_map.png'))
-    
-    print("Custom retrieval process completed.")
-    ```
-
-## 甲烷反演算法
-
-本项目所编写的所有甲烷反演算法存放在 `methane_retrieval_algorithms` 目录中
-
-- `columnwise_matchedfilter.py`
-  该函数基于原始匹配滤波算法进行浓度增强反演，以影像中的列为计算单元进行计算
-- `columnwise_ml_matchedfilter.py`
-  该函数基于**多层匹配滤波算法**进行浓度增强反演，以影像中的列为计算单元进行计算
+- `general_functions.py`
+通用函数，以下列举该文件中部分函数的作用和输入及输出参数解释。
 
   ```python
-  def columnwise_ml_matched_filter(
-      data_cube: np.ndarray, # 卫星数据 cube
-      initial_unit_absorption_spectrum: np.ndarray, # 初始单位吸收谱 numpy 数组
-      uas_list: np.ndarray, # 单位吸收谱 多维数组
-      transmittance_list: np.ndarray, # 透射率多维数组
-      iterate: bool = False, # 是否迭代运算，默认为否
-      albedoadjust: bool = False, # 是否校正 albedo，默认为否
-      sparsity: bool = False, # 是否考虑系数分布，默认为否
-      group_size: int = 5, # 行计算单元尺寸，默认以五列为一组
-      dynamic_adjust: bool = True,  # 新增动态调整标志
-      threshold: float = 5000,  # 初始浓度增强阈值
-      threshold_step: float = 5000,  # 阈值调整步长
-      max_threshold: float = 50000,  # 最大浓度增强阈值
-  ) -> np.ndarray:
-      """Calculate the methane enhancement of the image data based on the original matched filter method.
-
-      Args:
-          data_cube (np.ndarray): 3D array representing the image data cube.
-          unit_absorption_spectrum (np.ndarray): 1D array representing the unit absorption spectrum.
-          iterate (bool): Flag indicating whether to perform iterative computation.
-          albedoadjust (bool): Flag indicating whether to adjust for albedo.
-          sparsity (bool): Flag for sparsity adjustment, not used here but can be implemented.
-          group_size (int): The number of columns in each group to process together.
-
-      Returns:
-          np.ndarray: 2D array representing the concentration of methane.
+    def read_tiff_in_numpy(filepath:str) -> np.ndarray:
       """
+      读取一个 TIFF 文件，并返回所有通道的 numpy 数组。
+
+      :param filepath: TIFF 文件的路径
+      :return: 一个 3D numpy array，形状为 (bands, height, width)
+      """
+    
+    def save_ndarray_to_tiff(data_array:np.ndarray, output_path:str, reference_filepath:str = None):
+      """
+      将 numpy 数组导出为 TIFF 文件, 可选项：基于参考 TIFF 文件设置同样的地理参考。
+
+      :param data_array: 将要导出的 numpy 数组
+      :param outputpath: TIFF 文件的导出路径
+      :param reference_filepath: (Optional) 地理参考 TIFF 文件的路径
+      """
+
+    def gaussian_response_weights(center: float, fwhm: float, coaser_wavelengths: np.ndarray) -> np.ndarray:
+      """
+      基于高斯分布构建光谱响应函数的权重，用于进行光谱卷积。
+
+      :param center: 当前通道的中心波长信息
+      :param fwhm: 对应当前通道的 FWHM 信息
+      :param coaser_wavelengths: 波长的 numpy 列表
+      :return: 对应原始波长的光谱响应权重 numpy 数组
+      """
+
+    def convolute_into_higher_spectral_res(center_wavelengths: np.ndarray,fwhms: np.ndarray,raw_wvls: np.ndarray,raw_data: np.ndarray,) -> np.ndarray:
+      """
+      基于特定的中心波长和 FWHM 数组，对原始光谱数据进行光谱卷积
+      Perform convolution of raw data with Gaussian response functions for specific center wavelengths and FWHMs.
+
+      :param center_wavelengths: 中心波长 numpy 数组
+      :param fwhms: FWHMs numpy 数组
+      :param raw_wvls: 原始 raw 波长 numpy 数组
+      :param raw_data: 原始数据 numpy 数组
+      :return: 光谱卷积后的数据 numpy 数组
+      """
+    
+    def load_satellite_channels(channel_path: str, lower_wavelength: float = 1000, upper_wavelength: float = 2500) -> tuple[np.ndarray, np.ndarray]:
+      """
+      基于光谱通道信息文件的路径，加载特定波长范围内的光谱通道中心波长和 FWHMs 数组，默认范围为 1000 nm - 2500 nm。
+
+      :param path: 卫星光谱信息文件路径
+      :param lower_wavelength: 波长范围的下限，默认为 1000。
+      :param upper_wavelength: 波长范围的上限，默认为 2500。
+      :return: Tuple of central wavelengths and FWHMs within the specified range
+      """
+
   ```
-  
-- `columnwise_kalmanfilter_matchedfilter.py`
-  该函数基于卡曼滤波匹配滤波算法进行浓度增强反演，以影像中的列为计算单元进行计算
-- `columnwise_lognormal_matchedfilter.py`
-  该函数基于对数正态分布滤波算法进行浓度增强反演，以影像中的列为计算单元进行计算
-- `matchedfilter.py`
-  该函数基于原始匹配滤波算法进行浓度增强反演，以整副影像为计算单元进行计算
-- `ml_matchedfilter.py`
-  该函数基于**多层滤波匹配滤波算法**进行浓度增强反演，以整副影像为计算单元进行计算
-- `kalmanfilter_matchedfilter.py`
-  该函数基于卡曼滤波匹配滤波算法进行浓度增强反演，以整副影像为计算单元进行计算
-- `lognormal_matchedfilter.py`
-  该函数基于对数正态匹配滤波算法进行浓度增强反演，以整副影像为计算单元进行计算
+
+## 甲烷浓度增强反演算法
+
+本项目所编写的所有甲烷反演算法存放在 `methane_retrieval_algorithms` 目录中，其中**原始匹配滤波算法**和**多层匹配滤波算法**编写和运行经过了完整验证,剩余两个匹配滤波算法变体后续看情况进行完善。
+
+- **匹配滤波算法**
+  匹配滤波算法是广泛使用的高光谱成像仪辐亮度甲烷排放反演算法。
+  - `methane_retrieval_algorithms\matchedfilter.py`
+    `methane_retrieval_algorithms\columnwise_matchedfilter.py`
+    两个文件分别对应整幅影像进行计算和将影像以列组合为计算单位进行计算
+    ```python
+        def columnwise_ml_matched_filter(
+          data_cube: np.ndarray, # 卫星数据 cube
+          initial_unit_absorption_spectrum: np.ndarray, # 初始单位吸收谱 numpy 数组
+          uas_list: np.ndarray, # 单位吸收谱 多维数组
+          transmittance_list: np.ndarray, # 透射率多维数组
+          iterate: bool = False, # 是否迭代运算，默认为否
+          albedoadjust: bool = False, # 是否校正 albedo，默认为否
+          sparsity: bool = False, # 是否考虑系数分布，默认为否
+          group_size: int = 5, # 行计算单元尺寸，默认以五列为一组
+          dynamic_adjust: bool = True,  # 新增动态调整标志
+          threshold: float = 5000,  # 初始浓度增强阈值
+          threshold_step: float = 5000,  # 阈值调整步长
+          max_threshold: float = 50000,  # 最大浓度增强阈值
+        ) -> np.ndarray:
+          """
+          基于多层匹配滤波算法和短波红外波段的卫星大气层顶辐亮度观测进行甲烷浓度增强的反演。
+
+          Args:
+              data_cube (np.ndarray): 短波红外波段卫星观测影像的 3 维数组
+              initial_unit_absorption_spectrum (np.ndarray): 用于初始计算的单位吸收谱 1 维数组，要求维度与 data_cube 的光谱维度一致
+              iterate (bool): Flag indicating whether to perform iterative computation.
+              albedoadjust (bool): Flag indicating whether to adjust for albedo.
+              sparsity (bool): Flag for sparsity adjustment, not used here but can be implemented.
+              group_size (int): The number of columns in each group to process together.
+          Returns:
+              np.ndarray: 甲烷浓度增强结果，格式为 2 维 numpy 数组。
+          """
+      ```
+- **多层匹配滤波算法**
+  多层匹配滤波算法基于多次线性拟合逼近指数衰减的思想，对传统匹配滤波算法进行改进得到更精确的反演结果。
+  - `methane_retrieval_algorithms\ml_matchedfilter.py`
+    `methane_retrieval_algorithms\columnwise_ml_matchedfilter.py`
+    两个文件分别对应整幅影像进行计算和将影像以列组合为计算单位进行计算
+      ```python
+        def columnwise_ml_matched_filter(
+          data_cube: np.ndarray, # 卫星数据 cube
+          initial_unit_absorption_spectrum: np.ndarray, # 初始单位吸收谱 numpy 数组
+          uas_list: np.ndarray, # 单位吸收谱 多维数组
+          transmittance_list: np.ndarray, # 透射率多维数组
+          iterate: bool = False, # 是否迭代运算，默认为否
+          albedoadjust: bool = False, # 是否校正 albedo，默认为否
+          sparsity: bool = False, # 是否考虑系数分布，默认为否
+          group_size: int = 5, # 行计算单元尺寸，默认以五列为一组
+          dynamic_adjust: bool = True,  # 新增动态调整标志
+          threshold: float = 5000,  # 初始浓度增强阈值
+          threshold_step: float = 5000,  # 阈值调整步长
+          max_threshold: float = 50000,  # 最大浓度增强阈值
+        ) -> np.ndarray:
+          """
+          基于多层匹配滤波算法和短波红外波段的卫星大气层顶辐亮度观测进行甲烷浓度增强的反演。
+
+          Args:
+              data_cube (np.ndarray): 短波红外波段卫星观测影像的 3 维数组
+              initial_unit_absorption_spectrum (np.ndarray): 用于初始计算的单位吸收谱 1 维数组，要求维度与 data_cube 的光谱维度一致
+              iterate (bool): Flag indicating whether to perform iterative computation.
+              albedoadjust (bool): Flag indicating whether to adjust for albedo.
+              sparsity (bool): Flag for sparsity adjustment, not used here but can be implemented.
+              group_size (int): The number of columns in each group to process together.
+          Returns:
+              np.ndarray: 甲烷浓度增强结果，格式为 2 维 numpy 数组。
+          """
+      ```
+
+- kalman-filter 匹配滤波算法
+  - `methane_retrieval_algorithms\kalmanfilter_matchedfilter.py`
+  - `methane_retrieval_algorithms\columnwise_kalmanfilter_matchedfilter.py`
+
+- lognormal 匹配滤波算法
+  - `methane_retrieval_algorithms\lognormal_matchedfilter.py`
+  - `methane_retrieval_algorithms\columnwise_lognormal_matchedfilter.py`
+
+## 排放速率估算
 
 ## 结果
 
@@ -176,6 +219,5 @@
   - 反演得到的甲烷浓度值 (CSV, NetCDF, etc.)
   - 算法性能评估指标 (JSON, CSV)
   - 详细的反演报告或日志文件 (TXT)
-  - [请具体说明这里包含的文件类型和含义]
 - `figures/`: 存放可视化输出，例如：
   - 反演结果的空间分布图
