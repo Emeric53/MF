@@ -5,25 +5,20 @@
 ## 目录
 
 - [项目概览](#项目概览)
-- [主要功能](#主要功能)
 - [环境设置](#环境设置)
 - [项目结构](#项目结构)
 - [内部数据](#内部数据)
-- [卫星数据预处理](#卫星数据预处理)
-- [甲烷浓度增强反演算法](#甲烷浓度增强反演算法)
-- [结果](#结果)
+- 主要代码
+  - [卫星数据预处理](#卫星数据预处理)
+  - [甲烷浓度增强反演算法](#甲烷浓度增强反演算法)
+  - [排放速率估算](#排放速率估算)
+- 使用示例
+  - [甲烷浓度增强反演流程示例]
+  - [点源排放速率估算流程示例]
 
 ## 项目概览
 
 该项目为了实现多种基于高光谱卫星成像仪的甲烷浓度增强反演，通过一系列数据读取和处理算法，反演算法和数据导出；核心功能在于不同的卫星传感器数据读取，结合不同的匹配滤波算法处理管道进行浓度增强反演。
-
-## 主要功能
-
-- [功能1，例如：实现基于最优估计理论的甲烷反演算法]
-- [功能2，例如：支持处理 Sentinel-5P TROPOMI 卫星数据]
-- [功能3，例如：提供反演结果的空间可视化和时序分析工具]
-- [功能4，例如：自动化批量处理大量卫星数据]
-- ...
 
 ## 环境设置
 
@@ -170,7 +165,7 @@
   多层匹配滤波算法基于多次线性拟合逼近指数衰减的思想，对传统匹配滤波算法进行改进得到更精确的反演结果。
   - `methane_retrieval_algorithms\ml_matchedfilter.py`
     `methane_retrieval_algorithms\columnwise_ml_matchedfilter.py`
-    两个文件分别对应整幅影像进行计算和将影像以列组合为计算单位进行计算
+    两个文件分别对应整幅影像为计算单位和以影像中的列组合为计算单位进行计算的多层匹配滤波算法
       ```python
         def columnwise_ml_matched_filter(
           data_cube: np.ndarray, # 卫星数据 cube
@@ -201,6 +196,8 @@
           """
       ```
 
+以下是其他两项研究提出的匹配滤波算法的变体，具体函数体还未补充完整。
+
 - kalman-filter 匹配滤波算法
   - `methane_retrieval_algorithms\kalmanfilter_matchedfilter.py`
   - `methane_retrieval_algorithms\columnwise_kalmanfilter_matchedfilter.py`
@@ -210,6 +207,10 @@
   - `methane_retrieval_algorithms\columnwise_lognormal_matchedfilter.py`
 
 ## 排放速率估算
+
+在`utils\emission_estimate`目录下，存放了用于对甲烷排放烟羽 TIFF 文件进行排放速率估算的各种算法代码。本研究使用的方法主要是 Integrated Mass Enhancement 方法。
+
+- `Integrated_mass_enhancement.py`
 
 ## 结果
 
