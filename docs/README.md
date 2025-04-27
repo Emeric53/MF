@@ -132,6 +132,7 @@
   - `methane_retrieval_algorithms\matchedfilter.py`
     `methane_retrieval_algorithms\columnwise_matchedfilter.py`
     两个文件分别对应整幅影像进行计算和将影像以列组合为计算单位进行计算
+
     ```python
         def columnwise_ml_matched_filter(
           data_cube: np.ndarray, # 卫星数据 cube
@@ -161,11 +162,17 @@
               np.ndarray: 甲烷浓度增强结果，格式为 2 维 numpy 数组。
           """
       ```
+
 - **多层匹配滤波算法**
   多层匹配滤波算法基于多次线性拟合逼近指数衰减的思想，对传统匹配滤波算法进行改进得到更精确的反演结果。
   - `methane_retrieval_algorithms\ml_matchedfilter.py`
     `methane_retrieval_algorithms\columnwise_ml_matchedfilter.py`
+<<<<<<< Updated upstream
     两个文件分别对应整幅影像为计算单位和以影像中的列组合为计算单位进行计算的多层匹配滤波算法
+=======
+    两个文件分别对应整幅影像进行计算和将影像以列组合为计算单位进行计算
+
+>>>>>>> Stashed changes
       ```python
         def columnwise_ml_matched_filter(
           data_cube: np.ndarray, # 卫星数据 cube
