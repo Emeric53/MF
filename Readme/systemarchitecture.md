@@ -1,10 +1,10 @@
 # 系统架构{#system}
 
-本文详细概述了甲烷提取 (MF) 系统的架构，描述了核心组件、它们之间的交互以及数据流。该架构旨在利用各种匹配滤波算法高效处理高光谱卫星数据，以提取甲烷浓度。
+本文档介绍了甲烷提取 (MF) 系统的架构，描述了核心组件、它们之间的交互以及数据流。该架构旨在利用各种匹配滤波算法高效处理高光谱卫星数据，以提取甲烷浓度。
 
 ## 系统概述
 
-MF 系统旨在利用匹配滤波算法从卫星图像中检测和量化甲烷排放。它支持多种卫星平台，并包含用于数据预处理、甲烷浓度提取和排放速率估算的组件。
+匹配滤波算法旨在从卫星图像中检测和量化甲烷排放。它支持多种卫星平台，并包含用于数据预处理、甲烷浓度提取和排放速率估算的组件。
 
 ## 核心算法架构
 
@@ -12,10 +12,14 @@ MF 系统旨在利用匹配滤波算法从卫星图像中检测和量化甲烷�
 
 核心匹配滤波算法有几种变体：
 
-1. **标准匹配滤波 (Standard Matched Filter)**：通过与背景光谱比较来检测甲烷的基本实现。
-2. **列式匹配滤波 (Columnwise Matched Filter)**：按列组处理图像数据，以更好地管理内存。
-3. **多层匹配滤波 (Multi-Layer Matched Filter)**：对不同甲烷浓度范围使用多个单位吸收光谱。
-4. **列式多层匹配滤波 (Columnwise Multi-Layer Matched Filter)**：结合了列式处理和多层方法。
+1. **标准匹配滤波 (Standard Matched Filter)**
+通过与背景光谱比较来检测甲烷的基本实现。
+2. **列式匹配滤波 (Columnwise Matched Filter)**
+按列组处理图像数据，以更好地管理内存。
+3. **多层匹配滤波 (Multi-Layer Matched Filter)**
+对不同甲烷浓度范围使用多个单位吸收光谱。
+4. **列式多层匹配滤波 (Columnwise Multi-Layer Matched Filter)**
+结合了列式处理和多层方法。
 
 ## 数据流架构
 
@@ -27,11 +31,16 @@ MF 系统旨在利用匹配滤波算法从卫星图像中检测和量化甲烷�
 
 系统通过以下方式处理卫星数据：
 
-1. **数据读取器 (Data Readers)**：特定于平台用于读取和解释原始卫星数据的模块。
-2. **元数据提取 (Metadata Extraction)**：提取太阳天顶角 (SZA) 和地面高度等关键参数。
-3. **波段选择 (Band Selection)**：过滤到相关的短波红外 (SWIR) 波段（通常为 2150-2500 nm）。
-4. **辐射定标 (Radiometric Calibration)**：将原始值转换为定标后的辐射度。
-5. **UAS 生成 (UAS Generation)**：为特定条件创建单位吸收光谱。
+1. **数据读取器 (Data Readers)**
+特定于平台用于读取和解释原始卫星数据的模块。
+2. **元数据提取 (Metadata Extraction)**
+提取太阳天顶角 (SZA) 和地面高度等关键参数。
+3. **波段选择 (Band Selection)**
+过滤到相关的短波红外 (SWIR) 波段（通常为 2150-2500 nm）。
+4. **辐射定标 (Radiometric Calibration)**
+将原始值转换为定标后的辐射度。
+5. **UAS 生成 (UAS Generation)**
+为特定条件创建单位吸收光谱。
 
 ## 单位吸收光谱生成
 
@@ -39,10 +48,14 @@ MF 系统旨在利用匹配滤波算法从卫星图像中检测和量化甲烷�
 
 UAS 生成过程中的关键函数包括：
 
-1. **LUT 加载 (LUT Loading)**：加载预计算的特定卫星的辐射查找表。
-2. **插值 (Interpolation)**：对特定参数在 LUT 值之间进行插值。
-3. **UAS 计算 (UAS Calculation)**：计算不同浓度范围的单位吸收光谱。
-4. **透射率计算 (Transmittance Calculation)**：计算在多层方法中使用的透射光谱。
+1. **LUT 加载 (LUT Loading)**
+加载预计算的特定卫星的辐射查找表。
+2. **插值 (Interpolation)**
+对特定参数在 LUT 值之间进行插值。
+3. **UAS 计算 (UAS Calculation)**
+计算不同浓度范围的单位吸收光谱。
+4. **透射率计算 (Transmittance Calculation)**
+计算在多层方法中使用的透射光谱。
 
 ## 图像模拟与测试
 
@@ -50,10 +63,14 @@ UAS 生成过程中的关键函数包括：
 
 图像模拟过程包括：
 
-1. **羽流生成 (Plume Generation)**：使用高斯模型或真实模板创建甲烷羽流浓度图。
-2. **基础辐射模拟 (Base Radiance Simulation)**：从查找表生成背景辐射光谱。
-3. **羽流效应添加 (Plume Effect Addition)**：根据甲烷浓度应用透射率效应。
-4. **噪声添加 (Noise Addition)**：添加逼真的传感器噪声。
+1. **羽流生成 (Plume Generation)**
+使用高斯模型或真实模板创建甲烷羽流浓度图。
+2. **基础辐射模拟 (Base Radiance Simulation)**
+从查找表生成背景辐射光谱。
+3. **羽流效应添加 (Plume Effect Addition)**
+根据甲烷浓度应用透射率效应。
+4. **噪声添加 (Noise Addition)**
+添加逼真的传感器噪声。
 
 ## 排放速率估算
 
@@ -61,10 +78,14 @@ UAS 生成过程中的关键函数包括：
 
 排放速率估算过程包括：
 
-1. **羽流分割 (Plume Segmentation)**：将羽流从背景噪声中分离出来。
-2. **质量计算 (Mass Calculation)**：将浓度转换为甲烷总质量。
-3. **风速调整 (Wind Speed Adjustment)**：结合风速计算排放速率。
-4. **不确定性估算 (Uncertainty Estimation)**：计算排放估算的置信区间。
+1. **羽流分割 (Plume Segmentation)**
+将羽流从背景噪声中分离出来。
+2. **质量计算 (Mass Calculation)**
+将浓度转换为甲烷总质量。
+3. **风速调整 (Wind Speed Adjustment)**
+结合风速计算排放速率。
+4. **不确定性估算 (Uncertainty Estimation)**
+计算排放估算的置信区间。
 
 ## 批处理
 
@@ -72,10 +93,14 @@ UAS 生成过程中的关键函数包括：
 
 批处理系统提供：
 
-1. **文件管理 (File Management)**：用于过滤和选择合适文件的工具。
-2. **ROI 处理 (ROI Processing)**：专注于特定感兴趣区域。
-3. **结果管理 (Result Management)**：对结果进行有组织的存储和比较。
-4. **操作自动化 (Operational Automation)**：用于执行常规处理任务的脚本。
+1. **文件管理 (File Management)**
+用于过滤和选择合适文件的工具。
+2. **ROI 处理 (ROI Processing)**
+专注于特定感兴趣区域。
+3. **结果管理 (Result Management)**
+对结果进行有组织的存储和比较。
+4. **操作自动化 (Operational Automation)**
+用于执行常规处理任务的脚本。
 
 ## 技术栈和依赖
 

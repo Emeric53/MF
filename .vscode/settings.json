@@ -1,12 +1,13 @@
 {
-    "editor.fontSize": 24,
-    "editor.fontFamily": "'JetBrains Mono', 'Microsoft YaHei'",
+    "editor.fontSize": 16,
+    "editor.fontFamily": "'JetBrains Maple Mono'",
     "python.terminal.executeInFileDir": false,
     "python.envFile": "${workspaceFolder}/.env",
     "editor.smoothScrolling": true,
     "editor.cursorBlinking": "expand",
     "editor.cursorSmoothCaretAnimation": "on",
     "workbench.list.smoothScrolling": true,
+    "workbench.editor.restoreViewState": true,
     "terminal.integrated.env.linux": {
         "PYTHONPATH": "${workspaceFolder}"
     },

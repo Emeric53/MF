@@ -1,13 +1,13 @@
 import os
 import re
 import shutil
-from scipy.ndimage import gaussian_filter, median_filter
-import numpy as np
 
-from methane_retrieval_algorithms import columnwise_matchedfilter
+import numpy as np
+from scipy.ndimage import gaussian_filter, median_filter
 
 from utils import satellites_data as sd
 from utils import generate_radiance_lut_and_uas as glut
+from methane_retrieval_algorithms import columnwise_matchedfilter
 
 
 # 单个GF5B文件处理
@@ -82,13 +82,12 @@ def EMIT_mask(enhancement):
 
 def batch_EMIT_run(outputfolder, province_region):
     # 结果文件夹
-    # outputfolder = "J:\\shanxi_result"
     filefolder = "/media/emeric/Leap/EMIT_L1B_RAD_shanxi"
     # 用于存储符合条件的文件路径
     filepathlist = []
 
     # 遍历文件夹
-    for root, dirs, files in os.walk(filefolder):
+    for root, _, files in os.walk(filefolder):
         for file in files:
             # 检查文件是否是 .nc 后缀并且文件名中包含 _RAD_
             if file.endswith(".nc") and "_RAD_" in file:
@@ -159,37 +158,36 @@ def find_matching_radiance(plume_folder, radiance_folder):
     return file_mapping
 
 
-# # test single file
-# filepath = r"C:\\Users\\RS\\Desktop\\Lifei_essay_data\\GF5B_AHSI_W104.3_N32.3_20220209_002267_L10000074985\\GF5B_AHSI_W104.3_N32.3_20220209_002267_L10000074985_SW.tif"
-# outputfolder = r"C:\\Users\RS\\Desktop\\hi"
-# if not os.path.exists(outputfolder):
-#     os.mkdir(outputfolder)
-# # single_GF5B_run(filepath, outputfolder)
+if __name__ == "__main__":
+    # # test single file
+    # filepath = r"C:\\Users\\RS\\Desktop\\Lifei_essay_data\\GF5B_AHSI_W104.3_N32.3_20220209_002267_L10000074985\\GF5B_AHSI_W104.3_N32.3_20220209_002267_L10000074985_SW.tif"
+    # outputfolder = r"C:\\Users\RS\\Desktop\\hi"
+    # if not os.path.exists(outputfolder):
+    #     os.mkdir(outputfolder)
+    # # single_GF5B_run(filepath, outputfolder)
 
+    shanxi_region = [111.0, 114.5, 34.5, 40.8]
+    shanxi_region = [0, 180, 0, 90]
+    # shanxi_region_shapefile = gpd.read_file(r"L:\行政区划\中国国省界SHP\shanxi.shp")
+    outputfolder = r"/media/emeric/Documents/shanxi_emit"
+    os.makedirs(outputfolder, exist_ok=True)
+    batch_EMIT_run(outputfolder, shanxi_region)
 
-shanxi_region = [111.0, 114.5, 34.5, 40.8]
-shanxi_region = [0, 180, 0, 90]
-# shanxi_region_shapefile = gpd.read_file(r"L:\行政区划\中国国省界SHP\shanxi.shp")
-outputfolder = r"/media/emeric/Documents/shanxi_emit"
-os.makedirs(outputfolder, exist_ok=True)
-batch_EMIT_run(outputfolder, shanxi_region)
+    # xinjiang_region = [80.0, 95.0, 35.0, 49.0]
+    # xinjiang_region_shapefile = gpd.read_file(r"L:\行政区划\中国国省界SHP\xinjiang.shp")
+    # outputfolder = r"L:\xinjiang_emit"
+    # if not os.path.exists(outputfolder):
+    #     os.mkdir(outputfolder)
+    # batch_EMIT_run(outputfolder, xinjiang_region)
 
-# xinjiang_region = [80.0, 95.0, 35.0, 49.0]
-# xinjiang_region_shapefile = gpd.read_file(r"L:\行政区划\中国国省界SHP\xinjiang.shp")
-# outputfolder = r"L:\xinjiang_emit"
-# if not os.path.exists(outputfolder):
-#     os.mkdir(outputfolder)
-# batch_EMIT_run(outputfolder, xinjiang_region)
+    # neimenggu_region = [97.0, 126.0, 37.0, 53.0]
+    # neimenggu_region_shapefile = gpd.read_file(r"L:\行政区划\中国国省界SHP\neimenggu.shp")
+    # outputfolder = r"L:\neimenggu_emit"
+    # if not os.path.exists(outputfolder):
+    #     os.mkdir(outputfolder)
+    # batch_EMIT_run(outputfolder, neimenggu_region)
 
-# neimenggu_region = [97.0, 126.0, 37.0, 53.0]
-# neimenggu_region_shapefile = gpd.read_file(r"L:\行政区划\中国国省界SHP\neimenggu.shp")
-# outputfolder = r"L:\neimenggu_emit"
-# if not os.path.exists(outputfolder):
-#     os.mkdir(outputfolder)
-# batch_EMIT_run(outputfolder, neimenggu_region)
-
-
-# plume_folder = r"M:\EMITL2BCH4PLM_001-20241108_114914"  # 替换为 plume 文件夹的实际路径
-# radiance_folder = r"J:\EMIT\L1B"  # 替换为 radiance 文件夹的实际路径
-# outputfolder = r"G:\EMIT_plume_result_1sigma"  # 替换为输出文件夹的实际路径
-# batch_Plume_EMIT_run(plume_folder, radiance_folder, outputfolder)
+    # plume_folder = r"M:\EMITL2BCH4PLM_001-20241108_114914"  # 替换为 plume 文件夹的实际路径
+    # radiance_folder = r"J:\EMIT\L1B"  # 替换为 radiance 文件夹的实际路径
+    # outputfolder = r"G:\EMIT_plume_result_1sigma"  # 替换为输出文件夹的实际路径
+    # batch_Plume_EMIT_run(plume_folder, radiance_folder, outputfolder)

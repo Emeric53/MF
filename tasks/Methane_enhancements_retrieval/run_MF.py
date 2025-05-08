@@ -1,24 +1,19 @@
-import pathlib as pl
 import os
-import sys
 import re
 import shutil
-# import algorithms.columnwise_matchedfilter
-# import algorithms.matchedfilter
+import pathlib as pl
 
-sys.path.append("C://Users//RS//VSCode//matchedfiltermethod//src")
+
 from methane_retrieval_algorithms import matched_filter_variants as mfs
 from methane_retrieval_algorithms import matched_filter_all as mfa
-
-# import algorithms
 from utils import satellites_data as sd
 from utils import generate_radiance_lut_and_uas as glut
 
-
-# mf_type 以数字代表使用的匹配滤波算法 类型
-# 0：columnwise + 迭代 + 反射率校正因子 的匹配滤波算法
-# 1: 多层匹配滤波算法
-# 2: kalman 滤波器 匹配滤波算法
+# 山西省的经纬度范围
+shanxi_longitude_min = 111.0  # 最小经度
+shanxi_longitude_max = 114.5  # 最大经度
+shanxi_latitude_min = 34.5  # 最小纬度
+shanxi_latitude_max = 40.8  # 最大纬度
 
 # 部分参数设置
 low_wavelength = 2150
@@ -194,13 +189,6 @@ def process_files(filefolder_list, outputfolder, satellite_name):
             if current_filename in outputfile_list:
                 continue
             run_for_EMIT(radiance_path, outputfolder, mf_type=0)
-
-
-# 山西省的经纬度范围
-shanxi_longitude_min = 111.0  # 最小经度
-shanxi_longitude_max = 114.5  # 最大经度
-shanxi_latitude_min = 34.5  # 最小纬度
-shanxi_latitude_max = 40.8  # 最大纬度
 
 
 def is_within_province(data_name, lon_min, lon_max, lat_min, lat_max):
