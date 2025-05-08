@@ -1,0 +1,115 @@
+\documentclass[12pt,a4paper]{article} % 文章文档类，字号12pt，A4纸
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 字体和中文支持
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage[fontset=none]{ctex} % 中文支持，禁用默认字体配置（自己设置字体）
+\setmainfont[Scale=1.15, Ligatures=NoCommon]{Times New Roman} % 英文字体，放大1.15倍
+\setmonofont{JetBrains Mono} % 英文等宽字体
+\setCJKmainfont{SimSong} % 中文主字体
+% \setCJKmonofont{FangSong} % 中文等宽字体
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 基础功能宏包
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{fontawesome5} % 支持 FontAwesome 图标
+\usepackage{microtype}    % 微排版优化，提高可读性
+\usepackage{setspace}     % 行距设置
+\onehalfspacing           % 设为1.5倍行距
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 颜色设置
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{xcolor}
+\definecolor{citeblue}{rgb}{0.19,0.54,0.92}
+\definecolor{winered}{rgb}{0.5,0,0}
+\definecolor{wordblue}{RGB}{40,85,150}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 超链接设置
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage[
+    colorlinks=true,
+    linkcolor=red,
+    urlcolor=winered,
+    citecolor=citeblue,
+    anchorcolor=cyan,
+    hyperfootnotes=true,
+]{hyperref}
+
+\hypersetup{
+    pdfproducer={Latexmk},
+    pdfcreator={Markdown in LaTeX},
+    pdftitle={你的标题},
+    pdfsubject={你的主题},
+    pdfauthor={你的名字},
+    pdfkeywords={关键词1, 关键词2},
+}
+\urlstyle{same} % 让URL字体跟正文一致
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 表格与图像支持
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{graphicx}
+\graphicspath{{../}{images/}} % 指定图像搜索路径
+\usepackage{caption}
+\captionsetup{
+    hypcap=true,
+    font={bf},
+    skip=8pt, % 调整标题与正文之间的距离
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 页眉页脚与页面设置
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\pagestyle{plain}
+\renewcommand*{\thepage}{\footnotesize{\arabic{page}}}
+\setlength{\footskip}{1.5cm}
+\usepackage[margin=2.5cm]{geometry} % 设置页边距
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 文献引用设置
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage[backend=biber,style=gb7714-2015ay,gblanorder=englishahead]{biblatex} 
+\renewcommand{\bibfont}{\small}
+\setlength\bibitemsep{5pt}
+\addbibresource{../ref.bib} % 引用文献文件路径
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 脚注美化
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{perpage}
+\MakePerPage{footnote} % 每页脚注重新编号
+\usepackage{pifont}
+\newcommand*\dingctr[1]{\protect\ding{\number\numexpr\value{#1}+171\relax}}
+\renewcommand*\thefootnote{\dingctr{footnote}}
+
+\makeatletter
+\renewcommand\@makefntext[1]{%
+  \setlength\leftskip{1.2\ccwd}%
+  \setlength\parindent{2\ccwd}%
+  \selectfont
+  \noindent\llap{\@thefnmark\ }#1}
+\makeatother
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Pandoc 特定占位符
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 文档正文部分
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+% 输入 Pandoc 转换出来的正文部分
+\input{input.tex}
+
+% 生成参考文献目录
+\printbibliography[heading=bibintoc]
+
+\end{document}

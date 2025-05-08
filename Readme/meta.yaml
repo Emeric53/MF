@@ -1,0 +1,28 @@
+---
+title: "MF 甲烷点源排放反演技术文档"
+author: "梁梦磊"
+date: "2025年4月28日"
+output: 
+  pdf_document:
+    latex_engine: xelatex
+    mainfont: "Times New Roman"
+    CJKmainfont: "SimSong"
+    toc: true
+    number_sections: true
+    tables: true
+    graphics: true
+    link-citations: true
+    linkReferences: true
+    reference-section-title: "参考文献"
+    figPrefix: "图"
+    tblPrefix: "表"
+    figureTitle: "图"
+    tableTitle: "表"
+    header-includes:
+      - \usepackage{booktabs}
+      - \usepackage{longtable}
+      - \usepackage{array}
+      - \usepackage{geometry}
+      - \usepackage{xeCJK}  # 中文支持
+geometry: margin=1in
+---
